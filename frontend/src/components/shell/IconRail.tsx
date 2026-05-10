@@ -6,13 +6,7 @@ import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
 import { useTheme } from '../../hooks/useTheme'
 import { useTranslation } from 'react-i18next'
-
-function getInitials(email: string): string {
-  const local = email.split('@')[0]
-  const parts = local.split('.')
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return local.slice(0, 2).toUpperCase()
-}
+import { getInitials } from './shellUtils'
 
 interface IconRailProps {
   activeSection: SectionKey | null

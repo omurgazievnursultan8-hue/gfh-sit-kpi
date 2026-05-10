@@ -6,13 +6,7 @@ import { MoreHorizontal, User, Lock, LogOut } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
-
-function getInitials(email: string): string {
-  const local = email.split('@')[0]
-  const parts = local.split('.')
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
-  return local.slice(0, 2).toUpperCase()
-}
+import { getInitials } from './shellUtils'
 
 function roleLabel(role: string): string {
   const map: Record<string, string> = {
