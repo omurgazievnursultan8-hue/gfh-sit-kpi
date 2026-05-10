@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { adminApi, QuartzJobInfo } from './adminApi'
+import { Layout } from '../../components/Layout'
 
 type HealthStatus = 'up' | 'down' | 'checking'
 
@@ -51,7 +52,8 @@ export function AdminMonitoringPage() {
   }, [refresh])
 
   return (
-    <div className="space-y-6">
+    <Layout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">{t('admin.monitoring')}</h1>
         <button
@@ -144,6 +146,7 @@ export function AdminMonitoringPage() {
           )}
         </div>
       </section>
-    </div>
+      </div>
+    </Layout>
   )
 }

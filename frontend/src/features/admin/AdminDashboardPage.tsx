@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Users, BarChart3, ClipboardCheck, MessageSquare, Shield, Activity } from 'lucide-react'
 import { adminApi, AdminStats } from './adminApi'
+import { Layout } from '../../components/Layout'
 
 interface StatCardProps {
   label: string
@@ -80,13 +81,15 @@ export function AdminDashboardPage() {
   ]
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900">{t('admin.stats')}</h1>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map(card => (
-          <StatCard key={card.label} {...card} />
-        ))}
+    <Layout>
+      <div>
+        <h1 className="mb-6 text-2xl font-semibold text-gray-900">{t('admin.stats')}</h1>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {cards.map(card => (
+            <StatCard key={card.label} {...card} />
+          ))}
+        </div>
       </div>
-    </div>
+    </Layout>
   )
 }

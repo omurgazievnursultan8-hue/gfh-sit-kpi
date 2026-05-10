@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download } from 'lucide-react'
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
+import { Layout } from '../../components/Layout'
 
 const KNOWN_ACTIONS = [
   'CREATE_USER', 'UPDATE_USER', 'DEACTIVATE_USER',
@@ -64,7 +65,8 @@ export function AuditLogPage() {
   const handleExport = () => auditApi.export(buildParams())
 
   return (
-    <div>
+    <Layout>
+      <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">{t('admin.auditLog')}</h1>
         <button
@@ -193,6 +195,7 @@ export function AuditLogPage() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </Layout>
   )
 }
