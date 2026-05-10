@@ -15,8 +15,11 @@ public class PasswordPolicyValidator {
     private final Set<String> dictionary;
 
     public PasswordPolicyValidator() {
-        try (var stream = getClass().getResourceAsStream("/password-dictionary.txt");
-             var reader = new BufferedReader(new InputStreamReader(stream))) {
+        var rawStream = getClass().getResourceAsStream("/password-dictionary.txt");
+        if (rawStream == null) {
+            throw new RuntimeException("password-dictionary.txt not found on classpath");
+        }
+        try (var reader = new BufferedReader(new InputStreamReader(rawStream))) {
             this.dictionary = reader.lines()
                     .map(String::toLowerCase)
                     .collect(Collectors.toSet());

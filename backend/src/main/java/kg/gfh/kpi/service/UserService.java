@@ -94,7 +94,7 @@ public class UserService {
         }
         List<String> newHistory = new ArrayList<>(history);
         newHistory.add(user.getPasswordHash());
-        if (newHistory.size() > 5) newHistory = newHistory.subList(newHistory.size() - 5, newHistory.size());
+        if (newHistory.size() > 5) newHistory = new ArrayList<>(newHistory.subList(newHistory.size() - 5, newHistory.size()));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setPasswordHistory(newHistory);

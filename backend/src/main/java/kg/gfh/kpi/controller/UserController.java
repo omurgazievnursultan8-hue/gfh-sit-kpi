@@ -2,7 +2,9 @@ package kg.gfh.kpi.controller;
 
 import jakarta.validation.Valid;
 import kg.gfh.kpi.dto.*;
+import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.UserService;
+import kg.gfh.kpi.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -61,7 +64,11 @@ public class UserController {
     public ResponseEntity<Void> changePassword(
             @Valid @RequestBody ChangePasswordRequest req,
             org.springframework.security.core.Authentication auth) {
-        Long userId = ((kg.gfh.kpi.entity.User) auth.getPrincipal()).getId();
+        String email = auth.getName();
+        kg.gfh.kpi.entity.User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new ApiException("USER_NOT_FOUND",
+                "Пользователь не найден", "Колдонуучу табылган жок"));
+        Long userId = user.getId();
         userService.changePassword(userId, req.currentPassword(), req.newPassword());
         return ResponseEntity.ok().build();
     }
