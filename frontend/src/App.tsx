@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useIdleTimeout } from './hooks/useIdleTimeout'
+import { useNotifications } from './hooks/useNotifications'
 import { LoginPage } from './features/auth/LoginPage'
 import { ChangePasswordPage } from './features/auth/ChangePasswordPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
@@ -18,9 +19,11 @@ import { MyTasksPage } from './features/evaluations/MyTasksPage'
 import { MyEvaluationsPage } from './features/evaluations/MyEvaluationsPage'
 import { EvaluationDetailPage } from './features/evaluations/EvaluationDetailPage'
 import { AppealPage } from './features/appeals/AppealPage'
+import { NotificationsPage } from './features/notifications/NotificationsPage'
 
 export default function App() {
   useIdleTimeout()
+  useNotifications()
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -50,6 +53,7 @@ export default function App() {
       <Route path="/my-evaluations" element={<ProtectedRoute><MyEvaluationsPage /></ProtectedRoute>} />
       <Route path="/my-evaluations/:id" element={<ProtectedRoute><EvaluationDetailPage /></ProtectedRoute>} />
       <Route path="/appeals/new" element={<ProtectedRoute><AppealPage /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
