@@ -24,6 +24,7 @@ import { ManagerTodoPage } from './features/periods/ManagerTodoPage'
 import { PersonalDashboardPage } from './features/analytics/PersonalDashboardPage'
 import { ManagerDashboardPage } from './features/analytics/ManagerDashboardPage'
 import { HierarchicalAnalyticsPage } from './features/analytics/HierarchicalAnalyticsPage'
+import { AntiBonusAnalyticsPage } from './features/analytics/AntiBonusAnalyticsPage'
 
 export default function App() {
   useIdleTimeout()
@@ -62,6 +63,11 @@ export default function App() {
       <Route path="/analytics/hierarchical" element={
         <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN']}>
           <HierarchicalAnalyticsPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/analytics/anti-bonus" element={
+        <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT']}>
+          <AntiBonusAnalyticsPage />
         </ProtectedRoute>
       } />
       <Route path="/manager-dashboard" element={
