@@ -1,5 +1,6 @@
 package kg.gfh.kpi.service;
 
+import kg.gfh.kpi.dto.AppealPendingResponse;
 import kg.gfh.kpi.entity.Appeal;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
 import kg.gfh.kpi.entity.Evaluation;
@@ -116,6 +117,22 @@ public class AppealService {
             notificationService.notifyAppealAutoAgreed(eval);
             log.info("Auto-agreed appeal {} for evaluation {}", appeal.getId(), eval.getId());
         }
+    }
+
+    public List<AppealPendingResponse> getPendingAppealsForEvaluator(Long evaluatorId) {
+        return appealRepository.findPendingByEvaluatorId(evaluatorId).stream()
+            .map(a -> {
+                Evaluation eval = findEvaluation(a.getEvaluationId());
+                return new AppealPendingResponse(
+                    a.getId(),
+                    a.getEvaluationId(),
+                    eval.getEvaluatee().getFullName(),
+                    a.getReason(),
+                    a.getDeadline(),
+                    a.getCreatedAt()
+                );
+            })
+            .toList();
     }
 
     private Evaluation findEvaluation(Long id) {
