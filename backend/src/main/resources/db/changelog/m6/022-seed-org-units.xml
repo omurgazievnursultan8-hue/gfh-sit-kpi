@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="022-seed-org-units" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO org_units (id, name_ru, name_kg, type, parent_id, head_user_id, created_at, version) VALUES
+              (1,  'Председатель Правления',          'Башкарманын Төрагасы',                 'BLOCK',      NULL, NULL, '2026-01-01 00:00:00', 0),
+              (2,  'Финансовый блок',                 'Финансылык блок',                      'BLOCK',      1,    NULL, '2026-01-01 00:00:00', 0),
+              (3,  'Операционный блок',               'Операциялык блок',                     'BLOCK',      1,    NULL, '2026-01-01 00:00:00', 0),
+              (4,  'Финансовый департамент',          'Финансылык департамент',               'DEPARTMENT', 2,    NULL, '2026-01-01 00:00:00', 0),
+              (5,  'Департамент управления рисками',  'Тобокелдиктерди башкаруу департаменти','DEPARTMENT', 2,    NULL, '2026-01-01 00:00:00', 0),
+              (6,  'ИТ-департамент',                  'IT-департамент',                       'DEPARTMENT', 3,    NULL, '2026-01-01 00:00:00', 0),
+              (7,  'Юридический департамент',         'Юридикалык департамент',               'DEPARTMENT', 3,    NULL, '2026-01-01 00:00:00', 0),
+              (8,  'Отдел разработки',                'Иштеп чыгуу бөлүмү',                   'UNIT',       6,    NULL, '2026-01-01 00:00:00', 0),
+              (9,  'Отдел инфраструктуры',            'Инфраструктура бөлүмү',                'UNIT',       6,    NULL, '2026-01-01 00:00:00', 0),
+              (10, 'Управление персоналом',           'Кадрларды башкаруу',                   'DEPARTMENT', 3,    NULL, '2026-01-01 00:00:00', 0);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
