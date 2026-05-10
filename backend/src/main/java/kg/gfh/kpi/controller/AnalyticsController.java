@@ -1,5 +1,6 @@
 package kg.gfh.kpi.controller;
 
+import kg.gfh.kpi.dto.DashboardEventResponse;
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse;
 import kg.gfh.kpi.dto.ScorecardResponse;
 import kg.gfh.kpi.dto.TeamResponse;
@@ -40,6 +41,12 @@ public class AnalyticsController {
     public TeamResponse team(Authentication auth) {
         Long userId = resolveUserId(auth);
         return analyticsService.getTeamAttention(userId);
+    }
+
+    @GetMapping("/events")
+    public List<DashboardEventResponse> events(Authentication auth) {
+        Long userId = resolveUserId(auth);
+        return analyticsService.getDashboardEvents(userId);
     }
 
     @GetMapping("/hierarchical")
