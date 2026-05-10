@@ -29,4 +29,18 @@
     <include file="db/changelog/m3/020-create-notifications.xml"/>
 
     <include file="db/changelog/m5/021-audit-log-immutability-trigger.xml"/>
+
+    <include file="db/changelog/m6/022-seed-org-units.xml"/>
+    <include file="db/changelog/m6/023-seed-users.xml"/>
+    <include file="db/changelog/m6/024-seed-criteria.xml"/>
+    <include file="db/changelog/m6/025-seed-production-calendar.xml"/>
+    <include file="db/changelog/m6/026-seed-system-settings.xml"/>
+    <include file="db/changelog/m6/027-seed-delegations.xml"/>
+    <include file="db/changelog/m6/028-seed-periods.xml"/>
+    <include file="db/changelog/m6/029-seed-evaluations.xml"/>
+    <include file="db/changelog/m6/030-seed-evaluation-scores.xml"/>
+    <include file="db/changelog/m6/031-seed-score-history.xml"/>
+    <include file="db/changelog/m6/032-seed-appeals.xml"/>
+    <include file="db/changelog/m6/033-seed-reactions-files.xml"/>
+    <include file="db/changelog/m6/034-bump-sequences.xml"/>
 </databaseChangeLog>
