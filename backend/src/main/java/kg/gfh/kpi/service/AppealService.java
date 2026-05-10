@@ -1,5 +1,6 @@
 package kg.gfh.kpi.service;
 
+import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.AppealPendingResponse;
 import kg.gfh.kpi.entity.Appeal;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
@@ -28,6 +29,7 @@ public class AppealService {
     private final SystemSettingService settingService;
     private final NotificationService notificationService;
 
+    @Audited(action = "FILE_APPEAL", entityType = "EVALUATION")
     @Transactional
     public Appeal fileAppeal(Long evaluationId, Long appellantId, String reason) {
         Evaluation eval = findEvaluation(evaluationId);
@@ -61,6 +63,7 @@ public class AppealService {
         return appeal;
     }
 
+    @Audited(action = "RESPOND_APPEAL", entityType = "APPEAL")
     @Transactional
     public Appeal respond(Long appealId, Long evaluatorId, AppealStatus decision, String response) {
         Appeal appeal = appealRepository.findById(appealId)

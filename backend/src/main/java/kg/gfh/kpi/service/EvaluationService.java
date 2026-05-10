@@ -52,6 +52,7 @@ public class EvaluationService {
         return periodRepository.save(period);
     }
 
+    @Audited(action = "ACTIVATE_PERIOD", entityType = "EVALUATION_PERIOD")
     @Transactional
     public EvaluationPeriod activatePeriod(Long periodId) {
         EvaluationPeriod period = findPeriodById(periodId);
@@ -83,6 +84,7 @@ public class EvaluationService {
         return period;
     }
 
+    @Audited(action = "CLOSE_PERIOD", entityType = "EVALUATION_PERIOD")
     @Transactional
     public EvaluationPeriod closePeriod(Long periodId) {
         EvaluationPeriod period = findPeriodById(periodId);
