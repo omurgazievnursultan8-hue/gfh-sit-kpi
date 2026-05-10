@@ -8,6 +8,7 @@ const navItems = [
   { to: '/users', labelKey: 'nav.users', roles: ['ADMIN'] },
   { to: '/org', labelKey: 'nav.orgStructure', roles: ['ADMIN'] },
   { to: '/criteria', labelKey: 'nav.criteria', roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT'] },
+  { to: '/my-tasks', labelKey: 'nav.myTasks', roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT'] },
   { to: '/evaluations', labelKey: 'nav.evaluations', roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'EMPLOYEE'] },
   { to: '/analytics', labelKey: 'nav.analytics', roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT'] },
   { to: '/audit', labelKey: 'nav.audit', roles: ['ADMIN', 'CHAIRMAN'] },

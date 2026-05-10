@@ -13,6 +13,8 @@ import { DelegationsPage } from './features/org/DelegationsPage'
 import { CriteriaPage } from './features/criteria/CriteriaPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
+import { EvaluationFormPage } from './features/evaluations/EvaluationFormPage'
+import { MyTasksPage } from './features/evaluations/MyTasksPage'
 
 export default function App() {
   useIdleTimeout()
@@ -30,6 +32,16 @@ export default function App() {
       <Route path="/criteria" element={
         <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT']}>
           <CriteriaPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/my-tasks" element={
+        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+          <MyTasksPage />
+        </ProtectedRoute>
+      } />
+      <Route path="/evaluations/:id" element={
+        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+          <EvaluationFormPage />
         </ProtectedRoute>
       } />
       <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
