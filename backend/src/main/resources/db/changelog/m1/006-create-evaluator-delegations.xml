@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+    <changeSet id="006-create-evaluator-delegations" author="gfh">
+        <createTable tableName="evaluator_delegations">
+            <column name="id" type="BIGSERIAL"><constraints primaryKey="true"/></column>
+            <column name="evaluatee_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="original_evaluator_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="delegated_to_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="valid_from" type="DATE"><constraints nullable="false"/></column>
+            <column name="valid_to" type="DATE"><constraints nullable="false"/></column>
+            <column name="reason" type="VARCHAR(1000)"/>
+            <column name="created_by" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="evaluator_delegations" baseColumnNames="evaluatee_id"
+            referencedTableName="users" referencedColumnNames="id" constraintName="fk_deleg_evaluatee"/>
+        <addForeignKeyConstraint baseTableName="evaluator_delegations" baseColumnNames="original_evaluator_id"
+            referencedTableName="users" referencedColumnNames="id" constraintName="fk_deleg_original"/>
+        <addForeignKeyConstraint baseTableName="evaluator_delegations" baseColumnNames="delegated_to_id"
+            referencedTableName="users" referencedColumnNames="id" constraintName="fk_deleg_to"/>
+        <createIndex tableName="evaluator_delegations" indexName="idx_delegations_evaluatee_id">
+            <column name="evaluatee_id"/>
+        </createIndex>
+        <createIndex tableName="evaluator_delegations" indexName="idx_delegations_delegated_to">
+            <column name="delegated_to_id"/>
+        </createIndex>
+        <createIndex tableName="evaluator_delegations" indexName="idx_delegations_valid_range">
+            <column name="valid_from"/>
+            <column name="valid_to"/>
+            <column name="is_active"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

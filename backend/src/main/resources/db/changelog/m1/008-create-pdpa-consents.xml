@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+    <changeSet id="008-create-pdpa-consents" author="gfh">
+        <createTable tableName="pdpa_consents">
+            <column name="id" type="BIGSERIAL"><constraints primaryKey="true"/></column>
+            <column name="user_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="accepted_at" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="version" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="ip_address" type="VARCHAR(45)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="pdpa_consents" baseColumnNames="user_id"
+            referencedTableName="users" referencedColumnNames="id" constraintName="fk_pdpa_user_id"/>
+    </changeSet>
+</databaseChangeLog>
