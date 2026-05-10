@@ -13,4 +13,5 @@
     <include file="db/changelog/m1/006-create-evaluator-delegations.xml"/>
     <include file="db/changelog/m1/007-create-audit-log.xml"/>
     <include file="db/changelog/m1/008-create-pdpa-consents.xml"/>
+    <include file="db/changelog/m1/009-bootstrap-admin.xml"/>
 </databaseChangeLog>
