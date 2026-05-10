@@ -28,9 +28,7 @@
             </column>
         </createTable>
 
-        <addCheckConstraint tableName="org_units"
-            constraintName="chk_org_unit_type"
-            constraintBody="type IN ('BLOCK','DEPARTMENT','UNIT')"/>
+        <sql>ALTER TABLE org_units ADD CONSTRAINT chk_org_unit_type CHECK (type IN ('BLOCK','DEPARTMENT','UNIT'));</sql>
 
         <createIndex tableName="org_units" indexName="idx_org_units_parent_id">
             <column name="parent_id"/>
