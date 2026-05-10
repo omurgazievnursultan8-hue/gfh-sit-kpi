@@ -11,12 +11,19 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import org.springframework.jdbc.core.RowCallbackHandler;
+
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
+
+    private static final double GOAL_SCORE = 90.0;
 
     private final JdbcTemplate jdbc;
     private final UserRepository userRepository;
@@ -86,7 +93,7 @@ public class AnalyticsService {
     }
 
     private String computeGrade(double score) {
-        if (score >= 90) return "A";
+        if (score >= GOAL_SCORE) return "A";
         if (score >= 80) return "A−";
         if (score >= 70) return "B+";
         if (score >= 60) return "B";
@@ -159,7 +166,7 @@ public class AnalyticsService {
 
         Double vsPrevPeriod = null;
         String prevPeriodLabel = null;
-        java.util.Map<Long, Double> prevScores = new java.util.HashMap<>();
+        Map<Long, Double> prevScores = new HashMap<>();
 
         if (!prevRows.isEmpty()) {
             PrevRow prev = prevRows.get(0);
@@ -169,15 +176,15 @@ public class AnalyticsService {
                 SELECT criteria_id, value::float AS val
                 FROM evaluation_scores WHERE evaluation_id = ?
                 """,
-                (org.springframework.jdbc.core.RowCallbackHandler)
-                    rs -> prevScores.put(rs.getLong("criteria_id"), rs.getDouble("val")),
+                (RowCallbackHandler) rs -> prevScores.put(rs.getLong("criteria_id"), rs.getDouble("val")),
                 prev.id());
         }
 
-        // 4. Criteria scores — batch-load type to avoid N+1
-        java.util.List<ScorecardResponse.CriteriaScoreDto> allRows = jdbc.query("""
+        // 4. Criteria scores — type included in the same query to avoid a second round-trip
+        Map<Long, String> criteriaTypes = new HashMap<>();
+        List<ScorecardResponse.CriteriaScoreDto> allRows = jdbc.query("""
             SELECT es.criteria_id, c.name_ru, c.name_kg, c.weight::float,
-                   es.value::float AS score,
+                   c.type AS criteria_type, es.value::float AS score,
                    COALESCE(ou.name_ru, '') AS level_label
             FROM evaluation_scores es
             JOIN criteria c ON c.id = es.criteria_id
@@ -190,28 +197,18 @@ public class AnalyticsService {
                 double score = rs.getDouble("score");
                 Double delta = prevScores.containsKey(cid)
                     ? score - prevScores.get(cid) : null;
+                criteriaTypes.put(cid, rs.getString("criteria_type"));
                 return new ScorecardResponse.CriteriaScoreDto(
                     cid,
                     rs.getString("name_ru"),
                     rs.getString("name_kg"),
                     rs.getDouble("weight"),
                     score,
-                    rs.getDouble("weight"),   // maxScore == weight
+                    rs.getDouble("weight"),
                     delta,
                     rs.getString("level_label")
                 );
             }, ev.id());
-
-        // Batch-load criteria types to split positive vs anti-bonus
-        java.util.Map<Long, String> criteriaTypes = new java.util.HashMap<>();
-        jdbc.query("""
-            SELECT c.id, c.type FROM criteria c
-            JOIN evaluation_scores es ON es.criteria_id = c.id
-            WHERE es.evaluation_id = ?
-            """,
-            (org.springframework.jdbc.core.RowCallbackHandler)
-                rs -> criteriaTypes.put(rs.getLong("id"), rs.getString("type")),
-            ev.id());
 
         List<ScorecardResponse.CriteriaScoreDto> positiveCriteria = allRows.stream()
             .filter(c -> "POSITIVE".equals(criteriaTypes.get(c.criteriaId())))
@@ -225,7 +222,7 @@ public class AnalyticsService {
 
         return new ScorecardResponse(
             ev.periodId(), periodLabel, totalScore, computeGrade(totalScore),
-            totalScore - 90, vsPrevPeriod, prevPeriodLabel, rank,
+            totalScore - GOAL_SCORE, vsPrevPeriod, prevPeriodLabel, rank,
             antiBonusTotal, positiveCriteria, antiBonuses
         );
     }
