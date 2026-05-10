@@ -39,8 +39,11 @@ class MigrationIntegrationTest {
     @Test
     void allTablesExist() {
         var tables = List.of(
+            // M1
             "users", "org_units", "refresh_tokens", "login_attempts",
-            "password_reset_tokens", "evaluator_delegations", "audit_log", "pdpa_consents"
+            "password_reset_tokens", "evaluator_delegations", "audit_log", "pdpa_consents",
+            // M2
+            "criteria", "system_settings", "production_calendar", "evaluation_score_history"
         );
         for (String table : tables) {
             Integer count = jdbcTemplate.queryForObject(

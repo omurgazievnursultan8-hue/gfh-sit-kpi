@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="012-create-production-calendar" author="gfh">
+        <createTable tableName="production_calendar">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="year" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="month" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Number of working days in the month -->
+            <column name="working_days" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>ALTER TABLE production_calendar ADD CONSTRAINT chk_calendar_month_range CHECK (month >= 1 AND month &lt;= 12);</sql>
+        <sql>ALTER TABLE production_calendar ADD CONSTRAINT chk_calendar_working_days CHECK (working_days >= 0 AND working_days &lt;= 31);</sql>
+
+        <addUniqueConstraint
+            tableName="production_calendar"
+            columnNames="year, month"
+            constraintName="uq_production_calendar_year_month"/>
+
+        <createIndex tableName="production_calendar" indexName="idx_calendar_year_month">
+            <column name="year"/>
+            <column name="month"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="production_calendar"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

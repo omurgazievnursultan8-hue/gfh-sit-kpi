@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="013-create-score-history" author="gfh">
+        <!--
+            Stores a snapshot of each criteria score at the time of evaluation submission.
+            Kept separately from evaluations to support historical analytics and recalculation tracking.
+        -->
+        <createTable tableName="evaluation_score_history">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="evaluation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criteria_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Raw value entered or auto-calculated -->
+            <column name="raw_value" type="NUMERIC(10,4)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Weighted contribution to final score -->
+            <column name="weighted_value" type="NUMERIC(10,4)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Snapshot of weight at time of scoring (criteria weight may change later) -->
+            <column name="weight_snapshot" type="NUMERIC(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recorded_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- FK to evaluations will be added in M3 when that table exists -->
+
+        <addForeignKeyConstraint
+            baseTableName="evaluation_score_history"
+            baseColumnNames="criteria_id"
+            referencedTableName="criteria"
+            referencedColumnNames="id"
+            constraintName="fk_score_history_criteria"
+            onDelete="RESTRICT"/>
+
+        <createIndex tableName="evaluation_score_history" indexName="idx_score_history_evaluation_id">
+            <column name="evaluation_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="evaluation_score_history"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

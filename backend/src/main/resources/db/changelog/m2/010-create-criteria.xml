@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="010-create-criteria" author="gfh">
+        <createTable tableName="criteria">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_kg" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- POSITIVE or ANTI_BONUS -->
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Weight in percentage (0.00–100.00) -->
+            <column name="weight" type="NUMERIC(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- null = global (applies to all org units) -->
+            <column name="org_unit_id" type="BIGINT"/>
+            <!-- For ANTI_BONUS: auto-populated from production calendar -->
+            <column name="is_auto_calculated" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Once scores exist, is_penalty criteria cannot change weight -->
+            <column name="is_frozen" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>ALTER TABLE criteria ADD CONSTRAINT chk_criteria_type CHECK (type IN ('POSITIVE', 'ANTI_BONUS'));</sql>
+        <sql>ALTER TABLE criteria ADD CONSTRAINT chk_criteria_weight_range CHECK (weight >= 0 AND weight &lt;= 100);</sql>
+
+        <addForeignKeyConstraint
+            baseTableName="criteria"
+            baseColumnNames="org_unit_id"
+            referencedTableName="org_units"
+            referencedColumnNames="id"
+            constraintName="fk_criteria_org_unit"
+            onDelete="SET NULL"/>
+
+        <createIndex tableName="criteria" indexName="idx_criteria_org_unit_id">
+            <column name="org_unit_id"/>
+        </createIndex>
+        <createIndex tableName="criteria" indexName="idx_criteria_type_active">
+            <column name="type"/>
+            <column name="is_active"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="criteria"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

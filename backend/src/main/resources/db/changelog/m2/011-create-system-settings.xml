@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="011-create-system-settings" author="gfh">
+        <createTable tableName="system_settings">
+            <column name="key" type="VARCHAR(100)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="TEXT"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Seed default values -->
+        <insert tableName="system_settings">
+            <column name="key" value="idle_timeout_minutes"/>
+            <column name="value" value="30"/>
+            <column name="description" value="Idle timeout in minutes before auto-logout"/>
+        </insert>
+        <insert tableName="system_settings">
+            <column name="key" value="password_expiry_days"/>
+            <column name="value" value="90"/>
+            <column name="description" value="Number of days before password expires"/>
+        </insert>
+        <insert tableName="system_settings">
+            <column name="key" value="evaluation_period_days"/>
+            <column name="value" value="30"/>
+            <column name="description" value="Default evaluation period length in days"/>
+        </insert>
+        <insert tableName="system_settings">
+            <column name="key" value="appeal_deadline_days"/>
+            <column name="value" value="3"/>
+            <column name="description" value="Days employee has to file an appeal after evaluation"/>
+        </insert>
+        <insert tableName="system_settings">
+            <column name="key" value="auto_agree_timeout_hours"/>
+            <column name="value" value="72"/>
+            <column name="description" value="Hours before unanswered appeal is auto-agreed"/>
+        </insert>
+        <insert tableName="system_settings">
+            <column name="key" value="pdpa_version"/>
+            <column name="value" value="1.0"/>
+            <column name="description" value="Current PDPA consent version"/>
+        </insert>
+
+        <rollback>
+            <dropTable tableName="system_settings"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
