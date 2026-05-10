@@ -11,6 +11,9 @@ spring:
     open-in-view: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+    # Default to prod context so changesets tagged context="dev" (m6/ seed data)
+    # do not run in production. To apply dev seed data: SPRING_LIQUIBASE_CONTEXTS=dev
+    contexts: ${SPRING_LIQUIBASE_CONTEXTS:prod}
   quartz:
     job-store-type: memory
     auto-startup: true
