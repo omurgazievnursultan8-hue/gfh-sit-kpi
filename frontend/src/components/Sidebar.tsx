@@ -20,6 +20,7 @@ const navItems = [
   { to: '/audit', labelKey: 'nav.audit', roles: ['ADMIN', 'CHAIRMAN'] },
   { to: '/settings', labelKey: 'nav.settings', roles: ['ADMIN'] },
   { to: '/calendar', labelKey: 'nav.calendar', roles: ['ADMIN'] },
+  { to: '/admin', labelKey: 'nav.adminPanel', roles: ['ADMIN'] },
 ]
 
 interface SidebarProps {

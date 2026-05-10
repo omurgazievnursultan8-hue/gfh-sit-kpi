@@ -25,6 +25,10 @@ import { PersonalDashboardPage } from './features/analytics/PersonalDashboardPag
 import { ManagerDashboardPage } from './features/analytics/ManagerDashboardPage'
 import { HierarchicalAnalyticsPage } from './features/analytics/HierarchicalAnalyticsPage'
 import { AntiBonusAnalyticsPage } from './features/analytics/AntiBonusAnalyticsPage'
+import { AdminLayout } from './features/admin/AdminLayout'
+import { AdminDashboardPage } from './features/admin/AdminDashboardPage'
+import { AuditLogPage } from './features/admin/AuditLogPage'
+import { AdminMonitoringPage } from './features/admin/AdminMonitoringPage'
 
 export default function App() {
   useIdleTimeout()
@@ -82,6 +86,18 @@ export default function App() {
       } />
       <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLayout /></ProtectedRoute>}>
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="org" element={<OrgPage />} />
+        <Route path="delegations" element={<DelegationsPage />} />
+        <Route path="criteria" element={<CriteriaPage />} />
+        <Route path="periods" element={<ManagerTodoPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="calendar" element={<CalendarPage />} />
+        <Route path="audit" element={<AuditLogPage />} />
+        <Route path="monitoring" element={<AdminMonitoringPage />} />
+      </Route>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
