@@ -1,5 +1,6 @@
 package kg.gfh.kpi.service;
 
+import kg.gfh.kpi.dto.DashboardEventResponse;
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse;
 import kg.gfh.kpi.dto.TeamResponse;
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse.PeriodScore;
@@ -347,6 +348,149 @@ public class AnalyticsService {
 
         return new TeamResponse(attentionList, best, reports.size(),
             teamAvg != null ? Math.round(teamAvg * 10.0) / 10.0 : null);
+    }
+
+    private String iconTypeForAction(String action) {
+        return switch (action) {
+            case "SUBMIT_EVALUATION", "CLOSE_PERIOD" -> "success";
+            case "FILE_APPEAL", "RESPOND_APPEAL"     -> "warn";
+            default                                  -> "info";
+        };
+    }
+
+    public List<DashboardEventResponse> getDashboardEvents(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new ApiException("USER_NOT_FOUND",
+                "Пользователь не найден", "Колдонуучу табылган жок"));
+        String email = user.getEmail();
+
+        // 1. Fetch relevant audit_log rows
+        record RawEvent(long id, String action, String entityType, Long entityId, String ts) {}
+        List<RawEvent> rawEvents = jdbc.query("""
+            SELECT al.id, al.action, al.entity_type, al.entity_id, al.timestamp::text AS ts
+            FROM audit_log al
+            WHERE (
+                al.user_name = ?
+                OR (al.action = 'SUBMIT_EVALUATION' AND al.entity_id IN (
+                    SELECT e.id FROM evaluations e WHERE e.evaluatee_id = ?
+                ))
+                OR (al.action = 'ACTIVATE_PERIOD')
+            )
+            AND al.action IN (
+                'SUBMIT_EVALUATION','FILE_APPEAL','RESPOND_APPEAL',
+                'ACTIVATE_PERIOD','CLOSE_PERIOD'
+            )
+            ORDER BY al.timestamp DESC
+            LIMIT 10
+            """,
+            (rs, i) -> new RawEvent(rs.getLong("id"), rs.getString("action"),
+                rs.getString("entity_type"), rs.getObject("entity_id", Long.class),
+                rs.getString("ts")),
+            email, userId);
+
+        if (rawEvents.isEmpty()) return List.of();
+
+        // 2. Batch-load context for evaluation-related events
+        java.util.Set<Long> evalIds = rawEvents.stream()
+            .filter(e -> "EVALUATION".equals(e.entityType()) && e.entityId() != null)
+            .map(RawEvent::entityId)
+            .collect(java.util.stream.Collectors.toSet());
+        java.util.Set<Long> periodIds = rawEvents.stream()
+            .filter(e -> "EVALUATION_PERIOD".equals(e.entityType()) && e.entityId() != null)
+            .map(RawEvent::entityId)
+            .collect(java.util.stream.Collectors.toSet());
+
+        Map<Long, Map<String, Object>> evalContext = new HashMap<>();
+        if (!evalIds.isEmpty()) {
+            String inClause = evalIds.stream().map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+            jdbc.queryForList("""
+                SELECT e.id, e.final_score::float AS score,
+                       ep.type, ep.start_date::text,
+                       EXTRACT(YEAR  FROM ep.start_date)::int AS yr,
+                       EXTRACT(MONTH FROM ep.start_date)::int AS mo,
+                       u.full_name AS evaluatee_name
+                FROM evaluations e
+                JOIN evaluation_periods ep ON ep.id = e.period_id
+                JOIN users u ON u.id = e.evaluatee_id
+                WHERE e.id IN (%s)
+                """.formatted(inClause))
+                .forEach(row -> evalContext.put((Long) row.get("id"), row));
+        }
+
+        Map<Long, Map<String, Object>> periodContext = new HashMap<>();
+        if (!periodIds.isEmpty()) {
+            String inClause = periodIds.stream().map(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(","));
+            jdbc.queryForList("""
+                SELECT id, type, start_date::text,
+                       EXTRACT(YEAR  FROM start_date)::int AS yr,
+                       EXTRACT(MONTH FROM start_date)::int AS mo,
+                       submission_deadline::text AS deadline
+                FROM evaluation_periods
+                WHERE id IN (%s)
+                """.formatted(inClause))
+                .forEach(row -> periodContext.put((Long) row.get("id"), row));
+        }
+
+        // 3. Build text for each event
+        List<DashboardEventResponse> result = new ArrayList<>();
+        for (RawEvent ev : rawEvents) {
+            String text = buildEventText(ev.action(), ev.entityId(), evalContext, periodContext);
+            if (text == null) continue;
+            result.add(new DashboardEventResponse(
+                ev.id(), ev.action(), text,
+                iconTypeForAction(ev.action()), ev.ts()
+            ));
+        }
+        return result;
+    }
+
+    private String buildEventText(String action, Long entityId,
+            Map<Long, Map<String, Object>> evalCtx,
+            Map<Long, Map<String, Object>> periodCtx) {
+        return switch (action) {
+            case "SUBMIT_EVALUATION" -> {
+                Map<String, Object> ctx = evalCtx.get(entityId);
+                if (ctx == null) yield null;
+                String label = buildPeriodLabel(
+                    (String) ctx.get("type"),
+                    ((Number) ctx.get("yr")).intValue(),
+                    ((Number) ctx.get("mo")).intValue());
+                Object score = ctx.get("score");
+                String scoreStr = score != null
+                    ? String.valueOf(((Number) score).intValue()) : "—";
+                yield "Оценка за " + label + " отправлена · " + scoreStr + "/100";
+            }
+            case "FILE_APPEAL" -> {
+                Map<String, Object> ctx = evalCtx.get(entityId);
+                if (ctx == null) yield null;
+                String name = (String) ctx.get("evaluatee_name");
+                yield (name != null ? name : "Сотрудник") + " подал апелляцию";
+            }
+            case "RESPOND_APPEAL" -> "Апелляция закрыта";
+            case "ACTIVATE_PERIOD" -> {
+                Map<String, Object> ctx = periodCtx.get(entityId);
+                if (ctx == null) yield "Открыт новый период";
+                String label = buildPeriodLabel(
+                    (String) ctx.get("type"),
+                    ((Number) ctx.get("yr")).intValue(),
+                    ((Number) ctx.get("mo")).intValue());
+                String deadline = ctx.get("deadline") != null
+                    ? ctx.get("deadline").toString().substring(0, 10) : "?";
+                yield "Открыт период " + label + " · дедлайн " + deadline;
+            }
+            case "CLOSE_PERIOD" -> {
+                Map<String, Object> ctx = periodCtx.get(entityId);
+                if (ctx == null) yield "Период закрыт";
+                String label = buildPeriodLabel(
+                    (String) ctx.get("type"),
+                    ((Number) ctx.get("yr")).intValue(),
+                    ((Number) ctx.get("mo")).intValue());
+                yield "Период " + label + " завершён";
+            }
+            default -> null;
+        };
     }
 
     @Cacheable(value = "departmentRanking", key = "#orgUnitId + '_' + #periodId")
