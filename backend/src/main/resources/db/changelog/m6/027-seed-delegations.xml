@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="027-seed-delegations" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO evaluator_delegations
+              (id, evaluatee_id, original_evaluator_id, delegated_to_id, valid_from, valid_to, reason, created_by, created_at, is_active) VALUES
+              (1, 12, 5,  3, '2026-04-15', '2026-04-25', 'Отпуск руководителя',  1, '2026-04-10 10:00:00', true),
+              (2, 19, 10, 7, '2026-05-08', '2026-05-20', 'Командировка',         1, '2026-05-05 10:00:00', true);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
