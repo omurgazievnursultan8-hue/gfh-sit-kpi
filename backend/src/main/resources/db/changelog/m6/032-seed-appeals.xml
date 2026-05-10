@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="032-seed-appeals" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO appeals
+              (id, evaluation_id, appellant_id, reason, status, response, responded_by, deadline, created_at, resolved_at) VALUES
+              -- Q1 closed appeals
+              (1, 14, 16, 'Не учтены результаты по проекту X.', 'UPHELD',     'Доводы приняты, оценка скорректирована.', 6, '2026-04-08 18:00:00', '2026-04-04 09:00:00', '2026-04-07 12:00:00'),
+              (2, 21, 23, 'Прошу пересмотреть оценку по дисциплине.', 'UPHELD', 'Замечания справедливы, оценка повышена.', 11, '2026-04-08 18:00:00', '2026-04-04 09:30:00', '2026-04-07 14:00:00'),
+              (3, 26, 28, 'Считаю оценку заниженной.', 'OVERTURNED', 'Доводы недостаточны для пересмотра.', 9, '2026-04-08 18:00:00', '2026-04-04 10:00:00', '2026-04-08 09:00:00'),
+              -- Q2 pending appeals
+              (4, 52, 27, 'Не учтена работа в команде по аудиту.',          'PENDING', NULL, NULL, '2026-05-15 18:00:00', '2026-05-09 09:00:00', NULL),
+              (5, 53, 28, 'Прошу обосновать оценку коммуникации.',          'PENDING', NULL, NULL, '2026-05-15 18:00:00', '2026-05-09 10:00:00', NULL),
+              (6, 54, 29, 'Считаю оценку по инициативности заниженной.',    'PENDING', NULL, NULL, '2026-05-15 18:00:00', '2026-05-09 10:30:00', NULL);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
