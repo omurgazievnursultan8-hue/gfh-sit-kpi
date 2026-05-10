@@ -67,7 +67,8 @@ public class AuthPasswordController {
     @PostMapping("/admin-reset/{userId}")
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> adminReset(@PathVariable Long userId) {
-        userService.changePassword(userId, null, "TempReset1!");
+        String tempPwd = "Temp" + java.util.UUID.randomUUID().toString().substring(0, 8) + "1!";
+        userService.changePassword(userId, null, tempPwd);
         return ResponseEntity.ok().build();
     }
 }
