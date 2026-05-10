@@ -18,6 +18,11 @@ public interface AppealRepository extends JpaRepository<Appeal, Long> {
 
     @Query("SELECT a FROM Appeal a WHERE a.evaluationId IN " +
            "(SELECT e.id FROM Evaluation e WHERE e.evaluator.id = :evaluatorId) " +
-           "AND a.status = kg.gfh.kpi.entity.Appeal.AppealStatus.PENDING")
-    List<Appeal> findPendingByEvaluatorId(@Param("evaluatorId") Long evaluatorId);
+           "AND a.status = :status")
+    List<Appeal> findPendingByEvaluatorId(@Param("evaluatorId") Long evaluatorId,
+                                          @Param("status") AppealStatus status);
+
+    default List<Appeal> findPendingByEvaluatorId(Long evaluatorId) {
+        return findPendingByEvaluatorId(evaluatorId, AppealStatus.PENDING);
+    }
 }
