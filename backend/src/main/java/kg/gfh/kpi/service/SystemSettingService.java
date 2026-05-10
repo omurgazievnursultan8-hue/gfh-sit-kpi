@@ -4,6 +4,8 @@ import kg.gfh.kpi.entity.SystemSetting;
 import kg.gfh.kpi.exception.ApiException;
 import kg.gfh.kpi.repository.SystemSettingRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,10 +28,12 @@ public class SystemSettingService {
                 "Настройка не найдена: " + key, "Жөндөмө табылган жок: " + key));
     }
 
+    @Cacheable(value = "systemSettings", key = "#key")
     public String getValueOrDefault(String key, String defaultValue) {
         return repo.findById(key).map(SystemSetting::getValue).orElse(defaultValue);
     }
 
+    @CacheEvict(value = "systemSettings", key = "#key")
     @Transactional
     public SystemSetting update(String key, String value) {
         SystemSetting s = repo.findById(key)
