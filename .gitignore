@@ -1,0 +1,8 @@
+.env
+*.env.local
+logs/
+uploads/
+target/
+node_modules/
+frontend/dist/
+.worktrees/
