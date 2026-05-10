@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="034-bump-sequences" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            SELECT setval(pg_get_serial_sequence('users',                    'id'), (SELECT COALESCE(MAX(id), 1) FROM users));
+            SELECT setval(pg_get_serial_sequence('org_units',                'id'), (SELECT COALESCE(MAX(id), 1) FROM org_units));
+            SELECT setval(pg_get_serial_sequence('criteria',                 'id'), (SELECT COALESCE(MAX(id), 1) FROM criteria));
+            SELECT setval(pg_get_serial_sequence('evaluation_periods',       'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_periods));
+            SELECT setval(pg_get_serial_sequence('evaluations',              'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluations));
+            SELECT setval(pg_get_serial_sequence('evaluation_scores',        'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_scores));
+            SELECT setval(pg_get_serial_sequence('evaluation_score_history', 'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_score_history));
+            SELECT setval(pg_get_serial_sequence('appeals',                  'id'), (SELECT COALESCE(MAX(id), 1) FROM appeals));
+            SELECT setval(pg_get_serial_sequence('evaluation_reactions',     'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_reactions));
+            SELECT setval(pg_get_serial_sequence('evaluation_files',         'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_files));
+            SELECT setval(pg_get_serial_sequence('evaluator_delegations',    'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluator_delegations));
+            SELECT setval(pg_get_serial_sequence('production_calendar',      'id'), (SELECT COALESCE(MAX(id), 1) FROM production_calendar));
+        </sql>
+    </changeSet>
+</databaseChangeLog>
