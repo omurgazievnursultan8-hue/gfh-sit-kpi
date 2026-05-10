@@ -375,6 +375,7 @@ public class AnalyticsService {
                     SELECT e.id FROM evaluations e WHERE e.evaluatee_id = ?
                 ))
                 OR (al.action = 'ACTIVATE_PERIOD')
+                OR (al.action = 'CLOSE_PERIOD')
             )
             AND al.action IN (
                 'SUBMIT_EVALUATION','FILE_APPEAL','RESPOND_APPEAL',

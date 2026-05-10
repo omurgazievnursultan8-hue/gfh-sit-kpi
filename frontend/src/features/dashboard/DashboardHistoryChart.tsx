@@ -133,7 +133,7 @@ export function DashboardHistoryChart({ history }: Props) {
           <BarChart data={chartData} barGap={3} barCategoryGap="25%">
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#6b7280', fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-            <YAxis domain={[50, 100]} ticks={[55, 70, 85, 100]} tick={{ fontSize: 10, fill: '#6b7280', fontFamily: 'monospace' }} axisLine={false} tickLine={false} width={28} />
+            <YAxis domain={[0, 100]} ticks={[55, 70, 85, 100]} tick={{ fontSize: 10, fill: '#6b7280', fontFamily: 'monospace' }} axisLine={false} tickLine={false} width={28} />
             <Tooltip
               contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }}
               labelStyle={{ fontWeight: 600 }}
