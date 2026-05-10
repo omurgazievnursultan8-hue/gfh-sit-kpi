@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="014-add-criteria-type-to-score-history" author="gfh">
+        <!-- Denormalized for query performance — avoids JOIN on criteria table per rating computation -->
+        <addColumn tableName="evaluation_score_history">
+            <column name="criteria_type" type="VARCHAR(20)" defaultValue="POSITIVE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <sql>ALTER TABLE evaluation_score_history ADD CONSTRAINT chk_score_history_criteria_type CHECK (criteria_type IN ('POSITIVE', 'ANTI_BONUS'));</sql>
+
+        <createIndex tableName="evaluation_score_history" indexName="idx_score_history_eval_type">
+            <column name="evaluation_id"/>
+            <column name="criteria_type"/>
+        </createIndex>
+
+        <rollback>
+            <dropColumn tableName="evaluation_score_history" columnName="criteria_type"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

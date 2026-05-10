@@ -19,4 +19,5 @@
     <include file="db/changelog/m2/011-create-system-settings.xml"/>
     <include file="db/changelog/m2/012-create-production-calendar.xml"/>
     <include file="db/changelog/m2/013-create-score-history.xml"/>
+    <include file="db/changelog/m2/014-add-criteria-type-to-score-history.xml"/>
 </databaseChangeLog>
