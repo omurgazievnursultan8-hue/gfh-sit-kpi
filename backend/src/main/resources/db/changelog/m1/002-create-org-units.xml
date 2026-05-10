@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="002-create-org-units" author="gfh">
+        <createTable tableName="org_units">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_kg" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parent_id" type="BIGINT"/>
+            <column name="head_user_id" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addCheckConstraint tableName="org_units"
+            constraintName="chk_org_unit_type"
+            constraintBody="type IN ('BLOCK','DEPARTMENT','UNIT')"/>
+
+        <createIndex tableName="org_units" indexName="idx_org_units_parent_id">
+            <column name="parent_id"/>
+        </createIndex>
+        <createIndex tableName="org_units" indexName="idx_org_units_head_user_id">
+            <column name="head_user_id"/>
+        </createIndex>
+
+        <addForeignKeyConstraint
+            baseTableName="users" baseColumnNames="unit_id"
+            referencedTableName="org_units" referencedColumnNames="id"
+            constraintName="fk_users_unit_id"/>
+        <addForeignKeyConstraint
+            baseTableName="users" baseColumnNames="manager_id"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_users_manager_id"/>
+        <addForeignKeyConstraint
+            baseTableName="org_units" baseColumnNames="parent_id"
+            referencedTableName="org_units" referencedColumnNames="id"
+            constraintName="fk_org_units_parent_id"/>
+        <addForeignKeyConstraint
+            baseTableName="org_units" baseColumnNames="head_user_id"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_org_units_head_user_id"/>
+    </changeSet>
+</databaseChangeLog>
