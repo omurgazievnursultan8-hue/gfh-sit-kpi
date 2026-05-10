@@ -1,0 +1,36 @@
+{
+  "login": {
+    "title": "Системага кирүү",
+    "email": "Email",
+    "password": "Сырсөз",
+    "submit": "Кирүү",
+    "error": "Email же сырсөз туура эмес",
+    "forgotPassword": "Сырсөзүңүздү унуттуңузбу?"
+  },
+  "nav": {
+    "dashboard": "Башкы бет",
+    "users": "Колдонуучулар",
+    "orgStructure": "Уюм структурасы",
+    "delegations": "Делегирлөөлөр",
+    "criteria": "Критерийлер",
+    "evaluations": "Баалоолор",
+    "analytics": "Аналитика",
+    "audit": "Аудит",
+    "settings": "Жөндөөлөр",
+    "calendar": "Календарь",
+    "logout": "Чыгуу"
+  },
+  "common": {
+    "save": "Сактоо",
+    "cancel": "Жокко чыгаруу",
+    "delete": "Жок кылуу",
+    "edit": "Өзгөртүү",
+    "create": "Түзүү",
+    "active": "Активдүү",
+    "inactive": "Активсиз",
+    "loading": "Жүктөлүүдө...",
+    "error": "Ката кетти",
+    "yes": "Ооба",
+    "no": "Жок"
+  }
+}

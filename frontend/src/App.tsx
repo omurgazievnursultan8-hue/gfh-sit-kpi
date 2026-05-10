@@ -11,6 +11,8 @@ import { UsersPage } from './features/users/UsersPage'
 import { OrgPage } from './features/org/OrgPage'
 import { DelegationsPage } from './features/org/DelegationsPage'
 import { CriteriaPage } from './features/criteria/CriteriaPage'
+import { SettingsPage } from './features/settings/SettingsPage'
+import { CalendarPage } from './features/calendar/CalendarPage'
 
 export default function App() {
   useIdleTimeout()
@@ -30,6 +32,8 @@ export default function App() {
           <CriteriaPage />
         </ProtectedRoute>
       } />
+      <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )

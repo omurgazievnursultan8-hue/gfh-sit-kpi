@@ -1,0 +1,36 @@
+{
+  "login": {
+    "title": "Вход в систему",
+    "email": "Email",
+    "password": "Пароль",
+    "submit": "Войти",
+    "error": "Неверный email или пароль",
+    "forgotPassword": "Забыли пароль?"
+  },
+  "nav": {
+    "dashboard": "Дашборд",
+    "users": "Пользователи",
+    "orgStructure": "Оргструктура",
+    "delegations": "Делегирования",
+    "criteria": "Критерии",
+    "evaluations": "Оценки",
+    "analytics": "Аналитика",
+    "audit": "Аудит",
+    "settings": "Настройки",
+    "calendar": "Календарь",
+    "logout": "Выйти"
+  },
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "loading": "Загрузка...",
+    "error": "Произошла ошибка",
+    "yes": "Да",
+    "no": "Нет"
+  }
+}
