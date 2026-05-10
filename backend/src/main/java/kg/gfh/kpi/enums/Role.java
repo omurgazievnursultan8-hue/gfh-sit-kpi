@@ -1,0 +1,5 @@
+package kg.gfh.kpi.enums;
+
+public enum Role {
+    ADMIN, CHAIRMAN, DEPUTY_CHAIRMAN, HEAD_OF_DEPARTMENT, HEAD_OF_DEPARTMENT_UNIT, EMPLOYEE
+}
