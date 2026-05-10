@@ -6,3 +6,6 @@ target/
 node_modules/
 frontend/dist/
 .worktrees/
+nginx/ssl/*.crt
+nginx/ssl/*.key
+backups/
