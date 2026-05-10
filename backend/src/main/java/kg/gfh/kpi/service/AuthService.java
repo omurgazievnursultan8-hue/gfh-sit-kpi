@@ -93,7 +93,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void refresh(String rawRefreshToken, HttpServletResponse response) {
+    public void refresh(String rawRefreshToken, String ip, String userAgent, HttpServletResponse response) {
         if (rawRefreshToken == null) {
             throw new ApiException("INVALID_REFRESH_TOKEN",
                     "Refresh token отсутствует", "Refresh token жок");
@@ -129,6 +129,8 @@ public class AuthService {
         newRt.setTokenHash(jwtService.hashToken(newRawRefresh));
         newRt.setIssuedAt(LocalDateTime.now());
         newRt.setExpiresAt(LocalDateTime.now().plusDays(jwtService.refreshTokenDays()));
+        newRt.setIpAddress(ip);
+        newRt.setUserAgent(userAgent);
         refreshTokenRepository.save(newRt);
 
         setTokenCookies(response, newAccess, newRawRefresh);

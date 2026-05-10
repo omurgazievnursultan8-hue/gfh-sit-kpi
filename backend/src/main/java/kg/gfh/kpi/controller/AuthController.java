@@ -33,7 +33,9 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<Void> refresh(HttpServletRequest request, HttpServletResponse response) {
         String rawRefresh = extractCookie(request, "refresh_token");
-        authService.refresh(rawRefresh, response);
+        String ip = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        authService.refresh(rawRefresh, ip, userAgent, response);
         return ResponseEntity.ok().build();
     }
 
