@@ -39,7 +39,7 @@ export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pen
   const score = analytics?.currentScore ?? null
   const deptAvg = analytics?.departmentAvg ?? null
   const history = analytics?.history ?? []
-  const firstName = analytics?.fullName?.split(' ')[1] ?? analytics?.fullName ?? ''
+  const firstName = analytics?.fullName?.split(' ').pop() ?? analytics?.fullName ?? ''
 
   const vsDepart = score !== null && deptAvg !== null
     ? Math.round((score - deptAvg) * 10) / 10

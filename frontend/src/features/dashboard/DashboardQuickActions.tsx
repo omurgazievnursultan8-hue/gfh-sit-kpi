@@ -116,7 +116,7 @@ export function DashboardQuickActions({ myTasks, pendingAppeals, activePeriod }:
     const sorted = [...pendingAppeals].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())
     const nearestDays = daysUntil(sorted[0].deadline)
     const urgency: Urgency = nearestDays <= 3 ? 'urgent' : 'warn'
-    const names = sorted.slice(0, 2).map(a => a.evaluateeName.split(' ').slice(0, 2).join(' '))
+    const names = sorted.slice(0, 2).map(a => a.evaluateeName)
     const nameStr = names.join(', ') + (pendingAppeals.length > 2 ? '…' : '')
 
     cards.push({
