@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -58,6 +60,18 @@ public class UserController {
     public ResponseEntity<Void> reactivateUser(@PathVariable Long id) {
         userService.reactivateUser(id);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/subordinates")
+    @PreAuthorize("hasAnyRole('DEPUTY_CHAIRMAN','HEAD_OF_DEPARTMENT','HEAD_OF_DEPARTMENT_UNIT')")
+    public ResponseEntity<List<UserResponse>> getSubordinates(
+            org.springframework.security.core.Authentication auth) {
+        Long managerId = extractManagerId(auth);
+        return ResponseEntity.ok(userService.getDirectSubordinates(managerId));
+    }
+
+    private Long extractManagerId(org.springframework.security.core.Authentication auth) {
+        return userRepository.findByEmail(auth.getName()).orElseThrow().getId();
     }
 
     @PostMapping("/password/change")

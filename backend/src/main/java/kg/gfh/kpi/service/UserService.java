@@ -110,6 +110,11 @@ public class UserService {
         return UserResponse.from(findOrThrow(id));
     }
 
+    public List<UserResponse> getDirectSubordinates(Long managerId) {
+        return userRepository.findByManagerIdAndIsActiveTrue(managerId)
+                .stream().map(UserResponse::from).collect(java.util.stream.Collectors.toList());
+    }
+
     private User findOrThrow(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ApiException("USER_NOT_FOUND",
