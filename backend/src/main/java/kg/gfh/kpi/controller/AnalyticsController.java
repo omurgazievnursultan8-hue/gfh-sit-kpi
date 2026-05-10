@@ -2,6 +2,7 @@ package kg.gfh.kpi.controller;
 
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse;
 import kg.gfh.kpi.dto.ScorecardResponse;
+import kg.gfh.kpi.dto.TeamResponse;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.AnalyticsService;
 import kg.gfh.kpi.service.HierarchicalAnalyticsService;
@@ -33,6 +34,12 @@ public class AnalyticsController {
         Long userId = resolveUserId(auth);
         ScorecardResponse result = analyticsService.getPersonalScorecard(userId);
         return result == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/team")
+    public TeamResponse team(Authentication auth) {
+        Long userId = resolveUserId(auth);
+        return analyticsService.getTeamAttention(userId);
     }
 
     @GetMapping("/hierarchical")
