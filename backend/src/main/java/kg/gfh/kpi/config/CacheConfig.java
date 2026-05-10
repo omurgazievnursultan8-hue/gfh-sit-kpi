@@ -21,7 +21,8 @@ public class CacheConfig {
             "systemSettings",
             "personalAnalytics",
             "departmentRanking",
-            "hierarchicalAnalytics"
+            "hierarchicalAnalytics",
+            "antiBonusAnalytics"
         );
         manager.setCaffeine(Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.MINUTES)
