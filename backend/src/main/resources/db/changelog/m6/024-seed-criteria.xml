@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="024-seed-criteria" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO criteria (id, name_ru, name_kg, type, weight, org_unit_id, is_auto_calculated, is_frozen, is_active, created_at, updated_at) VALUES
+              (1,  'Выполнение плана',                  'Планды аткаруу',                          'POSITIVE',   20.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (2,  'KPI: Доход / результативность',     'KPI: Кирешелүүлүк',                       'POSITIVE',   15.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (3,  'Достижение целей',                  'Максаттарга жетүү',                       'POSITIVE',   15.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (4,  'Сдача проектов',                    'Долбоорлорду тапшыруу',                   'POSITIVE',   10.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (5,  'Профессионализм',                   'Профессионализм',                         'POSITIVE',   10.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (6,  'Работа в команде',                  'Командада иштөө',                         'POSITIVE',   10.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (7,  'Инициативность',                    'Демилгечилик',                            'POSITIVE',   10.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (8,  'Коммуникация',                      'Байланыш',                                'POSITIVE',   10.00, NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (9,  'Дисциплинарные нарушения',          'Тартиптик бузуулар',                      'ANTI_BONUS', 5.00,  NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00'),
+              (10, 'Несоблюдение регламентов',          'Регламенттерди сактабоо',                 'ANTI_BONUS', 5.00,  NULL, false, false, true, '2026-01-01 00:00:00', '2026-01-01 00:00:00');
+        </sql>
+    </changeSet>
+</databaseChangeLog>
