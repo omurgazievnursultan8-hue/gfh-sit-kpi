@@ -41,6 +41,7 @@ public class OrgUnitService {
         }
         unit.setNameRu(req.nameRu());
         unit.setNameKg(req.nameKg());
+        unit.setType(req.type());
         unit.setParentId(req.parentId());
         unit.setHeadUserId(req.headUserId());
         return OrgUnitResponse.from(orgUnitRepository.save(unit));
@@ -49,6 +50,12 @@ public class OrgUnitService {
     @Transactional
     public void deleteUnit(Long id) {
         findOrThrow(id);
+        List<OrgUnit> children = orgUnitRepository.findByParentId(id);
+        if (!children.isEmpty()) {
+            throw new ApiException("ORG_UNIT_HAS_CHILDREN",
+                    "Нельзя удалить подразделение с дочерними подразделениями",
+                    "Бала бөлүмдөрү бар бөлүмдү жок кылуу мүмкүн эмес");
+        }
         orgUnitRepository.deleteById(id);
     }
 
