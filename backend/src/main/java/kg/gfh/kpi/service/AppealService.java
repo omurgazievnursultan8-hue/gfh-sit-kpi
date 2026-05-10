@@ -119,6 +119,7 @@ public class AppealService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<AppealPendingResponse> getPendingAppealsForEvaluator(Long evaluatorId) {
         return appealRepository.findPendingByEvaluatorId(evaluatorId).stream()
             .map(a -> {

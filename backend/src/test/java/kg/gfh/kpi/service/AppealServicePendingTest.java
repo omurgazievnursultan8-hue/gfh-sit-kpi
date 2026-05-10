@@ -7,7 +7,6 @@ import kg.gfh.kpi.entity.Evaluation;
 import kg.gfh.kpi.entity.User;
 import kg.gfh.kpi.repository.AppealRepository;
 import kg.gfh.kpi.repository.EvaluationRepository;
-import kg.gfh.kpi.repository.EvaluationScoreRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,7 +25,6 @@ class AppealServicePendingTest {
 
     @Mock AppealRepository appealRepository;
     @Mock EvaluationRepository evaluationRepository;
-    @Mock EvaluationScoreRepository scoreRepository;
     @Mock SystemSettingService settingService;
     @Mock NotificationService notificationService;
     @InjectMocks AppealService appealService;
