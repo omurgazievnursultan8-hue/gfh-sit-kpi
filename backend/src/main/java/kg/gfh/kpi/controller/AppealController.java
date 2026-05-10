@@ -1,5 +1,6 @@
 package kg.gfh.kpi.controller;
 
+import kg.gfh.kpi.dto.AppealPendingResponse;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.AppealService;
@@ -8,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,6 +37,12 @@ public class AppealController {
         AppealStatus decision = AppealStatus.valueOf(body.get("decision"));
         String response = body.get("response");
         return appealService.respond(id, userId, decision, response);
+    }
+
+    @GetMapping("/pending")
+    public List<AppealPendingResponse> getPendingAppeals(Authentication auth) {
+        Long userId = resolveUserId(auth);
+        return appealService.getPendingAppealsForEvaluator(userId);
     }
 
     private Long resolveUserId(Authentication auth) {
