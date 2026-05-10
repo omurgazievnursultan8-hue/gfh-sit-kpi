@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="026-seed-system-settings-notification" author="gfh" context="dev" runOnChange="false">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT count(*) FROM system_settings WHERE key='notification_enabled'</sqlCheck>
+        </preConditions>
+        <insert tableName="system_settings">
+            <column name="key" value="notification_enabled"/>
+            <column name="value" value="true"/>
+            <column name="description" value="Master toggle for in-app + websocket notifications"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="026-seed-system-settings-default-period" author="gfh" context="dev" runOnChange="false">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT count(*) FROM system_settings WHERE key='default_period_type'</sqlCheck>
+        </preConditions>
+        <insert tableName="system_settings">
+            <column name="key" value="default_period_type"/>
+            <column name="value" value="QUARTERLY"/>
+            <column name="description" value="Default EvaluationPeriod.type for auto-creation"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>
