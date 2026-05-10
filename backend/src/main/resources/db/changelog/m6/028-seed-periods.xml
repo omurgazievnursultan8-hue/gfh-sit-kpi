@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="028-seed-periods" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO evaluation_periods
+              (id, type, start_date, end_date, submission_deadline, status, auto_created, created_by, created_at, closed_at) VALUES
+              (1, 'QUARTERLY', '2026-01-01', '2026-03-31', '2026-04-05 18:00:00', 'CLOSED', false, 1, '2025-12-15 10:00:00', '2026-04-10 10:00:00'),
+              (2, 'QUARTERLY', '2026-04-01', '2026-06-30', '2026-07-05 18:00:00', 'ACTIVE', false, 1, '2026-03-20 10:00:00', NULL);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
