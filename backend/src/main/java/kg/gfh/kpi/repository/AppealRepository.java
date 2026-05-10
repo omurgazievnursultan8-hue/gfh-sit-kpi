@@ -12,4 +12,5 @@ public interface AppealRepository extends JpaRepository<Appeal, Long> {
     Optional<Appeal> findByEvaluationId(Long evaluationId);
     boolean existsByEvaluationId(Long evaluationId);
     List<Appeal> findByStatusAndDeadlineBefore(AppealStatus status, LocalDateTime now);
+    long countByStatus(AppealStatus status);
 }

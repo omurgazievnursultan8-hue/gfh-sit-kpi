@@ -45,6 +45,8 @@ logging:
 
 app:
   upload-dir: ${UPLOAD_DIR:/app/uploads}
+  log:
+    error-file: ${LOG_PATH:/app/logs}/error.log
 
 springdoc:
   swagger-ui:

@@ -11,4 +11,5 @@ import java.util.List;
 public interface EvaluationPeriodRepository extends JpaRepository<EvaluationPeriod, Long> {
     List<EvaluationPeriod> findByStatus(PeriodStatus status);
     Page<EvaluationPeriod> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    long countByStatus(PeriodStatus status);
 }

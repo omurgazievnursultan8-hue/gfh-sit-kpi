@@ -28,4 +28,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         @Param("to") LocalDateTime to,
         Pageable pageable
     );
+
+    long countByTimestampAfter(LocalDateTime since);
 }

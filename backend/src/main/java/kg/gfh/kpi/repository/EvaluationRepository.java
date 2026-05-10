@@ -28,4 +28,5 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
     );
 
     long countByPeriodIdAndStatus(Long periodId, EvaluationStatus status);
+    long countByStatus(EvaluationStatus status);
 }
