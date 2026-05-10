@@ -20,6 +20,7 @@ import { MyEvaluationsPage } from './features/evaluations/MyEvaluationsPage'
 import { EvaluationDetailPage } from './features/evaluations/EvaluationDetailPage'
 import { AppealPage } from './features/appeals/AppealPage'
 import { NotificationsPage } from './features/notifications/NotificationsPage'
+import { ManagerTodoPage } from './features/periods/ManagerTodoPage'
 
 export default function App() {
   useIdleTimeout()
@@ -54,6 +55,11 @@ export default function App() {
       <Route path="/my-evaluations/:id" element={<ProtectedRoute><EvaluationDetailPage /></ProtectedRoute>} />
       <Route path="/appeals/new" element={<ProtectedRoute><AppealPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+      <Route path="/manager-tasks" element={
+        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+          <ManagerTodoPage />
+        </ProtectedRoute>
+      } />
       <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
