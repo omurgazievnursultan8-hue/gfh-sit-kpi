@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/gfh}
+    username: ${SPRING_DATASOURCE_USERNAME:gfh}
+    password: ${SPRING_DATASOURCE_PASSWORD:gfh}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+jwt:
+  secret: ${JWT_SECRET:changeme-at-least-32-chars-long!!}
+  access-token-minutes: 15
+  refresh-token-days: 7
