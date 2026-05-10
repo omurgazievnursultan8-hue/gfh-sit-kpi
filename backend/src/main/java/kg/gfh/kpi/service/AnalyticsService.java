@@ -1,6 +1,7 @@
 package kg.gfh.kpi.service;
 
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse;
+import kg.gfh.kpi.dto.TeamResponse;
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse.PeriodScore;
 import kg.gfh.kpi.dto.ScorecardResponse;
 import kg.gfh.kpi.entity.User;
@@ -225,6 +226,127 @@ public class AnalyticsService {
             totalScore - GOAL_SCORE, vsPrevPeriod, prevPeriodLabel, rank,
             antiBonusTotal, positiveCriteria, antiBonuses
         );
+    }
+
+    private String computeInitials(String fullName) {
+        if (fullName == null || fullName.isBlank()) return "?";
+        String[] parts = fullName.trim().split("\\s+");
+        if (parts.length == 1) return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        return (parts[0].charAt(0) + "" + parts[1].charAt(0)).toUpperCase();
+    }
+
+    public TeamResponse getTeamAttention(Long managerId) {
+        // 1. Find direct reports
+        List<Map<String, Object>> reports = jdbc.queryForList("""
+            SELECT id, full_name, COALESCE(position, '') AS position
+            FROM users
+            WHERE manager_id = ? AND is_active = true
+            """, managerId);
+
+        if (reports.isEmpty()) {
+            return new TeamResponse(List.of(), null, 0, null);
+        }
+
+        // 2. Find active period
+        List<Long> activePeriodIds = jdbc.query("""
+            SELECT id FROM evaluation_periods WHERE status = 'ACTIVE' LIMIT 1
+            """, (rs, i) -> rs.getLong("id"));
+        Long activePeriodId = activePeriodIds.isEmpty() ? null : activePeriodIds.get(0);
+
+        // 3. Build subordinate id list for batch queries
+        List<Long> subIds = reports.stream()
+            .map(r -> (Long) r.get("id"))
+            .toList();
+
+        // 4. Get latest evaluation per subordinate in active period (if active period exists)
+        Map<Long, Map<String, Object>> activeEvals = new HashMap<>();
+        if (activePeriodId != null) {
+            String inClause = subIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+            jdbc.queryForList("""
+                SELECT DISTINCT ON (e.evaluatee_id)
+                       e.evaluatee_id, e.status AS eval_status,
+                       e.final_score::float AS score,
+                       ep.submission_deadline::text AS deadline
+                FROM evaluations e
+                JOIN evaluation_periods ep ON ep.id = e.period_id
+                WHERE e.evaluatee_id IN (%s)
+                  AND e.period_id = %d
+                ORDER BY e.evaluatee_id, e.updated_at DESC
+                """.formatted(inClause, activePeriodId))
+                .forEach(row -> activeEvals.put((Long) row.get("evaluatee_id"), row));
+        }
+
+        // 5. Get previous period scores for delta
+        Map<Long, Double> prevScores = new HashMap<>();
+        if (activePeriodId != null) {
+            String inClause = subIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+            jdbc.queryForList("""
+                SELECT DISTINCT ON (e.evaluatee_id)
+                       e.evaluatee_id, e.final_score::float AS score
+                FROM evaluations e
+                JOIN evaluation_periods ep ON ep.id = e.period_id
+                WHERE e.evaluatee_id IN (%s)
+                  AND e.period_id != %d
+                  AND e.final_score IS NOT NULL
+                  AND e.status IN ('SUBMITTED','ACKNOWLEDGED','APPEALED','CLOSED')
+                ORDER BY e.evaluatee_id, ep.start_date DESC
+                """.formatted(inClause, activePeriodId))
+                .forEach(row -> prevScores.put((Long) row.get("evaluatee_id"), (Double) row.get("score")));
+        }
+
+        // 6. Classify each report
+        List<TeamResponse.TeamMemberDto> attentionList = new ArrayList<>();
+        TeamResponse.TeamMemberDto best = null;
+        Double bestScore = null;
+        List<Double> scoreList = new ArrayList<>();
+
+        for (Map<String, Object> report : reports) {
+            Long uid = (Long) report.get("id");
+            String fullName = (String) report.get("full_name");
+            String position = (String) report.get("position");
+            String initials = computeInitials(fullName);
+            Map<String, Object> eval = activeEvals.get(uid);
+
+            Double score = eval != null ? (Double) eval.get("score") : null;
+            if (score != null) scoreList.add(score);
+            Double prev = prevScores.get(uid);
+            Double delta = (score != null && prev != null) ? score - prev : null;
+
+            String status = null;
+            String reason = null;
+
+            if (eval != null && "APPEALED".equals(eval.get("eval_status"))) {
+                status = "appeal";
+                String deadline = eval.get("deadline") != null
+                    ? eval.get("deadline").toString().substring(0, 10) : "?";
+                reason = "Подал апелляцию · до " + deadline;
+            } else if (score != null && score < 60) {
+                status = "low";
+                reason = "Низкий балл < 60";
+            } else if (eval == null || "DRAFT".equals(eval.get("eval_status"))) {
+                status = "unevaluated";
+                reason = "Не оценён за текущий период";
+            }
+
+            if (status != null) {
+                attentionList.add(new TeamResponse.TeamMemberDto(
+                    uid, fullName, position, initials, score, delta, status, reason));
+            } else if (score != null && (bestScore == null || score > bestScore)) {
+                bestScore = score;
+                best = new TeamResponse.TeamMemberDto(
+                    uid, fullName, position, initials, score, delta, "best", "Лучший результат в команде");
+            }
+        }
+
+        // Sort attention: appeal first, then low, then unevaluated
+        attentionList.sort(java.util.Comparator.comparingInt(m ->
+            switch (m.status()) { case "appeal" -> 0; case "low" -> 1; default -> 2; }));
+
+        Double teamAvg = scoreList.isEmpty() ? null
+            : scoreList.stream().mapToDouble(Double::doubleValue).average().orElse(0);
+
+        return new TeamResponse(attentionList, best, reports.size(),
+            teamAvg != null ? Math.round(teamAvg * 10.0) / 10.0 : null);
     }
 
     @Cacheable(value = "departmentRanking", key = "#orgUnitId + '_' + #periodId")
