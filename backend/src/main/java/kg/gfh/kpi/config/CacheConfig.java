@@ -18,7 +18,10 @@ public class CacheConfig {
         CaffeineCacheManager manager = new CaffeineCacheManager(
             "productionCalendar",
             "autoAntiBonusRate",
-            "systemSettings"
+            "systemSettings",
+            "personalAnalytics",
+            "departmentRanking",
+            "hierarchicalAnalytics"
         );
         manager.setCaffeine(Caffeine.newBuilder()
             .expireAfterWrite(5, TimeUnit.MINUTES)
