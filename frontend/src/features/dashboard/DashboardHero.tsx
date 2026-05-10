@@ -26,9 +26,13 @@ function formatPeriodDate(dateStr: string): string {
 }
 
 function todayLine(): string {
-  return new Date().toLocaleDateString('ru-RU', {
+  const now = new Date()
+  const datePart = now.toLocaleDateString('ru-RU', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  return `${datePart} · ${hh}:${mm}`
 }
 
 export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pendingAppeals }: DashboardHeroProps) {
@@ -41,10 +45,25 @@ export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pen
     ? Math.round((score - deptAvg) * 10) / 10
     : null
 
-  const prevScore = history.length >= 2 ? history[history.length - 2].score : null
+  const prevPeriod = history.length >= 2 ? history[history.length - 2] : null
+  const prevScore = prevPeriod !== null ? prevPeriod.score : null
   const vsPrev = score !== null && prevScore !== null
     ? Math.round((score - prevScore) * 10) / 10
     : null
+
+  function prevPeriodLabel(p: typeof prevPeriod): string {
+    if (!p) return 'пред.'
+    if (p.periodType === 'QUARTERLY') {
+      const month = new Date(p.startDate).getMonth() // 0-based
+      const q = Math.floor(month / 3) + 1
+      return `Q${q}`
+    }
+    if (p.periodType === 'MONTHLY') {
+      const m = new Date(p.startDate).getMonth() + 1
+      return `M${m}`
+    }
+    return 'Год'
+  }
 
   const deadlineDays = activePeriod ? daysUntil(activePeriod.submissionDeadline) : null
   const periodName = activePeriod
@@ -99,7 +118,7 @@ export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pen
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span
-              className="inline-block rounded-full flex-shrink-0"
+              className="inline-block rounded-full flex-shrink-0 animate-pulse"
               style={{ width: 6, height: 6, background: 'var(--gold)' }}
             />
             <span
@@ -194,7 +213,7 @@ export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pen
                       className="font-mono"
                       style={{ fontSize: 10.5, color: vsPrev >= 0 ? '#9bdfb5' : '#d97f7f' }}
                     >
-                      vs пред.
+                      vs {prevPeriodLabel(prevPeriod)}
                     </span>
                   </>
                 ) : (

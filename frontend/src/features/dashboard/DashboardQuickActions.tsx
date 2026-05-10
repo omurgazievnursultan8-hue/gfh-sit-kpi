@@ -17,6 +17,18 @@ function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 }
 
+function derivePeriodName(period: { type: string; startDate: string }): string {
+  const date = new Date(period.startDate)
+  if (period.type === 'QUARTERLY') {
+    const q = Math.floor(date.getMonth() / 3) + 1
+    return `Q${q} ${date.getFullYear()}`
+  }
+  if (period.type === 'MONTHLY') {
+    return date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
+  }
+  return `${date.getFullYear()}`
+}
+
 type Urgency = 'urgent' | 'warn' | 'info' | 'neutral'
 
 function urgencyStyle(u: Urgency): { stripe: string; tag: string; tagText: string; tagBorder: string } {
@@ -91,6 +103,7 @@ export function DashboardQuickActions({ myTasks, pendingAppeals, activePeriod }:
         footer: (
           <span style={{ fontSize: 11.5, color: 'var(--ink-faint)', lineHeight: 1.5 }}>
             Финал до <strong style={{ color: 'var(--ink-soft)' }}>{formatDate(activePeriod.submissionDeadline)}</strong>
+            {' · '}{derivePeriodName(activePeriod)}
           </span>
         ),
         onClick: () => navigate('/my-tasks'),
@@ -187,7 +200,7 @@ export function DashboardQuickActions({ myTasks, pendingAppeals, activePeriod }:
       footer: (
         <span style={{ fontSize: 11.5, color: 'var(--ink-faint)', lineHeight: 1.5 }}>
           {total > 0
-            ? <><strong style={{ color: 'var(--ink-soft)' }}>{completed} из {total}</strong> оценено</>
+            ? <>Оценено <strong style={{ color: 'var(--ink-soft)' }}>{completed} из {total}</strong></>
             : 'Оценки ещё не начаты · период активен'}
         </span>
       ),
@@ -218,7 +231,7 @@ export function DashboardQuickActions({ myTasks, pendingAppeals, activePeriod }:
 
       <div
         className="grid gap-3"
-        style={{ gridTemplateColumns: `repeat(${cards.length}, 1fr)` }}
+        style={{ gridTemplateColumns: cards.length >= 3 ? `repeat(${cards.length}, 1fr)` : `repeat(${cards.length}, minmax(0, 340px))` }}
       >
         {cards.map(card => {
           const s = urgencyStyle(card.urgency)
