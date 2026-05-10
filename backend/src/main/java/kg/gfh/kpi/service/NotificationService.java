@@ -25,4 +25,6 @@ public class NotificationService {
     public void notifyAppealOverturned(Evaluation evaluation) {}
 
     public void notifyAppealAutoAgreed(Evaluation evaluation) {}
+
+    public void sendDeadlineReminders(EvaluationPeriod period) {}
 }

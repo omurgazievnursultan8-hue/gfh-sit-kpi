@@ -11,6 +11,13 @@ spring:
     open-in-view: false
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
+  quartz:
+    job-store-type: memory
+    auto-startup: true
+    scheduler-name: GfhKpiScheduler
+    properties:
+      org.quartz.scheduler.instanceName: GfhKpiScheduler
+      org.quartz.threadPool.threadCount: 4
 
 server:
   port: 8080
