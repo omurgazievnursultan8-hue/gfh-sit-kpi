@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="033-seed-reactions-files" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO evaluation_reactions (id, evaluation_id, reaction, comment, created_at) VALUES
+              (1, 1, 'AGREE', 'Согласен с оценкой.',    '2026-04-04 09:00:00'),
+              (2, 2, 'AGREE', NULL,                     '2026-04-04 09:10:00'),
+              (3, 3, 'AGREE', 'Замечания учту.',        '2026-04-04 09:15:00'),
+              (4, 4, 'AGREE', NULL,                     '2026-04-04 09:20:00'),
+              (5, 5, 'AGREE', 'Спасибо за обратную связь.', '2026-04-04 09:25:00');
+
+            INSERT INTO evaluation_files
+              (id, evaluation_id, uploaded_by, original_name, storage_path, mime_type, file_size, uploaded_at) VALUES
+              (1, 14, 16, 'appeal_evidence_1.pdf', '/seed/appeal-1.pdf', 'application/pdf', 12345, '2026-04-04 09:05:00'),
+              (2, 21, 23, 'appeal_evidence_2.pdf', '/seed/appeal-2.pdf', 'application/pdf', 12345, '2026-04-04 09:35:00'),
+              (3, 26, 28, 'appeal_evidence_3.pdf', '/seed/appeal-3.pdf', 'application/pdf', 12345, '2026-04-04 10:05:00');
+        </sql>
+    </changeSet>
+</databaseChangeLog>
