@@ -1,10 +1,12 @@
 package kg.gfh.kpi.controller;
 
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse;
+import kg.gfh.kpi.dto.ScorecardResponse;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.AnalyticsService;
 import kg.gfh.kpi.service.HierarchicalAnalyticsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +26,13 @@ public class AnalyticsController {
     public PersonalAnalyticsResponse personal(Authentication auth) {
         Long userId = resolveUserId(auth);
         return analyticsService.getPersonalAnalytics(userId);
+    }
+
+    @GetMapping("/personal/scorecard")
+    public ResponseEntity<ScorecardResponse> scorecard(Authentication auth) {
+        Long userId = resolveUserId(auth);
+        ScorecardResponse result = analyticsService.getPersonalScorecard(userId);
+        return result == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(result);
     }
 
     @GetMapping("/hierarchical")
