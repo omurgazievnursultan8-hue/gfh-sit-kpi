@@ -16,6 +16,7 @@ public record PersonalAnalyticsResponse(
         String periodType,
         String startDate,
         String endDate,
-        BigDecimal score
+        BigDecimal score,
+        BigDecimal departmentAvg
     ) {}
 }

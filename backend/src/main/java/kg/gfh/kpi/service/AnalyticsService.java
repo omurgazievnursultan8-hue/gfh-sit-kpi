@@ -27,7 +27,15 @@ public class AnalyticsService {
                 "Пользователь не найден", "Колдонуучу табылган жок"));
 
         List<PeriodScore> history = jdbc.query("""
-            SELECT e.period_id, ep.type, ep.start_date::text, ep.end_date::text, e.final_score
+            SELECT e.period_id, ep.type, ep.start_date::text, ep.end_date::text, e.final_score,
+                   (SELECT AVG(e2.final_score)
+                    FROM evaluations e2
+                    JOIN users u2 ON u2.id = e2.evaluatee_id
+                    JOIN users u1 ON u1.id = ? AND u1.org_unit_id = u2.org_unit_id
+                    WHERE e2.period_id = e.period_id
+                      AND e2.final_score IS NOT NULL
+                      AND e2.status IN ('SUBMITTED','ACKNOWLEDGED','APPEALED','CLOSED')
+                   ) AS dept_avg
             FROM evaluations e
             JOIN evaluation_periods ep ON ep.id = e.period_id
             WHERE e.evaluatee_id = ?
@@ -41,8 +49,9 @@ public class AnalyticsService {
                 rs.getString("type"),
                 rs.getString("start_date"),
                 rs.getString("end_date"),
-                rs.getBigDecimal("final_score")
-            ), userId);
+                rs.getBigDecimal("final_score"),
+                rs.getBigDecimal("dept_avg")
+            ), userId, userId);
 
         BigDecimal currentScore = history.isEmpty() ? null : history.get(0).score();
 
