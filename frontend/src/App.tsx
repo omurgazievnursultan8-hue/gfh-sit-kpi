@@ -23,6 +23,7 @@ import { NotificationsPage } from './features/notifications/NotificationsPage'
 import { ManagerTodoPage } from './features/periods/ManagerTodoPage'
 import { PersonalDashboardPage } from './features/analytics/PersonalDashboardPage'
 import { ManagerDashboardPage } from './features/analytics/ManagerDashboardPage'
+import { HierarchicalAnalyticsPage } from './features/analytics/HierarchicalAnalyticsPage'
 
 export default function App() {
   useIdleTimeout()
@@ -58,6 +59,11 @@ export default function App() {
       <Route path="/appeals/new" element={<ProtectedRoute><AppealPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/my-kpi" element={<ProtectedRoute><PersonalDashboardPage /></ProtectedRoute>} />
+      <Route path="/analytics/hierarchical" element={
+        <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN']}>
+          <HierarchicalAnalyticsPage />
+        </ProtectedRoute>
+      } />
       <Route path="/manager-dashboard" element={
         <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
           <ManagerDashboardPage />
