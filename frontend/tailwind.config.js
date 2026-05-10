@@ -9,6 +9,10 @@ export default {
           foreground: '#ffffff',
         },
       },
+      fontFamily: {
+        display: ['"Source Serif Pro"', 'Georgia', 'serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+      },
     },
   },
   plugins: [],
