@@ -3,6 +3,7 @@ package kg.gfh.kpi.controller;
 import jakarta.validation.Valid;
 import kg.gfh.kpi.dto.*;
 import kg.gfh.kpi.repository.UserRepository;
+import kg.gfh.kpi.service.EvaluatorResolver;
 import kg.gfh.kpi.service.UserService;
 import kg.gfh.kpi.exception.ApiException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
+    private final EvaluatorResolver evaluatorResolver;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -72,6 +74,13 @@ public class UserController {
 
     private Long extractManagerId(org.springframework.security.core.Authentication auth) {
         return userRepository.findByEmail(auth.getName()).orElseThrow().getId();
+    }
+
+    @GetMapping("/{id}/evaluator")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Long> getEvaluator(@PathVariable Long id) {
+        Long evaluatorId = evaluatorResolver.resolve(id, java.time.LocalDate.now());
+        return ResponseEntity.ok(evaluatorId);
     }
 
     @PostMapping("/password/change")
