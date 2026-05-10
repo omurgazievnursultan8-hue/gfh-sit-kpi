@@ -36,6 +36,9 @@ logging:
     root: INFO
     kg.gfh.kpi: INFO
 
+app:
+  upload-dir: ${UPLOAD_DIR:/app/uploads}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
