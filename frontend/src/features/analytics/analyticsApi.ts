@@ -6,6 +6,7 @@ export interface PeriodScore {
   startDate: string
   endDate: string
   score: number
+  departmentAvg: number | null
 }
 
 export interface PersonalAnalytics {
@@ -15,6 +16,57 @@ export interface PersonalAnalytics {
   currentScore: number | null
   departmentAvg: number | null
   companyAvg: number | null
+}
+
+export interface CriteriaScore {
+  criteriaId: number
+  nameRu: string
+  nameKg: string
+  weight: number
+  score: number
+  maxScore: number
+  delta: number | null
+  levelLabel: string
+}
+
+export interface ScorecardResponse {
+  periodId: number
+  periodLabel: string
+  totalScore: number
+  grade: string
+  vsGoal: number
+  vsPrevPeriod: number | null
+  prevPeriodLabel: string | null
+  rank: number | null
+  antiBonusTotal: number
+  criteria: CriteriaScore[]
+  antiBonuses: CriteriaScore[]
+}
+
+export interface TeamMemberDto {
+  userId: number
+  fullName: string
+  position: string
+  initials: string
+  latestScore: number | null
+  scoreDelta: number | null
+  status: 'appeal' | 'low' | 'unevaluated' | 'best'
+  reasonLabel: string
+}
+
+export interface TeamResponse {
+  attention: TeamMemberDto[]
+  bestPerformer: TeamMemberDto | null
+  totalCount: number
+  teamAvg: number | null
+}
+
+export interface DashboardEvent {
+  id: number
+  action: string
+  text: string
+  iconType: 'success' | 'warn' | 'info'
+  timestamp: string
 }
 
 export interface HierarchicalNode {
@@ -54,9 +106,23 @@ export interface AntiBonusAnalytics {
 }
 
 export const analyticsApi = {
-  personal: () => api.get<PersonalAnalytics>('/analytics/personal').then(r => r.data),
+  personal: () =>
+    api.get<PersonalAnalytics>('/analytics/personal').then(r => r.data),
+
+  scorecard: () =>
+    api.get<ScorecardResponse>('/analytics/personal/scorecard')
+      .then(r => r.status === 204 ? null : r.data)
+      .catch(() => null),
+
+  team: () =>
+    api.get<TeamResponse>('/analytics/team').then(r => r.data),
+
+  events: () =>
+    api.get<DashboardEvent[]>('/analytics/events').then(r => r.data),
+
   hierarchical: (params?: { orgUnitId?: number; periodType?: string; startDate?: string; endDate?: string }) =>
     api.get<HierarchicalNode[]>('/analytics/hierarchical', { params }).then(r => r.data),
+
   antiBonus: (params?: { orgUnitId?: number; periodType?: string }) =>
     api.get<AntiBonusAnalytics>('/analytics/anti-bonus', { params }).then(r => r.data),
 }
