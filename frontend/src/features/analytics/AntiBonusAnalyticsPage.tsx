@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import { analyticsApi, AntiBonusAnalytics } from './analyticsApi'
 import api from '../../app/api'
+import { ExportButtons } from '../../components/ExportButtons'
 
 interface OrgUnitOption { id: number; nameRu: string; children?: OrgUnitOption[] }
 
@@ -50,7 +51,10 @@ export function AntiBonusAnalyticsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Аналитика антибонусов</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Аналитика антибонусов</h1>
+        <ExportButtons type="period" />
+      </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex gap-4 items-end">
         <div>
@@ -85,7 +89,7 @@ export function AntiBonusAnalyticsPage() {
             {data.top10.length === 0 ? (
               <div className="py-6 text-center text-gray-400 text-sm">Нет данных</div>
             ) : (
-              <table className="min-w-full divide-y divide-gray-100">
+              <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-100">
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
@@ -108,7 +112,7 @@ export function AntiBonusAnalyticsPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             )}
           </div>
 

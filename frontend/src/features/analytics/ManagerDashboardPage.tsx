@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Trophy, TrendingDown, Users } from 'lucide-react'
 import { evaluationsApi, Evaluation } from '../evaluations/evaluationsApi'
+import { ExportButtons } from '../../components/ExportButtons'
 
 interface SubordinateRow {
   userId: number
@@ -60,7 +61,10 @@ export function ManagerDashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Операционный дашборд</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Операционный дашборд</h1>
+        <ExportButtons type="period" />
+      </div>
 
       {/* Progress bar */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
@@ -136,6 +140,7 @@ export function ManagerDashboardPage() {
             Нет данных для текущего периода
           </div>
         ) : (
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
             <thead>
               <tr className="bg-gray-50">
@@ -162,6 +167,7 @@ export function ManagerDashboardPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

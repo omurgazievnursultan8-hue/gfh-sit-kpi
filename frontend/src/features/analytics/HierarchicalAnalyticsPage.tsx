@@ -5,6 +5,7 @@ import {
 import { Table, BarChart2, Grid, X } from 'lucide-react'
 import { analyticsApi, HierarchicalNode } from './analyticsApi'
 import api from '../../app/api'
+import { ExportButtons } from '../../components/ExportButtons'
 
 type DisplayMode = 'table' | 'bar' | 'tree' | 'heatmap'
 
@@ -121,7 +122,10 @@ export function HierarchicalAnalyticsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Иерархическая аналитика</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Иерархическая аналитика</h1>
+        <ExportButtons type="period" />
+      </div>
 
       {/* Filter controls */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex flex-wrap gap-3 items-end">
@@ -182,7 +186,7 @@ export function HierarchicalAnalyticsPage() {
 
           {/* Table mode */}
           {mode === 'table' && (
-            <table className="min-w-full divide-y divide-gray-100">
+            <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-100">
               <thead>
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Подразделение</th>
@@ -213,7 +217,7 @@ export function HierarchicalAnalyticsPage() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
 
           {/* Bar chart mode */}

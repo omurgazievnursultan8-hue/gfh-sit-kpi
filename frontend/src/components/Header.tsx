@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { Bell } from 'lucide-react'
+import { Bell, Menu } from 'lucide-react'
 import { logoutAction } from '../features/auth/authSlice'
 import { markAllRead, fetchNotifications } from '../features/notifications/notificationsSlice'
 import { AppDispatch, RootState } from '../app/store'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
-export function Header() {
+interface HeaderProps { onMenuClick?: () => void }
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { t } = useTranslation()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -27,8 +29,13 @@ export function Header() {
   }
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 right-0 left-64 z-10">
-      <span className="text-sm text-gray-500">{role}</span>
+    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 fixed top-0 right-0 left-0 lg:left-64 z-20">
+      <div className="flex items-center gap-2">
+        <button onClick={onMenuClick} className="lg:hidden p-2 text-gray-500 hover:text-gray-800">
+          <Menu size={20} />
+        </button>
+        <span className="text-sm text-gray-500 hidden sm:block">{role}</span>
+      </div>
       <div className="flex items-center gap-4">
         <LanguageSwitcher />
 

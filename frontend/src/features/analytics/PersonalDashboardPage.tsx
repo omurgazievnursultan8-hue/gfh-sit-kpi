@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer, Legend
 } from 'recharts'
 import { analyticsApi, PersonalAnalytics } from './analyticsApi'
+import { ExportButtons } from '../../components/ExportButtons'
 
 function RatingBadge({ score }: { score: number | null }) {
   if (score === null) return <div className="text-4xl font-bold text-gray-400">—</div>
@@ -56,7 +57,10 @@ export function PersonalDashboardPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Мой KPI</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Мой KPI</h1>
+        <ExportButtons type="personal" />
+      </div>
 
       <div className="flex flex-col items-center mb-8">
         <RatingBadge score={data.currentScore} />

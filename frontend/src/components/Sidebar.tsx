@@ -22,14 +22,21 @@ const navItems = [
   { to: '/calendar', labelKey: 'nav.calendar', roles: ['ADMIN'] },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  open?: boolean
+  onNavClick?: () => void
+}
+
+export function Sidebar({ open, onNavClick }: SidebarProps) {
   const { t } = useTranslation()
   const { role } = useSelector((s: RootState) => s.auth)
 
   const visible = navItems.filter(item => role && item.roles.includes(role))
 
   return (
-    <aside className="w-64 bg-gray-900 text-gray-100 fixed top-0 left-0 h-full flex flex-col">
+    <aside className={`w-64 bg-gray-900 text-gray-100 fixed top-0 left-0 h-full flex flex-col z-40
+      transform transition-transform duration-200 ease-in-out
+      ${open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
       <div className="h-14 flex items-center px-6 border-b border-gray-700">
         <span className="text-lg font-bold text-white">ГФХ КПИ</span>
       </div>
@@ -38,6 +45,7 @@ export function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={onNavClick}
             className={({ isActive }) =>
               `block px-6 py-3 text-sm transition-colors ${
                 isActive ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
