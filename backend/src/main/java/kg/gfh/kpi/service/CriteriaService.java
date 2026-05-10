@@ -1,5 +1,6 @@
 package kg.gfh.kpi.service;
 
+import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.CriteriaRequest;
 import kg.gfh.kpi.dto.CriteriaResponse;
 import kg.gfh.kpi.entity.Criteria;
@@ -27,6 +28,7 @@ public class CriteriaService {
         return criteriaRepository.findByActiveTrue(pageable).map(CriteriaResponse::from);
     }
 
+    @Audited(action = "CREATE_CRITERIA", entityType = "CRITERIA")
     @Transactional
     public CriteriaResponse create(CriteriaRequest req) {
         validateWeightSum(req.type(), req.orgUnitId(), req.weight(), null);
@@ -45,6 +47,7 @@ public class CriteriaService {
         return CriteriaResponse.from(criteriaRepository.save(c));
     }
 
+    @Audited(action = "UPDATE_CRITERIA", entityType = "CRITERIA")
     @Transactional
     public CriteriaResponse update(Long id, CriteriaRequest req) {
         Criteria c = findById(id);

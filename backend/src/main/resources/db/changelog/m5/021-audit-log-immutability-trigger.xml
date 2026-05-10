@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="021-audit-log-immutability-trigger" author="gfh">
+        <sql splitStatements="false"><![CDATA[
+            CREATE OR REPLACE FUNCTION audit_log_immutable()
+            RETURNS trigger AS $$
+            BEGIN
+                RAISE EXCEPTION 'audit_log rows are immutable (op: %, id: %)',
+                    TG_OP, COALESCE(OLD.id::text, 'unknown');
+            END;
+            $$ LANGUAGE plpgsql;
+
+            CREATE TRIGGER trg_audit_log_immutable
+            BEFORE UPDATE OR DELETE ON audit_log
+            FOR EACH ROW EXECUTE FUNCTION audit_log_immutable();
+        ]]></sql>
+
+        <rollback>
+            <sql>DROP TRIGGER IF EXISTS trg_audit_log_immutable ON audit_log;</sql>
+            <sql>DROP FUNCTION IF EXISTS audit_log_immutable();</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

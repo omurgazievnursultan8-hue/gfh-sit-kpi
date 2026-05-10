@@ -1,5 +1,6 @@
 package kg.gfh.kpi.service;
 
+import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.*;
 import kg.gfh.kpi.entity.User;
 import kg.gfh.kpi.exception.ApiException;
@@ -26,6 +27,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordPolicyValidator passwordPolicyValidator;
 
+    @Audited(action = "CREATE_USER", entityType = "USER")
     @Transactional
     public UserResponse createUser(UserCreateRequest req) {
         if (userRepository.existsByEmail(req.email())) {
@@ -65,6 +67,7 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    @Audited(action = "DEACTIVATE_USER", entityType = "USER")
     @Transactional
     public void deactivateUser(Long id) {
         User user = findOrThrow(id);

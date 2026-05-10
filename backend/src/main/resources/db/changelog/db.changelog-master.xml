@@ -27,4 +27,6 @@
     <include file="db/changelog/m3/018-create-reactions-files.xml"/>
     <include file="db/changelog/m3/019-create-appeals.xml"/>
     <include file="db/changelog/m3/020-create-notifications.xml"/>
+
+    <include file="db/changelog/m5/021-audit-log-immutability-trigger.xml"/>
 </databaseChangeLog>

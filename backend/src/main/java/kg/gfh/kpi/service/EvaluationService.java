@@ -1,5 +1,6 @@
 package kg.gfh.kpi.service;
 
+import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.EvaluationPeriodRequest;
 import kg.gfh.kpi.dto.EvaluationResponse;
 import kg.gfh.kpi.dto.ScoreRequest;
@@ -151,6 +152,7 @@ public class EvaluationService {
 
     // ── Submission ───────────────────────────────────────────────────────────
 
+    @Audited(action = "SUBMIT_EVALUATION", entityType = "EVALUATION")
     @Transactional
     public EvaluationResponse submit(Long evaluationId, Long evaluatorId) {
         Evaluation eval;
