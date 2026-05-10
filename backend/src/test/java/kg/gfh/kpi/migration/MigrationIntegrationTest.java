@@ -43,7 +43,10 @@ class MigrationIntegrationTest {
             "users", "org_units", "refresh_tokens", "login_attempts",
             "password_reset_tokens", "evaluator_delegations", "audit_log", "pdpa_consents",
             // M2
-            "criteria", "system_settings", "production_calendar", "evaluation_score_history"
+            "criteria", "system_settings", "production_calendar", "evaluation_score_history",
+            // M3
+            "evaluation_periods", "evaluations", "evaluation_scores",
+            "evaluation_reactions", "evaluation_files", "appeals", "notifications"
         );
         for (String table : tables) {
             Integer count = jdbcTemplate.queryForObject(

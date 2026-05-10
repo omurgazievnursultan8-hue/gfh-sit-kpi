@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="019-create-appeals" author="gfh">
+        <createTable tableName="appeals">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="evaluation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="appellant_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(15)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="response" type="TEXT"/>
+            <column name="responded_by" type="BIGINT"/>
+            <column name="deadline" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resolved_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <sql>ALTER TABLE appeals ADD CONSTRAINT chk_appeal_status CHECK (status IN ('PENDING','UPHELD','OVERTURNED','AUTO_AGREED'));</sql>
+
+        <addUniqueConstraint
+            tableName="appeals"
+            columnNames="evaluation_id"
+            constraintName="uq_appeal_evaluation"/>
+
+        <addForeignKeyConstraint
+            baseTableName="appeals" baseColumnNames="evaluation_id"
+            referencedTableName="evaluations" referencedColumnNames="id"
+            constraintName="fk_appeals_evaluation" onDelete="RESTRICT"/>
+
+        <createIndex tableName="appeals" indexName="idx_appeals_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="appeals" indexName="idx_appeals_deadline">
+            <column name="deadline"/>
+        </createIndex>
+
+        <rollback><dropTable tableName="appeals"/></rollback>
+    </changeSet>
+</databaseChangeLog>

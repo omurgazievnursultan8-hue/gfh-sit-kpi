@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="017-create-evaluation-scores" author="gfh">
+        <createTable tableName="evaluation_scores">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="evaluation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="criteria_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="NUMERIC(10,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="TEXT"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint
+            tableName="evaluation_scores"
+            columnNames="evaluation_id, criteria_id"
+            constraintName="uq_score_evaluation_criteria"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluation_scores" baseColumnNames="evaluation_id"
+            referencedTableName="evaluations" referencedColumnNames="id"
+            constraintName="fk_scores_evaluation" onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluation_scores" baseColumnNames="criteria_id"
+            referencedTableName="criteria" referencedColumnNames="id"
+            constraintName="fk_scores_criteria" onDelete="RESTRICT"/>
+
+        <createIndex tableName="evaluation_scores" indexName="idx_eval_scores_evaluation_id">
+            <column name="evaluation_id"/>
+        </createIndex>
+
+        <rollback><dropTable tableName="evaluation_scores"/></rollback>
+    </changeSet>
+</databaseChangeLog>

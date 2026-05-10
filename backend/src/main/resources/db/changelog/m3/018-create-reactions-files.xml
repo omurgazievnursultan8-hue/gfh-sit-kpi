@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="018-create-reactions-files" author="gfh">
+        <createTable tableName="evaluation_reactions">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="evaluation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reaction" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment" type="TEXT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>ALTER TABLE evaluation_reactions ADD CONSTRAINT chk_reaction_type CHECK (reaction IN ('AGREE','DISAGREE'));</sql>
+
+        <addUniqueConstraint
+            tableName="evaluation_reactions"
+            columnNames="evaluation_id"
+            constraintName="uq_reaction_evaluation"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluation_reactions" baseColumnNames="evaluation_id"
+            referencedTableName="evaluations" referencedColumnNames="id"
+            constraintName="fk_reactions_evaluation" onDelete="CASCADE"/>
+
+        <createTable tableName="evaluation_files">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="evaluation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_by" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_path" type="VARCHAR(500)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="mime_type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_size" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluation_files" baseColumnNames="evaluation_id"
+            referencedTableName="evaluations" referencedColumnNames="id"
+            constraintName="fk_files_evaluation" onDelete="CASCADE"/>
+
+        <createIndex tableName="evaluation_files" indexName="idx_files_evaluation_id">
+            <column name="evaluation_id"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="evaluation_files"/>
+            <dropTable tableName="evaluation_reactions"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

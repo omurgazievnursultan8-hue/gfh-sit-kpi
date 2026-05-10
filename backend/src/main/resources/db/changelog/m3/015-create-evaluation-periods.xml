@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="015-create-evaluation-periods" author="gfh">
+        <createTable tableName="evaluation_periods">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="submission_deadline" type="TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="auto_created" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="BIGINT"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="closed_at" type="TIMESTAMP"/>
+        </createTable>
+
+        <sql>ALTER TABLE evaluation_periods ADD CONSTRAINT chk_period_type CHECK (type IN ('MONTHLY', 'QUARTERLY', 'ANNUAL'));</sql>
+        <sql>ALTER TABLE evaluation_periods ADD CONSTRAINT chk_period_status CHECK (status IN ('DRAFT', 'ACTIVE', 'CLOSED'));</sql>
+        <sql>ALTER TABLE evaluation_periods ADD CONSTRAINT chk_period_dates CHECK (end_date >= start_date);</sql>
+
+        <createIndex tableName="evaluation_periods" indexName="idx_periods_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="evaluation_periods" indexName="idx_periods_dates">
+            <column name="start_date"/>
+            <column name="end_date"/>
+        </createIndex>
+
+        <rollback><dropTable tableName="evaluation_periods"/></rollback>
+    </changeSet>
+</databaseChangeLog>

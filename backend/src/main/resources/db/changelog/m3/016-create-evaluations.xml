@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="016-create-evaluations" author="gfh">
+        <createTable tableName="evaluations">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="period_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="evaluatee_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="evaluator_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(20)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="final_score" type="NUMERIC(6,2)"/>
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="evaluatee_comment" type="TEXT"/>
+            <column name="submitted_at" type="TIMESTAMP"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>ALTER TABLE evaluations ADD CONSTRAINT chk_evaluation_status CHECK (status IN ('DRAFT','SUBMITTED','ACKNOWLEDGED','APPEALED','CLOSED'));</sql>
+
+        <addUniqueConstraint
+            tableName="evaluations"
+            columnNames="period_id, evaluatee_id"
+            constraintName="uq_evaluation_period_evaluatee"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluations" baseColumnNames="period_id"
+            referencedTableName="evaluation_periods" referencedColumnNames="id"
+            constraintName="fk_evaluations_period" onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluations" baseColumnNames="evaluatee_id"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_evaluations_evaluatee" onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluations" baseColumnNames="evaluator_id"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_evaluations_evaluator" onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            baseTableName="evaluation_score_history" baseColumnNames="evaluation_id"
+            referencedTableName="evaluations" referencedColumnNames="id"
+            constraintName="fk_score_history_evaluation" onDelete="CASCADE"/>
+
+        <createIndex tableName="evaluations" indexName="idx_evaluations_period_id">
+            <column name="period_id"/>
+        </createIndex>
+        <createIndex tableName="evaluations" indexName="idx_evaluations_evaluatee_id">
+            <column name="evaluatee_id"/>
+        </createIndex>
+        <createIndex tableName="evaluations" indexName="idx_evaluations_evaluator_id">
+            <column name="evaluator_id"/>
+        </createIndex>
+        <createIndex tableName="evaluations" indexName="idx_evaluations_status">
+            <column name="status"/>
+        </createIndex>
+
+        <rollback><dropTable tableName="evaluations"/></rollback>
+    </changeSet>
+</databaseChangeLog>
