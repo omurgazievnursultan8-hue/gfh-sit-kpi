@@ -20,6 +20,10 @@ public class AuditService {
         log("FILE_DOWNLOAD", userId, "evaluation_file", fileId, fileName);
     }
 
+    public void logExport(Long userId, String reportType, Long entityId) {
+        log("EXPORT", userId, "report", entityId, reportType);
+    }
+
     private void log(String action, Long userId, String entityType, Long entityId, String detail) {
         try {
             jdbcTemplate.update(
