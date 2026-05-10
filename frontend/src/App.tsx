@@ -15,6 +15,9 @@ import { SettingsPage } from './features/settings/SettingsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { EvaluationFormPage } from './features/evaluations/EvaluationFormPage'
 import { MyTasksPage } from './features/evaluations/MyTasksPage'
+import { MyEvaluationsPage } from './features/evaluations/MyEvaluationsPage'
+import { EvaluationDetailPage } from './features/evaluations/EvaluationDetailPage'
+import { AppealPage } from './features/appeals/AppealPage'
 
 export default function App() {
   useIdleTimeout()
@@ -44,6 +47,9 @@ export default function App() {
           <EvaluationFormPage />
         </ProtectedRoute>
       } />
+      <Route path="/my-evaluations" element={<ProtectedRoute><MyEvaluationsPage /></ProtectedRoute>} />
+      <Route path="/my-evaluations/:id" element={<ProtectedRoute><EvaluationDetailPage /></ProtectedRoute>} />
+      <Route path="/appeals/new" element={<ProtectedRoute><AppealPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
