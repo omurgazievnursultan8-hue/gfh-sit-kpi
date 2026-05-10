@@ -25,6 +25,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = extractTokenFromCookie(request);
         if (token != null && jwtService.isTokenValid(token)) {
             String email = jwtService.extractEmail(token);
+            if (email == null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             var userDetails = userDetailsService.loadUserByUsername(email);
             var auth = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());

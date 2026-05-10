@@ -120,7 +120,9 @@ public class AuthService {
         rt.setUsedAt(LocalDateTime.now());
         refreshTokenRepository.save(rt);
 
-        User user = userRepository.findById(rt.getUserId()).orElseThrow();
+        User user = userRepository.findById(rt.getUserId())
+                .orElseThrow(() -> new ApiException("USER_NOT_FOUND",
+                        "Пользователь не найден", "Колдонуучу табылган жок"));
         String newAccess = jwtService.generateAccessToken(user.getId(), user.getEmail());
         String newRawRefresh = jwtService.generateRefreshTokenRaw();
 
