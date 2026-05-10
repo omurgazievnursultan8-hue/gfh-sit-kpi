@@ -17,6 +17,8 @@ import java.util.Optional;
 @Slf4j
 public class EvaluatorResolver {
 
+    private static final int MAX_DELEGATION_CHAIN = 10;
+
     private final UserRepository userRepository;
     private final EvaluatorDelegationRepository delegationRepository;
 
@@ -61,8 +63,8 @@ public class EvaluatorResolver {
 
     private Long resolveChainedDelegation(Long evaluateeId, LocalDate date) {
         Long current = evaluateeId;
-        int maxChain = 10;
-        while (maxChain-- > 0) {
+        int depth = MAX_DELEGATION_CHAIN;
+        while (depth-- > 0) {
             Optional<EvaluatorDelegation> delegation =
                     delegationRepository.findActiveDelegation(current, date);
             if (delegation.isEmpty()) break;

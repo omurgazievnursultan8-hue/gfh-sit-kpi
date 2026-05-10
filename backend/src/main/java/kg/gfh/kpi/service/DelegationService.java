@@ -31,10 +31,15 @@ public class DelegationService {
 
         User evaluatee = userRepository.findById(req.evaluateeId()).orElseThrow();
         Long originalEvaluatorId = evaluatee.getManagerId();
+        if (originalEvaluatorId == null) {
+            throw new ApiException("NO_MANAGER_ASSIGNED",
+                    "У сотрудника не назначен руководитель",
+                    "Кызматкерге жетекчи дайындалган эмес");
+        }
 
         EvaluatorDelegation d = new EvaluatorDelegation();
         d.setEvaluateeId(req.evaluateeId());
-        d.setOriginalEvaluatorId(originalEvaluatorId != null ? originalEvaluatorId : 0L);
+        d.setOriginalEvaluatorId(originalEvaluatorId);
         d.setDelegatedToId(req.delegatedToId());
         d.setValidFrom(req.validFrom());
         d.setValidTo(req.validTo());
