@@ -63,12 +63,10 @@ export function LoginForm() {
         />
       )}
 
-      <p className="login-all-required">{t('login.allRequired')}</p>
-
       <form onSubmit={handleSubmit} noValidate autoComplete="on">
         <LoginField
           id="lf-email"
-          label={t('login.email')}
+          label={`01 — ${t('login.email')}`}
           icon={<UserIcon />}
           type="email"
           value={email}
@@ -84,7 +82,7 @@ export function LoginForm() {
 
         <PasswordField
           id="lf-password"
-          label={t('login.password')}
+          label={`02 — ${t('login.password')}`}
           value={password}
           onChange={(v) => { setPassword(v); clearErr() }}
           error={isError}
@@ -127,14 +125,7 @@ export function LoginForm() {
               <polyline points="5 12 10 17 19 7" />
             </svg>
           ) : (
-            <>
-              <span>{t('login.submit')}</span>
-              <span className="login-btn-arrow" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="13 6 19 12 13 18" />
-                </svg>
-              </span>
-            </>
+            <span>{t('login.submit')}</span>
           )}
         </button>
 

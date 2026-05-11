@@ -16,7 +16,7 @@ export function LoginPage() {
         <section className="login-form-panel" aria-label={t('login.title')}>
           <div className="login-form-head">
             <h1 className="login-form-title">{t('login.title')}</h1>
-            <p className="login-form-sub">{t('login.formSub')}</p>
+            <div className="login-form-rule" aria-hidden="true"><span>◆</span></div>
           </div>
           <LoginForm />
         </section>

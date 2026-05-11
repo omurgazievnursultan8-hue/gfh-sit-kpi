@@ -9,14 +9,8 @@ export function BrandPanel() {
       <div className="login-brand-glow" />
 
       <div className="login-brand-header">
-        <div className="login-brand-mark">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 20h18" />
-            <path d="M6 20V12" />
-            <path d="M11 20V7" />
-            <path d="M16 20v-6" />
-            <path d="M21 20V4" />
-          </svg>
+        <div className="login-brand-mark" aria-hidden="true">
+          <span className="login-brand-mono">ГФХ</span>
         </div>
         <p className="login-brand-name">{t('login.brandName')}</p>
       </div>
@@ -33,7 +27,7 @@ export function BrandPanel() {
       </ul>
 
       <div className="login-brand-foot">
-        <span>ГФХ · КПИ · 2026</span>
+        <span>ГФХ · КПИ · {new Date().getFullYear()}</span>
         <span>{t('login.footRight')}</span>
       </div>
     </section>
