@@ -14,6 +14,7 @@
     <include file="db/changelog/m1/007-create-audit-log.xml"/>
     <include file="db/changelog/m1/008-create-pdpa-consents.xml"/>
     <include file="db/changelog/m1/009-bootstrap-admin.xml"/>
+    <include file="db/changelog/m1/009a-fix-bootstrap-admin-password.xml"/>
 
     <include file="db/changelog/m2/010-create-criteria.xml"/>
     <include file="db/changelog/m2/011-create-system-settings.xml"/>
