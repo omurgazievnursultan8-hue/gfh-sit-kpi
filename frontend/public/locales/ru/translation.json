@@ -47,6 +47,7 @@
     "adminPanel": "Администрирование",
     "monitoring": "Мониторинг",
     "home": "Главная",
+    "toggleMenu": "Меню навигации",
     "cabinet": "Мой кабинет",
     "cabinetSub": "Личный кабинет",
     "analyticsSub": "Отчёты и аналитика",
@@ -263,7 +264,8 @@
     "evaluationSubmitted": "Оценка отправлена",
     "appealReceived": "Получена апелляция",
     "appealDecided": "Решение по апелляции",
-    "deadlineReminder": "Напоминание о дедлайне"
+    "deadlineReminder": "Напоминание о дедлайне",
+    "viewAll": "Все уведомления"
   },
   "analytics": {
     "title": "Аналитика",

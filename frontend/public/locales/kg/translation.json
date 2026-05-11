@@ -47,6 +47,7 @@
     "adminPanel": "Администрациялоо",
     "monitoring": "Мониторинг",
     "home": "Башкы",
+    "toggleMenu": "Багыттоо менюсу",
     "cabinet": "Менин кабинетим",
     "cabinetSub": "Жеке кабинет",
     "analyticsSub": "Отчёттор жана аналитика",
@@ -263,7 +264,8 @@
     "evaluationSubmitted": "Баалоо жөнөтүлдү",
     "appealReceived": "Даттануу келди",
     "appealDecided": "Даттануу боюнча чечим",
-    "deadlineReminder": "Мөөнөт эскертүүсү"
+    "deadlineReminder": "Мөөнөт эскертүүсү",
+    "viewAll": "Бардык билдирмелер"
   },
   "analytics": {
     "title": "Аналитика",

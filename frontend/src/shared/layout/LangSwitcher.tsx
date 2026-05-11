@@ -45,6 +45,7 @@ export function LangSwitcher() {
 
   const pick = (l: Lang) => {
     i18n.changeLanguage(l)
+    localStorage.setItem('gfh_lang', l)
     setOpen(false)
   }
 
