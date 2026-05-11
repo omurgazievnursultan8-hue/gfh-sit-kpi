@@ -22,6 +22,8 @@ export interface NavItem {
   icon: ElementType
   end?: boolean
   roles: Role[]
+  /** Single-char chord triggered after the `g` leader (event.code, KeyX). */
+  chord?: string
 }
 
 export interface NavGroup {
@@ -32,10 +34,14 @@ export interface NavGroup {
 export interface NavSection {
   key: SectionKey
   labelKey: string
+  /** Short uppercase label shown under the rail icon. */
+  railKey: string
   subKey: string
   icon: ElementType
   roles: Role[]
   groups: NavGroup[]
+  /** Section accent color (hex). Drives active-state hue across rail + panel. */
+  accent: string
 }
 
 const ALL_ROLES: Role[] = ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'EMPLOYEE']
@@ -47,23 +53,25 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     key: 'cabinet',
     labelKey: 'nav.cabinet',
+    railKey: 'nav.railCabinet',
     subKey: 'nav.cabinetSub',
     icon: Home,
+    accent: '#3aa37a',
     roles: ALL_ROLES,
     groups: [
       {
         groupKey: 'nav.groupMain',
         items: [
-          { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true, roles: ALL_ROLES },
-          { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'HEAD_OF_DEPARTMENT_UNIT', 'HEAD_OF_DEPARTMENT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'] },
-          { to: '/my-evaluations', labelKey: 'nav.myEvaluations', icon: FileCheck, roles: ALL_ROLES },
-          { to: '/evaluations', labelKey: 'nav.evaluations', icon: ClipboardCheck, roles: ALL_ROLES },
+          { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true, roles: ALL_ROLES, chord: 'd' },
+          { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'HEAD_OF_DEPARTMENT_UNIT', 'HEAD_OF_DEPARTMENT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'], chord: 'm' },
+          { to: '/my-evaluations', labelKey: 'nav.myEvaluations', icon: FileCheck, roles: ALL_ROLES, chord: 'e' },
+          { to: '/evaluations', labelKey: 'nav.evaluations', icon: ClipboardCheck, roles: ALL_ROLES, chord: 'v' },
         ],
       },
       {
         groupKey: 'nav.groupTasks',
         items: [
-          { to: '/my-tasks', labelKey: 'nav.myTasks', icon: CheckSquare, roles: MANAGERS },
+          { to: '/my-tasks', labelKey: 'nav.myTasks', icon: CheckSquare, roles: MANAGERS, chord: 't' },
           { to: '/manager-tasks', labelKey: 'nav.managerTasks', icon: ListTodo, roles: MANAGERS },
         ],
       },
@@ -72,8 +80,10 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     key: 'analytics',
     labelKey: 'nav.analytics',
+    railKey: 'nav.railAnalytics',
     subKey: 'nav.analyticsSub',
     icon: BarChart2,
+    accent: '#c9a961',
     roles: MANAGERS,
     groups: [
       {
@@ -81,8 +91,8 @@ export const NAV_SECTIONS: NavSection[] = [
         items: [
           { to: '/criteria', labelKey: 'nav.criteria', icon: ListChecks, roles: MANAGERS },
           { to: '/manager-dashboard', labelKey: 'nav.managerDashboard', icon: TrendingUp, roles: MANAGERS },
-          { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart2, end: true, roles: MANAGERS },
-          { to: '/analytics/hierarchical', labelKey: 'nav.hierarchical', icon: Building2, roles: TOP },
+          { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart2, end: true, roles: MANAGERS, chord: 'a' },
+          { to: '/analytics/hierarchical', labelKey: 'nav.hierarchical', icon: Building2, roles: TOP, chord: 'h' },
           { to: '/analytics/anti-bonus', labelKey: 'nav.antiBonusAnalytics', icon: BarChart3, roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT'] },
         ],
       },
@@ -91,15 +101,17 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     key: 'admin',
     labelKey: 'nav.adminPanel',
+    railKey: 'nav.railAdmin',
     subKey: 'nav.adminSub',
     icon: Shield,
+    accent: '#a98fd1',
     roles: ADMIN_ONLY,
     groups: [
       {
         groupKey: 'nav.groupAdmin',
         items: [
           { to: '/admin', labelKey: 'admin.stats', icon: BarChart3, end: true, roles: ADMIN_ONLY },
-          { to: '/admin/users', labelKey: 'admin.users', icon: Users, roles: ADMIN_ONLY },
+          { to: '/admin/users', labelKey: 'admin.users', icon: Users, roles: ADMIN_ONLY, chord: 'u' },
           { to: '/admin/org', labelKey: 'admin.orgStructure', icon: Building2, roles: ADMIN_ONLY },
           { to: '/admin/criteria', labelKey: 'admin.criteria', icon: ListChecks, roles: ADMIN_ONLY },
           { to: '/admin/periods', labelKey: 'admin.periods', icon: Calendar, roles: ADMIN_ONLY },
@@ -109,7 +121,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         groupKey: 'nav.groupSystem',
         items: [
-          { to: '/admin/settings', labelKey: 'admin.settings', icon: Settings, roles: ADMIN_ONLY },
+          { to: '/admin/settings', labelKey: 'admin.settings', icon: Settings, roles: ADMIN_ONLY, chord: 's' },
           { to: '/admin/calendar', labelKey: 'admin.calendar', icon: CalendarDays, roles: ADMIN_ONLY },
           { to: '/admin/audit', labelKey: 'admin.auditLog', icon: ClipboardList, roles: ADMIN_ONLY },
           { to: '/admin/monitoring', labelKey: 'admin.monitoring', icon: Activity, roles: ADMIN_ONLY },

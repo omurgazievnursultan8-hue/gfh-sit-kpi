@@ -637,11 +637,8 @@ html, body {
   display: grid;
   grid-template-columns: var(--rail-w) 1fr;
   min-height: 100vh;
-  transition: grid-template-columns 0.24s cubic-bezier(0.4,0,0.2,1);
 }
-.app-shell.app-shell--panel-open {
-  grid-template-columns: var(--rail-w) var(--nav-w) 1fr;
-}
+/* Panel always overlays main — hover or pinned. No shift. */
 .app-shell-main {
   display: flex;
   flex-direction: column;
@@ -703,32 +700,44 @@ html, body {
 }
 
 .rail-icon {
-  width: 54px; height: 54px;
+  width: 56px; height: 64px;
   border-radius: 11px;
-  display: grid; place-items: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
   color: #8a9d99; cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   position: relative;
-  background: none; border: none; padding: 0;
+  background: none; border: none; padding: 6px 0 5px;
   flex: none;
 }
 .rail-icon:hover { background: rgba(255,255,255,0.05); color: #e5ece9; }
 .rail-icon.active {
-  background: var(--nav-bg-1);
-  color: var(--gold);
-  border-radius: 11px 0 0 11px;
-  box-shadow: inset 2px 0 0 var(--gold);
+  background: transparent;
+  color: var(--section-accent, var(--gold));
+  border-radius: 0;
+  box-shadow:
+    inset 0 1px 0 0 var(--section-accent, var(--gold)),
+    inset 0 -1px 0 0 var(--section-accent, var(--gold));
 }
-/* Tether: bridges the 9px gap between active rail icon and nav panel. */
-.app-shell--panel-open .rail-icon.active::after {
-  content: "";
-  position: absolute;
-  right: -10px; top: 0; bottom: 0;
-  width: 12px;
-  background: var(--nav-bg-1);
-  z-index: 1;
+/* No tether — keep rail icon visually distinct from the panel. */
+.rail-icon svg { width: 24px; height: 24px; stroke-width: 1.6; position: relative; z-index: 2; }
+
+/* Editorial label under each section icon. Always visible on the rail. */
+.rail-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+  opacity: 0.55;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  position: relative; z-index: 2;
 }
-.rail-icon svg { width: 27px; height: 27px; stroke-width: 1.6; position: relative; z-index: 2; }
+.rail-icon:hover .rail-label { opacity: 0.9; color: var(--gold-soft); }
+.rail-icon.active .rail-label { opacity: 1; color: var(--section-accent, var(--gold)); }
 
 .rail-tooltip {
   position: absolute;
@@ -816,12 +825,21 @@ html, body {
 .nav-brand-mark {
   width: 36px; height: 36px; flex: none;
   display: grid; place-items: center;
-  color: var(--gold-soft);
-  background: rgba(201,169,97,0.08);
-  border: 1px solid rgba(201,169,97,0.18);
+  color: var(--section-accent, var(--gold-soft));
+  background: color-mix(in srgb, var(--section-accent, var(--gold)) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--gold)) 22%, transparent);
   border-radius: 8px;
+  overflow: hidden;
 }
-.nav-brand-text { min-width: 0; }
+.nav-brand-mark img {
+  width: 28px; height: 28px;
+  object-fit: contain;
+  display: block;
+}
+/* Hide fallback SVG by default — only shows if <img> errors. */
+.nav-brand-mark-fallback-svg { display: none; }
+.nav-brand-mark--fallback .nav-brand-mark-fallback-svg { display: block; }
+.nav-brand-text { min-width: 0; flex: 1; }
 .nav-brand-name {
   font-family: var(--font-display);
   font-size: 17px; font-weight: 600;
@@ -864,11 +882,121 @@ html, body {
 }
 .nav-period-dot { opacity: 0.5; }
 .nav-period-days { color: var(--gold-soft); font-weight: 600; }
+
+/* Period elapsed bar — gold gradient track under meta row. */
+.nav-period-bar {
+  margin-top: 8px;
+  height: 3px;
+  background: rgba(245,236,210,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+.nav-period-bar-fill {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, rgba(201,169,97,0.65), var(--gold));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.nav-period-bar--warn .nav-period-bar-fill {
+  background: linear-gradient(90deg, rgba(201,169,97,0.55), #d4a13e);
+}
+.nav-period-bar--late .nav-period-bar-fill {
+  background: linear-gradient(90deg, #c97a3a, #d85a3a);
+}
+
+/* Quick-action FAB — anchored bottom-right of nav-panel. Pinned mode only. */
+.nav-panel > .nav-fab-root,
+.nav-fab-root {
+  position: absolute;
+  right: 14px; bottom: 14px;
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 8px;
+  z-index: 4;
+  pointer-events: none;
+}
+.nav-fab-root > * { pointer-events: auto; }
+.nav-fab {
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--section-accent, var(--gold));
+  color: #0e2520;
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--gold)) 80%, white 20%);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -6px rgba(0,0,0,0.55), 0 1px 2px rgba(0,0,0,0.4);
+  transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+.nav-fab:hover { transform: translateY(-1px); box-shadow: 0 9px 22px -6px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.4); }
+.nav-fab--open { transform: rotate(45deg); }
+.nav-fab--open:hover { transform: rotate(45deg) translateY(-1px); }
+.nav-fab-menu {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: 6px;
+}
+.nav-fab-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px 7px 9px;
+  background: rgba(15,30,28,0.96);
+  color: var(--nav-ink-soft);
+  border: 1px solid rgba(245,236,210,0.12);
+  border-radius: 22px;
+  font-family: inherit; font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px -4px rgba(0,0,0,0.5);
+  opacity: 0;
+  transform: translateY(6px);
+  animation: nav-fab-rise 0.18s ease forwards;
+}
+.nav-fab-item:hover {
+  background: rgba(26,55,50,0.96);
+  border-color: color-mix(in srgb, var(--section-accent, var(--gold)) 32%, transparent);
+  color: var(--gold-soft);
+}
+.nav-fab-item-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--section-accent, var(--gold)) 18%, transparent);
+  color: var(--section-accent, var(--gold));
+  flex: none;
+}
+.nav-fab-item-label { font-weight: 500; letter-spacing: 0.01em; }
+@keyframes nav-fab-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 768px) {
+  .nav-fab-root { display: none; }
+}
+/* Unpin button sits at the right edge of the brand row. */
+.nav-brand-pin-btn {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  margin-left: auto;
+  padding: 0;
+  background: rgba(245,236,210,0.06);
+  border: 1px solid rgba(245,236,210,0.14);
+  border-radius: 6px;
+  color: var(--gold);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.nav-brand-pin-btn:hover {
+  background: rgba(245,236,210,0.12);
+  border-color: rgba(245,236,210,0.28);
+  color: var(--gold);
+}
+.nav-brand-pin-btn svg { width: 14px; height: 14px; }
 .nav-brand-sub {
   font-family: var(--font-mono);
   font-size: 10px; color: var(--nav-ink-faint);
   letter-spacing: 0.05em; text-transform: uppercase;
-  margin-top: 5px; white-space: nowrap;
+  margin-top: 5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .nav-scroll {
@@ -888,7 +1016,7 @@ html, body {
   font-family: var(--font-display, ui-serif);
   font-size: 11px; font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--gold);
+  color: var(--section-accent, var(--gold));
   letter-spacing: 0.04em;
   flex: none;
 }
@@ -919,16 +1047,36 @@ html, body {
 }
 .nav-item:hover { background: rgba(255,255,255,0.04); color: #ecf2f0; }
 .nav-item.nav-item--active {
-  background: linear-gradient(90deg, rgba(26,117,88,0.22), rgba(26,117,88,0.06));
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--section-accent, var(--gold)) 22%, transparent),
+    color-mix(in srgb, var(--section-accent, var(--gold)) 6%, transparent));
   color: var(--gold-soft);
 }
 .nav-item.nav-item--active::before {
   content: "";
   position: absolute; left: -14px; top: 8px; bottom: 8px;
-  width: 2px; background: var(--gold); border-radius: 2px;
+  width: 2px; background: var(--section-accent, var(--gold)); border-radius: 2px;
 }
 .nav-item svg { width: 18px; height: 18px; stroke-width: 1.5; flex: none; }
 .nav-item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pin/unpin star — hidden until row hover, persistent when pinned. */
+.nav-pin {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  padding: 0; margin: 0 -4px 0 0;
+  background: none; border: none; border-radius: 5px;
+  color: var(--nav-ink-soft);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.nav-pin svg { width: 13px; height: 13px; stroke-width: 1.8; }
+.nav-item:hover .nav-pin { opacity: 0.55; }
+.nav-pin:hover { opacity: 1 !important; background: rgba(245,236,210,0.08); color: var(--gold); }
+.nav-pin--on { opacity: 0.85; color: var(--gold); }
+.nav-pin--on:hover { opacity: 1; }
 
 /* Rail avatar popover menu — replaces old nav-footer profile card. */
 .rail-avatar-btn.active {
@@ -1067,20 +1215,32 @@ html, body {
   .topbar-search { min-width: 0; padding: 0 8px; }
 }
 
-/* Rail badge — small pulsing dot on icon */
-.rail-badge {
+/* Rail count pill — numeric badge on icon top-right */
+.rail-count {
   position: absolute;
-  top: 8px; right: 8px;
-  width: 8px; height: 8px;
+  top: 4px; right: 4px;
+  min-width: 16px; height: 16px;
+  padding: 0 4px;
+  display: inline-flex; align-items: center; justify-content: center;
   border-radius: 999px;
-  background: var(--danger, #d44);
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 9.5px; font-weight: 700;
+  line-height: 1;
+  color: #1a0a0a;
+  background: #f5d27a;
   border: 2px solid var(--rail-bg-1);
   z-index: 3;
-  animation: rail-badge-pulse 2s ease-in-out infinite;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
-@keyframes rail-badge-pulse {
+.rail-count--warn   { background: #f5d27a; color: #2a1700; }
+.rail-count--danger {
+  background: var(--danger, #d44); color: #fff;
+  animation: rail-count-pulse 2.4s ease-in-out infinite;
+}
+@keyframes rail-count-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(220,68,68,0.45); }
-  50%      { box-shadow: 0 0 0 4px rgba(220,68,68,0); }
+  50%      { box-shadow: 0 0 0 5px rgba(220,68,68,0); }
 }
 
 /* Command palette */
@@ -1159,6 +1319,110 @@ html, body {
   color: var(--ink-faint);
 }
 .cmdk-item-enter { color: var(--ink-faint); flex: none; }
+
+/* Palette: sectioned empty-state */
+.cmdk-section {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px 4px;
+}
+.cmdk-section-label {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 10px; letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.cmdk-section-rule {
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, var(--line-soft), transparent);
+}
+
+/* Palette: per-row group glyph (fav/recent/all) */
+.cmdk-item-glyph {
+  width: 14px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.cmdk-item-fav-on { color: var(--gold, #c9a961); }
+.cmdk-item-recent { color: var(--ink-faint); }
+.cmdk-item-hash   { color: var(--ink-faint); opacity: 0.4; }
+
+/* Palette: star toggle button */
+.cmdk-fav-btn {
+  background: none; border: 0; padding: 4px;
+  border-radius: 6px;
+  color: var(--ink-faint);
+  opacity: 0;
+  cursor: pointer; flex: none;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.cmdk-item:hover .cmdk-fav-btn,
+.cmdk-item--active .cmdk-fav-btn { opacity: 1; }
+.cmdk-fav-btn:hover { background: var(--bg-soft); color: var(--ink); }
+.cmdk-fav-btn.active { color: var(--gold, #c9a961); opacity: 1; }
+
+/* Palette: per-item chord chip (g + letter) */
+.cmdk-item-chord {
+  display: inline-flex; gap: 2px; align-items: center;
+  flex: none;
+  margin-left: 4px;
+}
+.cmdk-item-chord kbd {
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 10px; font-weight: 600;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-soft);
+  padding: 1px 5px; border-radius: 4px;
+  line-height: 1.4;
+}
+.cmdk-item--active .cmdk-item-chord kbd {
+  border-color: var(--accent, #1a7558);
+  color: var(--accent, #1a7558);
+}
+
+/* Chord hint pill (bottom-right while leader is held) */
+.chord-hint {
+  position: fixed;
+  bottom: 20px; right: 24px;
+  z-index: 70;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(8,22,18,0.92);
+  color: #ecf2f0;
+  border: 1px solid rgba(201,169,97,0.32);
+  border-radius: 999px;
+  padding: 8px 14px 8px 10px;
+  box-shadow: 0 8px 24px rgba(8,22,18,0.35);
+  font-family: var(--font-mono, ui-monospace);
+  font-size: 12px;
+  animation: chord-hint-in 0.12s ease-out;
+}
+@keyframes chord-hint-in {
+  from { opacity: 0; transform: translateY(4px) }
+  to   { opacity: 1; transform: translateY(0) }
+}
+.chord-hint kbd {
+  font-family: inherit; font-weight: 700;
+  background: var(--gold, #c9a961); color: #1a0a0a;
+  padding: 1px 7px; border-radius: 4px;
+  font-size: 12px;
+}
+.chord-hint-dots { color: var(--gold, #c9a961); font-weight: 700; }
+.chord-hint-label { color: rgba(236,242,240,0.62); letter-spacing: 0.04em; }
+
+/* Splash shown while /auth/me bootstrap is in flight (prevents premature login redirect). */
+.auth-splash {
+  min-height: 100vh;
+  background: var(--bg);
+  display: grid; place-items: center;
+}
+.auth-splash::before {
+  content: "";
+  width: 28px; height: 28px;
+  border: 2px solid var(--line-soft);
+  border-top-color: var(--gold, #c9a961);
+  border-radius: 999px;
+  animation: auth-splash-spin 0.9s linear infinite;
+}
+@keyframes auth-splash-spin { to { transform: rotate(360deg) } }
 .cmdk-footer {
   display: flex; gap: 16px; align-items: center;
   padding: 8px 16px;
@@ -1196,7 +1460,8 @@ html, body {
 @media (max-width: 768px) {
   .mobile-overlay { display: block; }
   .app-shell,
-  .app-shell.app-shell--panel-open { grid-template-columns: 1fr; }
+  .app-shell.app-shell--panel-open,
+  .app-shell.app-shell--pinned { grid-template-columns: 1fr; }
   .icon-rail {
     position: fixed; left: 0;
     transform: translateX(-100%);

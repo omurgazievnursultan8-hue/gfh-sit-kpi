@@ -60,3 +60,33 @@ export function daysUntilDeadline(p: CurrentPeriod): number {
   const ms = dl - Date.now()
   return Math.max(0, Math.ceil(ms / 86_400_000))
 }
+
+export interface PeriodProgress {
+  pct: number
+  daysTotal: number
+  daysElapsed: number
+  daysLeft: number
+  endLabel: string
+}
+
+// Elapsed share of [startDate, submissionDeadline]. Clamped to [0, 100].
+export function periodProgress(p: CurrentPeriod): PeriodProgress {
+  const start = new Date(p.startDate).getTime()
+  const end = new Date(p.submissionDeadline).getTime()
+  const now = Date.now()
+  const total = Math.max(1, end - start)
+  const elapsed = Math.min(total, Math.max(0, now - start))
+  const pct = Math.round((elapsed / total) * 100)
+  const daysTotal = Math.max(1, Math.ceil(total / 86_400_000))
+  const daysElapsed = Math.max(0, Math.ceil(elapsed / 86_400_000))
+  const endDt = new Date(end)
+  const dd = String(endDt.getDate()).padStart(2, '0')
+  const mm = String(endDt.getMonth() + 1).padStart(2, '0')
+  return {
+    pct,
+    daysTotal,
+    daysElapsed,
+    daysLeft: Math.max(0, daysTotal - daysElapsed),
+    endLabel: `${dd}.${mm}`,
+  }
+}

@@ -8,6 +8,7 @@ import { logoutAction } from '../../features/auth/authSlice'
 import { useTheme } from '../../hooks/useTheme'
 import { useTranslation } from 'react-i18next'
 import { getInitials } from './shellUtils'
+import { useUserCounters } from './useUserCounters'
 
 function roleLabel(role: string): string {
   const map: Record<string, string> = {
@@ -23,14 +24,18 @@ function roleLabel(role: string): string {
 
 interface IconRailProps {
   activeSection: SectionKey | null
+  pinned: boolean
   onSectionClick: (section: SectionKey) => void
+  onSectionHover: (section: SectionKey) => void
+  onRailEnter: () => void
+  onRailLeave: () => void
   mobileOpen: boolean
 }
 
-export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRailProps) {
+export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover, onRailEnter, onRailLeave, mobileOpen }: IconRailProps) {
   const { t } = useTranslation()
   const { role, email } = useSelector((s: RootState) => s.auth)
-  const unreadCount = useSelector((s: RootState) => s.notifications?.unreadCount ?? 0)
+  const counters = useUserCounters()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
@@ -66,7 +71,11 @@ export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRail
   }
 
   return (
-    <aside className={`icon-rail${mobileOpen ? ' icon-rail--mobile-open' : ''}`}>
+    <aside
+      className={`icon-rail${mobileOpen ? ' icon-rail--mobile-open' : ''}`}
+      onMouseEnter={onRailEnter}
+      onMouseLeave={onRailLeave}
+    >
       <a href="/dashboard" className="rail-logo">
         <span>АСУ</span>
         <div className="rail-tooltip">АСУ КПИ</div>
@@ -76,16 +85,27 @@ export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRail
 
       {visibleSections.map(section => {
         const Icon = section.icon
-        const hasAlert = section.key === 'cabinet' && unreadCount > 0
+        let count = 0
+        if (section.key === 'cabinet') count = counters.pendingEvaluations + counters.unreadNotifications
+        else if (section.key === 'admin') count = counters.openAppeals
+        const label = count > 99 ? '99+' : String(count)
+        const tier = count >= 10 ? 'danger' : count > 0 ? 'warn' : ''
+        const isActive = activeSection === section.key
         return (
           <button
             key={section.key}
-            className={`rail-icon${activeSection === section.key ? ' active' : ''}`}
+            className={`rail-icon${isActive ? ' active' : ''}${isActive && pinned ? ' pinned' : ''}`}
             onClick={() => onSectionClick(section.key)}
+            onMouseEnter={() => onSectionHover(section.key)}
+            onFocus={() => onSectionHover(section.key)}
             type="button"
+            title={isActive && pinned ? t('nav.pinnedHint', 'Закреплено · клик чтобы открепить') : undefined}
           >
             <Icon />
-            {hasAlert && <span className="rail-badge" aria-label={`${unreadCount}`} />}
+            {count > 0 && (
+              <span className={`rail-count rail-count--${tier}`} aria-label={`${count}`}>{label}</span>
+            )}
+            <span className="rail-label">{t(section.railKey)}</span>
             <div className="rail-tooltip">{t(section.labelKey)}</div>
           </button>
         )
