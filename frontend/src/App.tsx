@@ -1,7 +1,11 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { useIdleTimeout } from './hooks/useIdleTimeout'
 import { useNotifications } from './hooks/useNotifications'
+import { bootstrapAuth } from './features/auth/authSlice'
+import type { AppDispatch } from './app/store'
 import { LoginPage } from './features/auth/LoginPage'
 import { ChangePasswordPage } from './features/auth/ChangePasswordPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
@@ -31,6 +35,8 @@ import { AuditLogPage } from './features/admin/AuditLogPage'
 import { AdminMonitoringPage } from './features/admin/AdminMonitoringPage'
 
 export default function App() {
+  const dispatch = useDispatch<AppDispatch>()
+  useEffect(() => { dispatch(bootstrapAuth()) }, [dispatch])
   useIdleTimeout()
   useNotifications()
   return (

@@ -8,7 +8,12 @@ interface Props {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: Props) {
-  const { isAuthenticated, role, passwordExpired } = useSelector((s: RootState) => s.auth)
+  const { isAuthenticated, role, passwordExpired, bootstrapped } = useSelector((s: RootState) => s.auth)
+
+  // Wait for the mount-time /auth/me check before deciding to redirect.
+  if (!bootstrapped) {
+    return <div className="auth-splash" aria-busy="true" />
+  }
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (passwordExpired) return <Navigate to="/change-password" replace />

@@ -36,6 +36,7 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config
+    const skipRedirect = !!originalRequest?.headers?.['X-Skip-Auth-Redirect']
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -50,8 +51,10 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError instanceof Error ? refreshError : new Error(String(refreshError)))
-        store.dispatch(logout())
-        window.location.href = '/login'
+        if (!skipRedirect) {
+          store.dispatch(logout())
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError)
       } finally {
         isRefreshing = false
