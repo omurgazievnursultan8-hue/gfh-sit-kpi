@@ -26,7 +26,7 @@ public class AntiBonusAnalyticsService {
     }
 
     private List<TopEmployee> getTop10(Long orgUnitId, String periodType) {
-        String unitFilter = orgUnitId != null ? "AND u.org_unit_id = ?" : "";
+        String unitFilter = orgUnitId != null ? "AND u.unit_id = ?" : "";
         Object[] params = orgUnitId != null
             ? new Object[]{periodType, orgUnitId}
             : new Object[]{periodType};
@@ -40,7 +40,7 @@ public class AntiBonusAnalyticsService {
             JOIN evaluations e ON e.id = h.evaluation_id
             JOIN evaluation_periods ep ON ep.id = e.period_id AND ep.type = ?
             JOIN users u ON u.id = e.evaluatee_id
-            LEFT JOIN org_units ou ON ou.id = u.org_unit_id
+            LEFT JOIN org_units ou ON ou.id = u.unit_id
             WHERE h.criteria_type = 'ANTI_BONUS'
             """ + unitFilter + """
             GROUP BY u.id, u.full_name, ou.name_ru
@@ -56,7 +56,7 @@ public class AntiBonusAnalyticsService {
     }
 
     private List<DistributionBucket> getDistribution(Long orgUnitId, String periodType) {
-        String unitFilter = orgUnitId != null ? "AND u.org_unit_id = ?" : "";
+        String unitFilter = orgUnitId != null ? "AND u.unit_id = ?" : "";
         List<DistributionBucket> buckets = new ArrayList<>();
 
         for (int from = 0; from < 100; from += 10) {
@@ -85,7 +85,7 @@ public class AntiBonusAnalyticsService {
     }
 
     private List<PeriodDynamics> getDynamics(Long orgUnitId, String periodType) {
-        String unitFilter = orgUnitId != null ? "AND u.org_unit_id = ?" : "";
+        String unitFilter = orgUnitId != null ? "AND u.unit_id = ?" : "";
         Object[] params = orgUnitId != null
             ? new Object[]{periodType, orgUnitId}
             : new Object[]{periodType};

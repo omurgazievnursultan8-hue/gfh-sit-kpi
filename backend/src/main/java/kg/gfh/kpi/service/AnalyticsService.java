@@ -41,7 +41,7 @@ public class AnalyticsService {
                    (SELECT AVG(e2.final_score)
                     FROM evaluations e2
                     JOIN users u2 ON u2.id = e2.evaluatee_id
-                    JOIN users u1 ON u1.id = ? AND u1.org_unit_id = u2.org_unit_id
+                    JOIN users u1 ON u1.id = ? AND u1.unit_id = u2.unit_id
                     WHERE e2.period_id = e.period_id
                       AND e2.final_score IS NOT NULL
                       AND e2.status IN ('SUBMITTED','ACKNOWLEDGED','APPEALED','CLOSED')
@@ -69,7 +69,7 @@ public class AnalyticsService {
             SELECT AVG(e2.final_score)
             FROM evaluations e2
             JOIN users u2 ON u2.id = e2.evaluatee_id
-            JOIN users u1 ON u1.org_unit_id = u2.org_unit_id AND u1.id = ?
+            JOIN users u1 ON u1.unit_id = u2.unit_id AND u1.id = ?
             WHERE e2.period_id = (
                 SELECT MAX(e3.period_id) FROM evaluations e3 WHERE e3.evaluatee_id = ?
             ) AND e2.final_score IS NOT NULL
@@ -501,7 +501,7 @@ public class AnalyticsService {
                    RANK() OVER (ORDER BY e.final_score DESC NULLS LAST) as rank
             FROM evaluations e
             JOIN users u ON u.id = e.evaluatee_id
-            WHERE u.org_unit_id = ?
+            WHERE u.unit_id = ?
               AND e.period_id = ?
               AND e.final_score IS NOT NULL
             ORDER BY e.final_score DESC

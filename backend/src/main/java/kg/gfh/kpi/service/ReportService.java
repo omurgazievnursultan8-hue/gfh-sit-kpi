@@ -122,7 +122,7 @@ public class ReportService {
             FROM evaluations e
             JOIN users u ON u.id = e.evaluatee_id
             JOIN users ev ON ev.id = e.evaluator_id
-            LEFT JOIN org_units ou ON ou.id = u.org_unit_id
+            LEFT JOIN org_units ou ON ou.id = u.unit_id
             WHERE e.period_id = ?
             ORDER BY ou.name_ru, u.full_name
             """, periodId);

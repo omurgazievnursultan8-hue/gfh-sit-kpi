@@ -35,7 +35,7 @@ public class HierarchicalAnalyticsService {
         }
 
         String sql = """
-            SELECT u.org_unit_id,
+            SELECT u.unit_id AS org_unit_id,
                    COUNT(DISTINCT u.id) as employee_count,
                    COUNT(e.id) FILTER (WHERE e.final_score IS NOT NULL) as submitted_count,
                    AVG(e.final_score) as avg_score,
@@ -46,8 +46,8 @@ public class HierarchicalAnalyticsService {
             LEFT JOIN evaluation_periods ep ON ep.id = e.period_id AND ep.type = ?
             """ + dateFilter + """
 
-            WHERE u.is_active = true AND u.org_unit_id IS NOT NULL
-            GROUP BY u.org_unit_id
+            WHERE u.is_active = true AND u.unit_id IS NOT NULL
+            GROUP BY u.unit_id
             """;
 
         List<Map<String, Object>> scores = jdbc.queryForList(sql, params.toArray());
