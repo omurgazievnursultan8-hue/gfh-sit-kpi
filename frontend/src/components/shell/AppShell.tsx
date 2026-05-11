@@ -58,15 +58,26 @@ export function AppShell({ children }: AppShellProps) {
   //   activeSection != null  → panel currently shown (hover- or pin-driven)
   //   pinned = true          → click-pinned; ignores mouseleave close
   //   pinned = false         → hover-opened; closes on mouseleave grace
+  // Hydrate from storage without role check — role loads async after reload.
+  // Effect below re-validates once role lands.
   const [activeSection, setActiveSection] = useState<SectionKey | null>(() => {
-    const storedPin = localStorage.getItem(PIN_KEY) as SectionKey | null
-    if (storedPin && allowedSections.includes(storedPin)) return storedPin
-    return null
+    return (localStorage.getItem(PIN_KEY) as SectionKey | null) ?? null
   })
   const [pinned, setPinned] = useState<boolean>(() => {
-    const storedPin = localStorage.getItem(PIN_KEY) as SectionKey | null
-    return !!(storedPin && allowedSections.includes(storedPin))
+    return !!localStorage.getItem(PIN_KEY)
   })
+
+  // Once role arrives, drop stored pin if section not allowed for this role.
+  useEffect(() => {
+    if (!role) return
+    const storedPin = localStorage.getItem(PIN_KEY) as SectionKey | null
+    if (storedPin && !allowedSections.includes(storedPin)) {
+      setPinned(false)
+      setActiveSection(null)
+      localStorage.removeItem(PIN_KEY)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role])
   const [mobileOpen, setMobileOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
 
@@ -183,20 +194,14 @@ export function AppShell({ children }: AppShellProps) {
     !pdpaRequired &&
     !NO_SHELL_PATHS.includes(location.pathname)
 
-  // Click rail icon: pin / unpin sticky.
-  //   - Pinned to same section → unpin + close.
-  //   - Otherwise → pin to that section (overrides any hover state).
+  // Click rail icon: pin / switch section.
+  //   - Already pinned → just switch section (stays pinned; unpin only via PinOff/Esc).
+  //   - Not pinned → pin to that section (overrides any hover state).
   const handleSectionClick = useCallback((section: SectionKey) => {
     cancelHoverTimers()
-    setPinned(prev => {
-      if (prev && activeSection === section) {
-        setActiveSection(null)
-        return false
-      }
-      setActiveSection(section)
-      return true
-    })
-  }, [activeSection, cancelHoverTimers])
+    setPinned(true)
+    setActiveSection(section)
+  }, [cancelHoverTimers])
 
   // Hover open: schedule open after delay (instant switch if panel already open).
   const handleSectionHover = useCallback((section: SectionKey) => {
