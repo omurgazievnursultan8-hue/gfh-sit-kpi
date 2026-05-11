@@ -87,26 +87,9 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
       {section && (
         <>
           <div className="nav-brand">
-            <div className="nav-brand-mark" aria-hidden="true">
-              <img
-                src="/brand/gfh-mark.png"
-                alt=""
-                width={28}
-                height={28}
-                onError={(e) => {
-                  const el = e.currentTarget as HTMLImageElement
-                  el.style.display = 'none'
-                  el.parentElement?.classList.add('nav-brand-mark--fallback')
-                }}
-              />
-              <svg className="nav-brand-mark-fallback-svg" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
-                <rect x="2" y="2" width="28" height="28" rx="6" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-                <path d="M9 22 L9 10 L16 10 L16 16 L23 16 L23 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square"/>
-                <circle cx="23" cy="10" r="1.6" fill="currentColor"/>
-              </svg>
-            </div>
             <div className="nav-brand-text">
               <div className="nav-brand-name">{t(section.labelKey)}</div>
+              <div className="nav-brand-rule" aria-hidden="true" />
               <div className="nav-brand-sub" title={crumb ?? undefined}>
                 {crumb ?? t(section.subKey)}
               </div>
@@ -169,7 +152,7 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                       key={`pin-${item.to}`}
                       to={item.to}
                       end={item.end}
-                      onClick={() => { pushRecent(userId, item.to); onClose() }}
+                      onClick={() => { pushRecent(userId, item.to); if (!pinned) onClose() }}
                       className={({ isActive }) =>
                         `nav-item${isActive ? ' nav-item--active' : ''}`
                       }
@@ -198,13 +181,13 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                 </div>
                 {group.items.map(item => {
                   const Icon = item.icon
-                  const pinned = favsSet.has(item.to)
+                  const isFav = favsSet.has(item.to)
                   return (
                     <NavLink
                       key={item.to}
                       to={item.to}
                       end={item.end}
-                      onClick={() => { pushRecent(userId, item.to); onClose() }}
+                      onClick={() => { pushRecent(userId, item.to); if (!pinned) onClose() }}
                       className={({ isActive }) =>
                         `nav-item${isActive ? ' nav-item--active' : ''}`
                       }
@@ -213,11 +196,11 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                       <span className="nav-item-label">{t(item.labelKey)}</span>
                       <button
                         type="button"
-                        className={`nav-pin${pinned ? ' nav-pin--on' : ''}`}
-                        aria-label={(pinned ? t('nav.unpin', 'Открепить') : t('nav.pin', 'Закрепить')) as string}
+                        className={`nav-pin${isFav ? ' nav-pin--on' : ''}`}
+                        aria-label={(isFav ? t('nav.unpin', 'Открепить') : t('nav.pin', 'Закрепить')) as string}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleTogglePin(item.to) }}
                       >
-                        <Star size={13} fill={pinned ? 'currentColor' : 'none'} />
+                        <Star size={13} fill={isFav ? 'currentColor' : 'none'} />
                       </button>
                     </NavLink>
                   )
@@ -229,8 +212,8 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
           {pinned && (
             <NavFAB
               role={(role as Role | null) ?? null}
-              onOpenPalette={() => { onOpenPalette(); onClose() }}
-              onNavigate={onClose}
+              onOpenPalette={() => { onOpenPalette(); if (!pinned) onClose() }}
+              onNavigate={() => { if (!pinned) onClose() }}
             />
           )}
         </>
