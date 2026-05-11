@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
-import { Bell } from 'lucide-react'
+import { Bell, Search } from 'lucide-react'
 import { AppDispatch, RootState } from '../../app/store'
 import { markAllRead, fetchNotifications } from '../../features/notifications/notificationsSlice'
 import { usePageTitleKey } from '../../context/PageContext'
@@ -11,9 +11,10 @@ import { getInitials } from './shellUtils'
 
 interface TopbarProps {
   onHamburgerClick: () => void
+  onSearchClick?: () => void
 }
 
-export function Topbar({ onHamburgerClick }: TopbarProps) {
+export function Topbar({ onHamburgerClick, onSearchClick }: TopbarProps) {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const { email } = useSelector((s: RootState) => s.auth)
@@ -72,6 +73,14 @@ export function Topbar({ onHamburgerClick }: TopbarProps) {
       </div>
 
       <div className="topbar-actions">
+        {onSearchClick && (
+          <button className="topbar-search" onClick={onSearchClick} type="button" title="Cmd/Ctrl+K">
+            <Search size={15} />
+            <span className="topbar-search-label">{t('palette.placeholder', 'Поиск разделов…')}</span>
+            <kbd className="topbar-search-kbd">⌘K</kbd>
+          </button>
+        )}
+
         <div className="lang-toggle">
           <button
             className={currentLang === 'ru' ? 'lang-active' : ''}

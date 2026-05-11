@@ -47,6 +47,7 @@ export JWT_SECRET="dev-secret-key-at-least-32-chars-long!!"
 export LOG_PATH=/tmp/gfh-logs
 export UPLOAD_DIR=/tmp/gfh-uploads
 export SPRING_LIQUIBASE_CONTEXTS="${SPRING_LIQUIBASE_CONTEXTS:-dev}"
+export LOGIN_RATE_LIMIT_ENABLED="${LOGIN_RATE_LIMIT_ENABLED:-false}"
 mkdir -p "$LOG_PATH" "$UPLOAD_DIR"
 
 # --- Backend ---

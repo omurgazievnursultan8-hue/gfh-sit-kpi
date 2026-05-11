@@ -1,12 +1,25 @@
+import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, LogOut } from 'lucide-react'
+import { Sun, Moon, LogOut, User, Lock } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
 import { useTheme } from '../../hooks/useTheme'
 import { useTranslation } from 'react-i18next'
 import { getInitials } from './shellUtils'
+
+function roleLabel(role: string): string {
+  const map: Record<string, string> = {
+    ADMIN: 'Администратор',
+    CHAIRMAN: 'Председатель',
+    DEPUTY_CHAIRMAN: 'Зам. председателя',
+    HEAD_OF_DEPARTMENT: 'Нач. отдела',
+    HEAD_OF_DEPARTMENT_UNIT: 'Нач. подотдела',
+    EMPLOYEE: 'Сотрудник',
+  }
+  return map[role] ?? role
+}
 
 interface IconRailProps {
   activeSection: SectionKey | null
@@ -17,9 +30,29 @@ interface IconRailProps {
 export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRailProps) {
   const { t } = useTranslation()
   const { role, email } = useSelector((s: RootState) => s.auth)
+  const unreadCount = useSelector((s: RootState) => s.notifications?.unreadCount ?? 0)
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const avatarRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (menuRef.current?.contains(t) || avatarRef.current?.contains(t)) return
+      setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   const visibleSections = NAV_SECTIONS.filter(
     s => role && s.roles.includes(role as Role)
@@ -27,6 +60,7 @@ export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRail
   const initials = email ? getInitials(email) : '?'
 
   const handleLogout = async () => {
+    setMenuOpen(false)
     await dispatch(logoutAction())
     navigate('/login')
   }
@@ -42,6 +76,7 @@ export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRail
 
       {visibleSections.map(section => {
         const Icon = section.icon
+        const hasAlert = section.key === 'cabinet' && unreadCount > 0
         return (
           <button
             key={section.key}
@@ -50,6 +85,7 @@ export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRail
             type="button"
           >
             <Icon />
+            {hasAlert && <span className="rail-badge" aria-label={`${unreadCount}`} />}
             <div className="rail-tooltip">{t(section.labelKey)}</div>
           </button>
         )
@@ -62,15 +98,44 @@ export function IconRail({ activeSection, onSectionClick, mobileOpen }: IconRail
         <div className="rail-tooltip">{theme === 'dark' ? t('nav.lightTheme', 'Светлая') : t('nav.darkTheme', 'Тёмная')}</div>
       </button>
 
-      <button className="rail-action logout" onClick={handleLogout} type="button">
-        <LogOut />
-        <div className="rail-tooltip">{t('nav.logout')}</div>
+      <button
+        ref={avatarRef}
+        className={`rail-avatar-btn${menuOpen ? ' active' : ''}`}
+        type="button"
+        onClick={() => setMenuOpen(o => !o)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+      >
+        {initials}
+        {!menuOpen && <div className="rail-tooltip">{email}</div>}
       </button>
 
-      <button className="rail-avatar-btn" type="button" title={email ?? ''}>
-        {initials}
-        <div className="rail-tooltip">{email}</div>
-      </button>
+      {menuOpen && (
+        <div ref={menuRef} className="rail-menu" role="menu">
+          <div className="rail-menu-head">
+            <div className="rail-menu-avatar">{initials}</div>
+            <div className="rail-menu-id">
+              <div className="rail-menu-email">{email}</div>
+              <div className="rail-menu-role">{role ? roleLabel(role) : ''}</div>
+            </div>
+          </div>
+          <div className="rail-menu-divider" />
+          <button className="rail-menu-item" type="button" onClick={() => setMenuOpen(false)}>
+            <User size={16} /> {t('nav.profile', 'Профиль')}
+          </button>
+          <button
+            className="rail-menu-item"
+            type="button"
+            onClick={() => { setMenuOpen(false); navigate('/change-password') }}
+          >
+            <Lock size={16} /> {t('nav.changePassword', 'Сменить пароль')}
+          </button>
+          <div className="rail-menu-divider" />
+          <button className="rail-menu-item danger" type="button" onClick={handleLogout}>
+            <LogOut size={16} /> {t('nav.logout')}
+          </button>
+        </div>
+      )}
     </aside>
   )
 }

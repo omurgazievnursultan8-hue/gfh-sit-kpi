@@ -27,6 +27,29 @@ public class EvaluationController {
     private final EvaluationService evaluationService;
     private final UserRepository userRepository;
 
+    @GetMapping("/periods/current")
+    public Object getCurrentPeriod() {
+        var period = evaluationService.findCurrentPeriod();
+        if (period == null) return null;
+        return new CurrentPeriod(
+                period.getId(),
+                period.getType().name(),
+                period.getStartDate(),
+                period.getEndDate(),
+                period.getSubmissionDeadline(),
+                period.getStatus().name()
+        );
+    }
+
+    public record CurrentPeriod(
+            Long id,
+            String type,
+            java.time.LocalDate startDate,
+            java.time.LocalDate endDate,
+            java.time.LocalDateTime submissionDeadline,
+            String status
+    ) {}
+
     @PostMapping("/periods")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)

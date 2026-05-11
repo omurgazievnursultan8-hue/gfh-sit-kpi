@@ -41,6 +41,11 @@ public class EvaluationService {
 
     // ── Period lifecycle ─────────────────────────────────────────────────────
 
+    public EvaluationPeriod findCurrentPeriod() {
+        var list = periodRepository.findByStatus(EvaluationPeriod.PeriodStatus.ACTIVE);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
     @Transactional
     public EvaluationPeriod createPeriod(EvaluationPeriodRequest req, Long createdBy) {
         EvaluationPeriod period = new EvaluationPeriod();

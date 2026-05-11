@@ -1,24 +1,10 @@
-import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { NavLink } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
-import { MoreHorizontal, User, Lock, LogOut } from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
-import { RootState, AppDispatch } from '../../app/store'
-import { logoutAction } from '../../features/auth/authSlice'
-import { getInitials } from './shellUtils'
-
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
-    ADMIN: 'Администратор',
-    CHAIRMAN: 'Председатель',
-    DEPUTY_CHAIRMAN: 'Зам. председателя',
-    HEAD_OF_DEPARTMENT: 'Нач. отдела',
-    HEAD_OF_DEPARTMENT_UNIT: 'Нач. подотдела',
-    EMPLOYEE: 'Сотрудник',
-  }
-  return map[role] ?? role
-}
+import { RootState } from '../../app/store'
+import { useCurrentPeriod, formatPeriodLabel, daysUntilDeadline } from './useCurrentPeriod'
 
 interface NavPanelProps {
   activeSection: SectionKey | null
@@ -26,11 +12,10 @@ interface NavPanelProps {
 }
 
 export function NavPanel({ activeSection, onClose }: NavPanelProps) {
-  const { t } = useTranslation()
-  const { role, email } = useSelector((s: RootState) => s.auth)
-  const dispatch = useDispatch<AppDispatch>()
-  const navigate = useNavigate()
-  const [popoverOpen, setPopoverOpen] = useState(false)
+  const { t, i18n } = useTranslation()
+  const { role } = useSelector((s: RootState) => s.auth)
+  const { period } = useCurrentPeriod()
+  const lang = (i18n.language?.startsWith('kg') ? 'kg' : 'ru') as 'ru' | 'kg'
 
   const section = activeSection ? NAV_SECTIONS.find(s => s.key === activeSection) ?? null : null
 
@@ -41,28 +26,48 @@ export function NavPanel({ activeSection, onClose }: NavPanelProps) {
       })).filter(g => g.items.length > 0)
     : []
 
-  const initials = email ? getInitials(email) : '?'
-
-  const handleLogout = async () => {
-    setPopoverOpen(false)
-    onClose()
-    await dispatch(logoutAction())
-    navigate('/login')
-  }
-
   return (
     <div className={`nav-panel${section ? ' nav-panel--visible' : ''}`}>
       {section && (
         <>
           <div className="nav-brand">
-            <div className="nav-brand-name">{t(section.labelKey)}</div>
-            <div className="nav-brand-sub">{t(section.subKey)}</div>
+            <div className="nav-brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32" width="28" height="28">
+                <rect x="2" y="2" width="28" height="28" rx="6" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M9 22 L9 10 L16 10 L16 16 L23 16 L23 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square"/>
+                <circle cx="23" cy="10" r="1.6" fill="currentColor"/>
+              </svg>
+            </div>
+            <div className="nav-brand-text">
+              <div className="nav-brand-name">{t(section.labelKey)}</div>
+              <div className="nav-brand-sub">{t(section.subKey)}</div>
+            </div>
           </div>
 
+          {period && (
+            <div className="nav-period">
+              <div className="nav-period-icon"><CalendarClock size={14} /></div>
+              <div className="nav-period-body">
+                <div className="nav-period-label">{formatPeriodLabel(period, lang)}</div>
+                <div className="nav-period-meta">
+                  <span className="nav-period-status">{t('period.active', 'Активный период')}</span>
+                  <span className="nav-period-dot">·</span>
+                  <span className="nav-period-days">
+                    {daysUntilDeadline(period)} {t('period.daysShort', 'дн.')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="nav-scroll">
-            {visibleGroups.map(group => (
+            {visibleGroups.map((group, idx) => (
               <div key={group.groupKey} className="nav-group">
-                <div className="nav-group-title">{t(group.groupKey)}</div>
+                <div className="nav-group-title">
+                  <span className="nav-group-num">{String(idx + 1).padStart(2, '0')}</span>
+                  <span className="nav-group-label">{t(group.groupKey)}</span>
+                  <span className="nav-group-rule" aria-hidden="true" />
+                </div>
                 {group.items.map(item => {
                   const Icon = item.icon
                   return (
@@ -84,34 +89,6 @@ export function NavPanel({ activeSection, onClose }: NavPanelProps) {
             ))}
           </div>
 
-          <div className="nav-footer">
-            <div className={`profile-popover${popoverOpen ? ' profile-popover--visible' : ''}`}>
-              <button className="profile-popover-item" type="button"
-                onClick={() => setPopoverOpen(false)}>
-                <User size={16} />
-                Профиль
-              </button>
-              <button className="profile-popover-item" type="button"
-                onClick={() => { navigate('/change-password'); setPopoverOpen(false); onClose() }}>
-                <Lock size={16} />
-                Сменить пароль
-              </button>
-              <div className="profile-popover-divider" />
-              <button className="profile-popover-item danger" type="button" onClick={handleLogout}>
-                <LogOut size={16} />
-                {t('nav.logout')}
-              </button>
-            </div>
-
-            <button className="me-card" type="button" onClick={() => setPopoverOpen(o => !o)}>
-              <div className="me-avatar">{initials}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="me-name">{email}</div>
-                <div className="me-role">{role ? roleLabel(role) : ''}</div>
-              </div>
-              <div className="me-more"><MoreHorizontal size={16} /></div>
-            </button>
-          </div>
         </>
       )}
     </div>
