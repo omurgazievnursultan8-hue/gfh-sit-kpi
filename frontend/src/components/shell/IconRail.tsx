@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, LogOut, Lock } from 'lucide-react'
+import { LogOut, Lock } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
@@ -33,15 +33,32 @@ interface IconRailProps {
 }
 
 export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover, onRailEnter, onRailLeave, mobileOpen }: IconRailProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { role, email, fullName } = useSelector((s: RootState) => s.auth)
   const counters = useUserCounters()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
+  const currentLang = (i18n.language?.startsWith('kg') ? 'kg' : 'ru') as 'ru' | 'kg'
+  const setLang = (lng: 'ru' | 'kg') => {
+    i18n.changeLanguage(lng)
+    try { localStorage.setItem('gfh_lang', lng) } catch { /* noop */ }
+  }
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const avatarRef = useRef<HTMLButtonElement>(null)
+  const hoverCloseTimer = useRef<number | null>(null)
+  const cancelHoverClose = () => {
+    if (hoverCloseTimer.current !== null) {
+      window.clearTimeout(hoverCloseTimer.current)
+      hoverCloseTimer.current = null
+    }
+  }
+  const scheduleHoverClose = () => {
+    cancelHoverClose()
+    hoverCloseTimer.current = window.setTimeout(() => setMenuOpen(false), 220)
+  }
+  useEffect(() => () => cancelHoverClose(), [])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -77,27 +94,28 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
       onMouseEnter={onRailEnter}
       onMouseLeave={onRailLeave}
     >
-      <a href="/dashboard" className="rail-logo" aria-label="АСУ КПИ">
-        <img
-          src="/brand/gfh-mark.png"
-          alt=""
-          width={36}
-          height={36}
-          onError={(e) => {
-            const el = e.currentTarget as HTMLImageElement
-            el.style.display = 'none'
-            el.parentElement?.classList.add('rail-logo--fallback')
-          }}
-        />
-        <svg className="rail-logo-fallback-svg" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
-          <rect x="2" y="2" width="28" height="28" rx="4" fill="none" stroke="currentColor" strokeWidth="1.2"/>
-          <path d="M9 22 L9 10 L16 10 L16 16 L23 16 L23 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square"/>
-          <circle cx="23" cy="10" r="1.6" fill="currentColor"/>
-        </svg>
-        <div className="rail-tooltip">АСУ КПИ</div>
+      <a href="/dashboard" className="rail-logo" aria-label={t('shell.brand', 'АСУ КПИ') as string}>
+        <span className="rail-logo-cell">
+          <img
+            src="/brand/gfh-mark.png"
+            alt=""
+            width={32}
+            height={32}
+            onError={(e) => {
+              const el = e.currentTarget as HTMLImageElement
+              el.style.display = 'none'
+              el.parentElement?.classList.add('rail-logo-cell--fallback')
+            }}
+          />
+          <svg className="rail-logo-fallback-svg" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="3" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M9 22 L9 10 L16 10 L16 16 L23 16 L23 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square"/>
+            <circle cx="23" cy="10" r="1.6" fill="currentColor"/>
+          </svg>
+        </span>
+        <span className="rail-build-chip" aria-hidden="true">v1.0</span>
+        <div className="rail-tooltip">{t('shell.brand', 'АСУ КПИ')}</div>
       </a>
-
-      <div className="rail-divider" />
 
       {visibleSections.map(section => {
         const Icon = section.icon
@@ -129,16 +147,14 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
 
       <div className="rail-spacer" />
 
-      <button className="rail-action" onClick={toggle} type="button">
-        {theme === 'dark' ? <Sun /> : <Moon />}
-        <div className="rail-tooltip">{theme === 'dark' ? t('nav.lightTheme', 'Светлая') : t('nav.darkTheme', 'Тёмная')}</div>
-      </button>
-
       <button
         ref={avatarRef}
         className={`rail-avatar-btn${menuOpen ? ' active' : ''}${role ? ` rail-avatar-btn--${role.toLowerCase()}` : ''}`}
         type="button"
-        onClick={() => setMenuOpen(o => !o)}
+        onClick={() => { cancelHoverClose(); setMenuOpen(o => !o) }}
+        onMouseEnter={() => { cancelHoverClose(); setMenuOpen(true) }}
+        onMouseLeave={scheduleHoverClose}
+        onFocus={() => { cancelHoverClose(); setMenuOpen(true) }}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
       >
@@ -147,27 +163,81 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
       </button>
 
       {menuOpen && (
-        <div ref={menuRef} className="rail-menu" role="menu">
+        <div
+          ref={menuRef}
+          className={`rail-menu${role ? ` rail-menu--${role.toLowerCase()}` : ''}`}
+          role="menu"
+          aria-label={displayName}
+          onMouseEnter={cancelHoverClose}
+          onMouseLeave={scheduleHoverClose}
+        >
+          <span className="rail-menu-mark" aria-hidden="true">АСУ</span>
           <div className="rail-menu-head">
             <div className="rail-menu-avatar">{initials}</div>
             <div className="rail-menu-id">
               {fullName && <div className="rail-menu-name">{fullName}</div>}
               <div className="rail-menu-email">{email}</div>
-              <div className="rail-menu-role">{role ? roleLabel(role) : ''}</div>
+              {role && (
+                <div className="rail-menu-role">
+                  <span className="rail-menu-role-dot" aria-hidden="true" />
+                  {roleLabel(role)}
+                </div>
+              )}
             </div>
           </div>
-          <div className="rail-menu-divider" />
-          <button
-            className="rail-menu-item"
-            type="button"
-            onClick={() => { setMenuOpen(false); navigate('/change-password') }}
-          >
-            <Lock size={16} /> {t('nav.changePassword', 'Сменить пароль')}
-          </button>
-          <div className="rail-menu-divider" />
-          <button className="rail-menu-item danger" type="button" onClick={handleLogout}>
-            <LogOut size={16} /> {t('nav.logout')}
-          </button>
+
+          <div className="rail-menu-section">
+            <div className="rail-menu-section-title">{t('nav.menuAccount', 'Аккаунт')}</div>
+            <button
+              className="rail-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => { setMenuOpen(false); navigate('/change-password') }}
+            >
+              <Lock size={15} /> {t('auth.changePassword')}
+            </button>
+          </div>
+
+          <div className="rail-menu-section">
+            <div className="rail-menu-section-title">{t('nav.menuPrefs', 'Настройки')}</div>
+            <div className="rail-menu-toggle" role="group" aria-label={t('nav.language', 'Язык') as string}>
+              <span className="rail-menu-toggle-label">{t('nav.language', 'Язык')}</span>
+              <div className="rail-menu-seg">
+                <button
+                  type="button"
+                  className={`rail-menu-seg-btn${currentLang === 'ru' ? ' active' : ''}`}
+                  onClick={() => setLang('ru')}
+                >RU</button>
+                <button
+                  type="button"
+                  className={`rail-menu-seg-btn${currentLang === 'kg' ? ' active' : ''}`}
+                  onClick={() => setLang('kg')}
+                >KG</button>
+              </div>
+            </div>
+            <div className="rail-menu-toggle" role="group" aria-label={t('nav.theme', 'Тема') as string}>
+              <span className="rail-menu-toggle-label">{t('nav.theme', 'Тема')}</span>
+              <div className="rail-menu-seg">
+                <button
+                  type="button"
+                  className={`rail-menu-seg-btn${theme === 'light' ? ' active' : ''}`}
+                  onClick={() => { if (theme !== 'light') toggle() }}
+                >{t('nav.lightTheme', 'Светлая')}</button>
+                <button
+                  type="button"
+                  className={`rail-menu-seg-btn${theme === 'dark' ? ' active' : ''}`}
+                  onClick={() => { if (theme !== 'dark') toggle() }}
+                >{t('nav.darkTheme', 'Тёмная')}</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="rail-menu-section">
+            <div className="rail-menu-section-title">{t('nav.menuSession', 'Сессия')}</div>
+            <button className="rail-menu-item danger" type="button" role="menuitem" onClick={handleLogout}>
+              <LogOut size={15} /> {t('nav.logout')}
+            </button>
+          </div>
         </div>
       )}
     </aside>

@@ -2,10 +2,9 @@ import { useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
-import { CalendarClock, PinOff, Star } from 'lucide-react'
+import { PinOff, Star } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role, NavItem } from './navConfig'
 import { RootState } from '../../app/store'
-import { useCurrentPeriod, formatPeriodLabel, daysUntilDeadline, periodProgress } from './useCurrentPeriod'
 import { pushRecent, getEffectiveFavs, toggleFavWithDefaults } from './navMemory'
 import { NavFAB } from './NavFAB'
 
@@ -20,11 +19,9 @@ interface NavPanelProps {
 }
 
 export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter, onPanelLeave, onOpenPalette }: NavPanelProps) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const location = useLocation()
   const { role, userId } = useSelector((s: RootState) => s.auth)
-  const { period } = useCurrentPeriod()
-  const lang = (i18n.language?.startsWith('kg') ? 'kg' : 'ru') as 'ru' | 'kg'
 
   const section = activeSection ? NAV_SECTIONS.find(s => s.key === activeSection) ?? null : null
 
@@ -107,35 +104,6 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
             )}
           </div>
 
-          {period && (() => {
-            const prog = periodProgress(period)
-            const barClass = prog.pct >= 90 ? ' nav-period-bar--late' : prog.pct >= 70 ? ' nav-period-bar--warn' : ''
-            return (
-              <div className="nav-period">
-                <div className="nav-period-icon"><CalendarClock size={14} /></div>
-                <div className="nav-period-body">
-                  <div className="nav-period-label">{formatPeriodLabel(period, lang)}</div>
-                  <div className="nav-period-meta">
-                    <span className="nav-period-status">{t('period.active', 'Активный период')}</span>
-                    <span className="nav-period-dot">·</span>
-                    <span className="nav-period-days">
-                      {daysUntilDeadline(period)} {t('period.daysShort', 'дн.')}
-                    </span>
-                  </div>
-                  <div
-                    className={`nav-period-bar${barClass}`}
-                    role="progressbar"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={prog.pct}
-                    title={`${prog.daysElapsed} / ${prog.daysTotal} ${t('period.daysShort', 'дн.')} · ${t('period.until', 'до')} ${prog.endLabel}`}
-                  >
-                    <span className="nav-period-bar-fill" style={{ width: `${prog.pct}%` }} />
-                  </div>
-                </div>
-              </div>
-            )
-          })()}
 
           <div className="nav-scroll">
             {pinnedItems.length > 0 && (
@@ -152,6 +120,7 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                       key={`pin-${item.to}`}
                       to={item.to}
                       end={item.end}
+                      title={t(item.labelKey) as string}
                       onClick={() => { pushRecent(userId, item.to); if (!pinned) onClose() }}
                       className={({ isActive }) =>
                         `nav-item${isActive ? ' nav-item--active' : ''}`
@@ -187,6 +156,7 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                       key={item.to}
                       to={item.to}
                       end={item.end}
+                      title={t(item.labelKey) as string}
                       onClick={() => { pushRecent(userId, item.to); if (!pinned) onClose() }}
                       className={({ isActive }) =>
                         `nav-item${isActive ? ' nav-item--active' : ''}`
