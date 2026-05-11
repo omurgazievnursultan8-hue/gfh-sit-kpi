@@ -30,7 +30,8 @@
   --radius: 6px;
   --radius-lg: 10px;
   --radius-xl: 14px;
-  --font-text: "Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  --topbar-h: 52px;
+  --font-text: "Geist","IBM Plex Sans","Söhne","Segoe UI",system-ui,-apple-system,sans-serif;
   --font-mono: "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
   --font-display: "Source Serif Pro","Georgia",serif;
   --rail-w: 72px;
@@ -1660,23 +1661,22 @@ html, body {
 
 /* ===== Topbar ===== */
 .app-topbar {
-  height: 56px;
+  height: var(--topbar-h);
   border-bottom: 1px solid var(--line-soft);
-  padding: 0 24px;
+  padding: 0 20px;
   display: flex; align-items: center; gap: 14px;
   flex: none; position: sticky; top: 0; z-index: 5;
-  backdrop-filter: blur(8px);
-  background: var(--bg);
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  background: var(--surface);
+  box-shadow: 0 1px 0 rgba(15,23,20,.02);
 }
 .topbar-crumbs {
   display: flex; align-items: center; gap: 8px;
-  font-family: var(--font-mono); font-size: 12px;
-  color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em;
   overflow: hidden; white-space: nowrap;
 }
 .topbar-crumbs .sep { color: var(--ink-dim); margin: 0 2px; }
-.topbar-crumbs .current { color: var(--ink); font-weight: 600; }
+.topbar-crumbs .current { color: var(--ink); font-weight: 500; }
 .topbar-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
 
 .lang-toggle {
@@ -1843,17 +1843,18 @@ html, body {
 /* Palette: sectioned empty-state */
 .cmdk-section {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px 4px;
+  padding: 12px 12px 6px;
 }
+.cmdk-section + .cmdk-item { margin-top: 0; }
 .cmdk-section-label {
   font-family: var(--font-mono, ui-monospace);
-  font-size: 10px; letter-spacing: 0.12em;
+  font-size: 11px; letter-spacing: 0.14em; font-weight: 600;
   text-transform: uppercase;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
 }
 .cmdk-section-rule {
   flex: 1; height: 1px;
-  background: linear-gradient(90deg, var(--line-soft), transparent);
+  background: linear-gradient(90deg, var(--line), transparent 90%);
 }
 
 /* Palette: per-row group glyph (fav/recent/all) */
