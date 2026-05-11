@@ -25,4 +25,10 @@ public interface AppealRepository extends JpaRepository<Appeal, Long> {
     default List<Appeal> findPendingByEvaluatorId(Long evaluatorId) {
         return findPendingByEvaluatorId(evaluatorId, AppealStatus.PENDING);
     }
+
+    @Query("SELECT count(a) FROM Appeal a WHERE a.evaluationId IN " +
+           "(SELECT e.id FROM Evaluation e WHERE e.evaluator.id = :evaluatorId) " +
+           "AND a.status = :status")
+    long countByEvaluatorIdAndStatus(@Param("evaluatorId") Long evaluatorId,
+                                     @Param("status") AppealStatus status);
 }
