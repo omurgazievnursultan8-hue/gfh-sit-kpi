@@ -167,30 +167,36 @@ html, body {
   background: radial-gradient(circle, rgba(168,133,43,0.22), transparent 62%);
   pointer-events: none;
 }
+.login-brand-header {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 14px;
+  position: relative; z-index: 1;
+}
 .login-brand-mark {
   width: 54px; height: 54px;
   border-radius: 14px;
   background: rgba(255,255,255,0.10);
   border: 1px solid rgba(255,255,255,0.16);
   display: flex; align-items: center; justify-content: center;
-  margin-bottom: 32px;
-  position: relative; z-index: 1;
+  flex-shrink: 0;
 }
 .login-brand-name {
+  flex: 1;
+  text-align: center;
   font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  margin: 0 0 10px;
+  margin: 0;
   color: #f5ecd2;
   font-family: Georgia, 'Times New Roman', serif;
-  position: relative; z-index: 1;
 }
 .login-brand-sub {
   font-size: 14px;
   line-height: 1.58;
   color: #8fa6a1;
   margin: 0 0 38px;
-  max-width: 290px;
   position: relative; z-index: 1;
 }
 .login-brand-list {
