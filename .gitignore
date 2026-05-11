@@ -9,3 +9,4 @@ frontend/dist/
 nginx/ssl/*.crt
 nginx/ssl/*.key
 backups/
+.dev-logs/

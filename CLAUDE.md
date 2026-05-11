@@ -8,6 +8,18 @@ Web-based employee KPI evaluation system for OAO "State Financial Holding" (~100
 
 ## Commands
 
+### Full dev stack (one shot)
+
+```bash
+# Starts Postgres container + backend + frontend, tails logs, Ctrl+C stops backend/frontend
+./scripts/dev-start.sh
+
+# Override Liquibase contexts (default: dev, loads seed data; use prod for empty DB)
+SPRING_LIQUIBASE_CONTEXTS=prod ./scripts/dev-start.sh
+```
+
+Logs land in `.dev-logs/{backend,frontend}.log`. Postgres container (`gfh-postgres`) is left running on Ctrl+C; stop with `docker stop gfh-postgres`. Backend `:8080`, frontend `:5173`.
+
 ### Backend
 
 ```bash
