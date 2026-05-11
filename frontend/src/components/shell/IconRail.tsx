@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { Sun, Moon, LogOut, User, Lock } from 'lucide-react'
+import { Sun, Moon, LogOut, Lock } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
@@ -34,7 +34,7 @@ interface IconRailProps {
 
 export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover, onRailEnter, onRailLeave, mobileOpen }: IconRailProps) {
   const { t } = useTranslation()
-  const { role, email } = useSelector((s: RootState) => s.auth)
+  const { role, email, fullName } = useSelector((s: RootState) => s.auth)
   const counters = useUserCounters()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -62,7 +62,8 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
   const visibleSections = NAV_SECTIONS.filter(
     s => role && s.roles.includes(role as Role)
   )
-  const initials = email ? getInitials(email) : '?'
+  const initials = getInitials(fullName ?? email)
+  const displayName = fullName ?? email ?? ''
 
   const handleLogout = async () => {
     setMenuOpen(false)
@@ -76,8 +77,23 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
       onMouseEnter={onRailEnter}
       onMouseLeave={onRailLeave}
     >
-      <a href="/dashboard" className="rail-logo">
-        <span>АСУ</span>
+      <a href="/dashboard" className="rail-logo" aria-label="АСУ КПИ">
+        <img
+          src="/brand/gfh-mark.png"
+          alt=""
+          width={36}
+          height={36}
+          onError={(e) => {
+            const el = e.currentTarget as HTMLImageElement
+            el.style.display = 'none'
+            el.parentElement?.classList.add('rail-logo--fallback')
+          }}
+        />
+        <svg className="rail-logo-fallback-svg" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+          <rect x="2" y="2" width="28" height="28" rx="4" fill="none" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M9 22 L9 10 L16 10 L16 16 L23 16 L23 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square"/>
+          <circle cx="23" cy="10" r="1.6" fill="currentColor"/>
+        </svg>
         <div className="rail-tooltip">АСУ КПИ</div>
       </a>
 
@@ -120,14 +136,14 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
 
       <button
         ref={avatarRef}
-        className={`rail-avatar-btn${menuOpen ? ' active' : ''}`}
+        className={`rail-avatar-btn${menuOpen ? ' active' : ''}${role ? ` rail-avatar-btn--${role.toLowerCase()}` : ''}`}
         type="button"
         onClick={() => setMenuOpen(o => !o)}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
       >
         {initials}
-        {!menuOpen && <div className="rail-tooltip">{email}</div>}
+        {!menuOpen && <div className="rail-tooltip">{displayName}</div>}
       </button>
 
       {menuOpen && (
@@ -135,14 +151,12 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
           <div className="rail-menu-head">
             <div className="rail-menu-avatar">{initials}</div>
             <div className="rail-menu-id">
+              {fullName && <div className="rail-menu-name">{fullName}</div>}
               <div className="rail-menu-email">{email}</div>
               <div className="rail-menu-role">{role ? roleLabel(role) : ''}</div>
             </div>
           </div>
           <div className="rail-menu-divider" />
-          <button className="rail-menu-item" type="button" onClick={() => setMenuOpen(false)}>
-            <User size={16} /> {t('nav.profile', 'Профиль')}
-          </button>
           <button
             className="rail-menu-item"
             type="button"

@@ -76,7 +76,7 @@ public class AuthService {
         boolean passwordExpired = user.getPasswordUpdatedAt() != null &&
                 user.getPasswordUpdatedAt().isBefore(LocalDateTime.now().minusDays(90));
 
-        return new LoginResponse(user.getId(), user.getEmail(),
+        return new LoginResponse(user.getId(), user.getEmail(), user.getFullName(),
                 user.getRole().name(), passwordExpired, false);
     }
 

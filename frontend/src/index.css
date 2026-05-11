@@ -675,22 +675,26 @@ html, body {
 
 .rail-logo {
   width: 52px; height: 52px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent-2) 0%, var(--accent) 100%);
+  border-radius: 4px;
+  background: transparent;
   display: grid; place-items: center;
   margin-bottom: 16px; flex: none;
-  border: 1px solid rgba(245,236,210,0.20);
+  border: none;
   position: relative; cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: opacity 0.15s ease;
   text-decoration: none;
-}
-.rail-logo:hover { transform: scale(1.04); }
-.rail-logo span {
-  font-family: var(--font-display);
-  font-size: 17px; font-weight: 600;
   color: var(--gold-soft);
-  letter-spacing: 0.02em;
+  overflow: visible;
 }
+.rail-logo:hover { opacity: 0.85; }
+.rail-logo img {
+  width: 36px; height: 36px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.35));
+}
+.rail-logo-fallback-svg { display: none; }
+.rail-logo--fallback .rail-logo-fallback-svg { display: block; color: var(--gold-soft); }
 
 .rail-divider {
   width: 24px; height: 1px;
@@ -775,22 +779,39 @@ html, body {
 .rail-action.logout:hover { color: #f5b8b8; }
 
 .rail-avatar-btn {
-  width: 50px; height: 50px;
-  border-radius: 999px;
-  background: var(--gold); color: #1a1306;
+  --avatar-accent: var(--gold);
+  --avatar-accent-soft: var(--gold-soft);
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--avatar-accent) 12%, var(--rail-bg-2));
+  color: var(--avatar-accent);
   font-family: var(--font-display);
-  font-weight: 600; font-size: 17px;
+  font-weight: 600; font-size: 14px;
+  letter-spacing: 0.04em;
   display: grid; place-items: center;
   cursor: pointer; flex: none;
-  position: relative; margin-top: 4px;
-  border: none; padding: 0;
+  position: relative; margin: 6px 0 2px;
+  border: 1px solid color-mix(in srgb, var(--avatar-accent) 35%, transparent);
+  padding: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
 }
-.rail-avatar-btn::after {
-  content: "";
-  position: absolute; bottom: -1px; right: -1px;
-  width: 13px; height: 13px; border-radius: 999px;
-  background: var(--accent-2);
-  border: 2px solid var(--rail-bg-2);
+.rail-avatar-btn:hover {
+  background: color-mix(in srgb, var(--avatar-accent) 22%, var(--rail-bg-2));
+  border-color: var(--avatar-accent);
+  color: var(--avatar-accent-soft);
+}
+
+/* Role tints — subliminal rank surface. Body fill stays dark; accent drives border + ink. */
+.rail-avatar-btn--admin              { --avatar-accent: #d4af6b; --avatar-accent-soft: #f5ecd2; }
+.rail-avatar-btn--chairman           { --avatar-accent: #f5ecd2; --avatar-accent-soft: #ffffff; }
+.rail-avatar-btn--deputy_chairman    { --avatar-accent: #8a6f24; --avatar-accent-soft: #c9a850; }
+.rail-avatar-btn--head_of_department { --avatar-accent: #4ea391; --avatar-accent-soft: #9cd4c4; }
+.rail-avatar-btn--head_of_department_unit { --avatar-accent: #6fa8a0; --avatar-accent-soft: #b8d8d3; }
+.rail-avatar-btn--employee           { --avatar-accent: #b6c3bf; --avatar-accent-soft: #dfe7e5; }
+.rail-avatar-btn:active { transform: translateY(1px); }
+.rail-avatar-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 45%, transparent);
 }
 
 /* ===== Nav Panel ===== */
@@ -823,40 +844,68 @@ html, body {
 .nav-panel > * { position: relative; z-index: 1; }
 
 .nav-brand {
-  padding: 18px 16px 14px 18px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin: 12px 12px 4px;
+  padding: 14px 14px 12px;
   position: relative; flex: none;
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(255,255,255,0.018);
+  border: 1px solid rgba(245,236,210,0.08);
+  border-radius: 2px;
 }
+/* Corner tick — top-left L-bracket */
 .nav-brand::before {
   content: "";
-  position: absolute; left: 0; top: 20px; bottom: 22px;
-  width: 2px; background: var(--gold); border-radius: 2px;
+  position: absolute; top: -1px; left: -1px;
+  width: 10px; height: 10px;
+  border-top: 1px solid var(--section-accent, var(--gold));
+  border-left: 1px solid var(--section-accent, var(--gold));
+  pointer-events: none;
+}
+/* Corner tick — bottom-right L-bracket */
+.nav-brand::after {
+  content: "";
+  position: absolute; bottom: -1px; right: -1px;
+  width: 10px; height: 10px;
+  border-bottom: 1px solid var(--section-accent, var(--gold));
+  border-right: 1px solid var(--section-accent, var(--gold));
+  pointer-events: none;
 }
 .nav-brand-mark {
-  width: 36px; height: 36px; flex: none;
+  width: 40px; height: 40px; flex: none;
   display: grid; place-items: center;
   color: var(--section-accent, var(--gold-soft));
-  background: color-mix(in srgb, var(--section-accent, var(--gold)) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--section-accent, var(--gold)) 22%, transparent);
-  border-radius: 8px;
+  background: #0e1714;
+  border: 1px solid color-mix(in srgb, var(--section-accent, var(--gold)) 32%, transparent);
+  border-radius: 3px;
   overflow: hidden;
 }
 .nav-brand-mark img {
-  width: 28px; height: 28px;
+  width: 30px; height: 30px;
   object-fit: contain;
   display: block;
 }
 /* Hide fallback SVG by default — only shows if <img> errors. */
 .nav-brand-mark-fallback-svg { display: none; }
 .nav-brand-mark--fallback .nav-brand-mark-fallback-svg { display: block; }
-.nav-brand-text { min-width: 0; flex: 1; }
+.nav-brand-text { min-width: 0; flex: 1; padding-right: 28px; }
 .nav-brand-name {
   font-family: var(--font-display);
   font-size: 17px; font-weight: 600;
   color: var(--gold-soft);
   white-space: nowrap; line-height: 1.2;
   letter-spacing: 0.01em;
+  font-feature-settings: "tnum";
+}
+.nav-brand-rule {
+  margin: 7px 0 6px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(245,236,210,0.18) 12%,
+    rgba(245,236,210,0.18) 75%,
+    transparent 100%
+  );
 }
 
 /* Active period card — pinned just below brand */
@@ -983,16 +1032,17 @@ html, body {
 }
 /* Unpin button sits at the right edge of the brand row. */
 .nav-brand-pin-btn {
-  flex: none;
+  position: absolute;
+  top: 6px; right: 6px;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px;
-  margin-left: auto;
+  width: 22px; height: 22px;
   padding: 0;
-  background: rgba(245,236,210,0.06);
-  border: 1px solid rgba(245,236,210,0.14);
-  border-radius: 6px;
+  background: transparent;
+  border: 1px solid rgba(245,236,210,0.10);
+  border-radius: 2px;
   color: var(--gold);
   cursor: pointer;
+  z-index: 2;
   transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 .nav-brand-pin-btn:hover {
@@ -1000,12 +1050,12 @@ html, body {
   border-color: rgba(245,236,210,0.28);
   color: var(--gold);
 }
-.nav-brand-pin-btn svg { width: 14px; height: 14px; }
+.nav-brand-pin-btn svg { width: 12px; height: 12px; }
 .nav-brand-sub {
   font-family: var(--font-mono);
   font-size: 10px; color: var(--nav-ink-faint);
   letter-spacing: 0.05em; text-transform: uppercase;
-  margin-top: 5px;
+  margin-top: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: 100%;
 }
@@ -1091,9 +1141,14 @@ html, body {
 
 /* Rail avatar popover menu — replaces old nav-footer profile card. */
 .rail-avatar-btn.active {
-  background: var(--nav-bg-1);
-  color: var(--gold);
-  box-shadow: inset 2px 0 0 var(--gold);
+  background: var(--avatar-accent);
+  color: #1a1306;
+  border-color: var(--avatar-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--avatar-accent) 28%, transparent);
+}
+.rail-avatar-btn.active:hover {
+  background: var(--avatar-accent);
+  color: #1a1306;
 }
 .rail-menu {
   position: fixed;
@@ -1118,14 +1173,19 @@ html, body {
   padding: 10px 10px 8px;
 }
 .rail-menu-avatar {
-  width: 36px; height: 36px; border-radius: 999px;
+  width: 36px; height: 36px; border-radius: 10px;
   background: var(--gold); color: #1a1306;
   display: grid; place-items: center; flex: none;
   font-family: var(--font-display); font-weight: 600; font-size: 13px;
+  letter-spacing: 0.04em;
 }
 .rail-menu-id { min-width: 0; flex: 1; }
+.rail-menu-name {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rail-menu-email {
-  font-size: 13px; font-weight: 500; color: var(--ink);
+  font-size: 12px; font-weight: 400; color: var(--ink-soft, #7e9591);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .rail-menu-role {
