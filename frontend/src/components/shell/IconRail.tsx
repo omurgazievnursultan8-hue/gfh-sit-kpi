@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, NavLink } from 'react-router-dom'
 import { LogOut, Lock } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
@@ -10,22 +10,19 @@ import { useTranslation } from 'react-i18next'
 import { getInitials } from './shellUtils'
 import { useUserCounters } from './useUserCounters'
 
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
-    ADMIN: 'Администратор',
-    CHAIRMAN: 'Председатель',
-    DEPUTY_CHAIRMAN: 'Зам. председателя',
-    HEAD_OF_DEPARTMENT: 'Нач. отдела',
-    HEAD_OF_DEPARTMENT_UNIT: 'Нач. подотдела',
-    EMPLOYEE: 'Сотрудник',
-  }
-  return map[role] ?? role
+const ROLE_KEY: Record<string, string> = {
+  ADMIN: 'nav.roleAdmin',
+  CHAIRMAN: 'nav.roleChairman',
+  DEPUTY_CHAIRMAN: 'nav.roleDeputyChairman',
+  HEAD_OF_DEPARTMENT: 'nav.roleHeadOfDepartment',
+  HEAD_OF_DEPARTMENT_UNIT: 'nav.roleHeadOfDepartmentUnit',
+  EMPLOYEE: 'nav.roleEmployee',
 }
 
 interface IconRailProps {
   activeSection: SectionKey | null
   pinned: boolean
-  onSectionClick: (section: SectionKey) => void
+  onSectionClick: (section: SectionKey, trigger?: HTMLElement | null) => void
   onSectionHover: (section: SectionKey) => void
   onRailEnter: () => void
   onRailLeave: () => void
@@ -33,6 +30,7 @@ interface IconRailProps {
 }
 
 export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover, onRailEnter, onRailLeave, mobileOpen }: IconRailProps) {
+  const railRef = useRef<HTMLElement>(null)
   const { t, i18n } = useTranslation()
   const { role, email, fullName } = useSelector((s: RootState) => s.auth)
   const counters = useUserCounters()
@@ -45,6 +43,8 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
     try { localStorage.setItem('gfh_lang', lng) } catch { /* noop */ }
   }
   const [menuOpen, setMenuOpen] = useState(false)
+  // True only when menu opened via click/keyboard — used to gate focus move.
+  const menuFocusOnOpenRef = useRef(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const avatarRef = useRef<HTMLButtonElement>(null)
   const hoverCloseTimer = useRef<number | null>(null)
@@ -56,9 +56,19 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
   }
   const scheduleHoverClose = () => {
     cancelHoverClose()
-    hoverCloseTimer.current = window.setTimeout(() => setMenuOpen(false), 220)
+    hoverCloseTimer.current = window.setTimeout(() => setMenuOpen(false), 140)
   }
   useEffect(() => () => cancelHoverClose(), [])
+
+  // Mobile drawer open: move focus to first rail-icon for keyboard users.
+  const prevMobileRef = useRef(mobileOpen)
+  useEffect(() => {
+    if (mobileOpen && !prevMobileRef.current) {
+      const first = railRef.current?.querySelector<HTMLButtonElement>('button.rail-icon')
+      first?.focus()
+    }
+    prevMobileRef.current = mobileOpen
+  }, [mobileOpen])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -67,17 +77,39 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
       if (menuRef.current?.contains(t) || avatarRef.current?.contains(t)) return
       setMenuOpen(false)
     }
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false) }
+    const getItems = () =>
+      Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setMenuOpen(false); avatarRef.current?.focus(); return }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Home' && e.key !== 'End') return
+      const items = getItems()
+      if (items.length === 0) return
+      const idx = items.indexOf(document.activeElement as HTMLElement)
+      e.preventDefault()
+      let next = 0
+      if (e.key === 'ArrowDown') next = idx < 0 ? 0 : (idx + 1) % items.length
+      else if (e.key === 'ArrowUp') next = idx < 0 ? items.length - 1 : (idx - 1 + items.length) % items.length
+      else if (e.key === 'Home') next = 0
+      else if (e.key === 'End') next = items.length - 1
+      items[next]?.focus()
+    }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
+    // Move focus into menu only when opened by click/keyboard, not hover.
+    const raf = menuFocusOnOpenRef.current
+      ? requestAnimationFrame(() => { getItems()[0]?.focus() })
+      : 0
+    menuFocusOnOpenRef.current = false
     return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
+      if (raf) cancelAnimationFrame(raf)
     }
   }, [menuOpen])
 
-  const visibleSections = NAV_SECTIONS.filter(
-    s => role && s.roles.includes(role as Role)
+  const visibleSections = useMemo(
+    () => NAV_SECTIONS.filter(s => role && s.roles.includes(role as Role)),
+    [role],
   )
   const initials = getInitials(fullName ?? email)
   const displayName = fullName ?? email ?? ''
@@ -89,12 +121,15 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
   }
 
   return (
-    <aside
+    <nav
+      ref={railRef as React.RefObject<HTMLElement>}
+      id="gfh-icon-rail"
       className={`icon-rail${mobileOpen ? ' icon-rail--mobile-open' : ''}`}
       onMouseEnter={onRailEnter}
       onMouseLeave={onRailLeave}
+      aria-label={t('nav.primary', 'Основная навигация') as string}
     >
-      <a href="/dashboard" className="rail-logo" aria-label={t('shell.brand', 'АСУ КПИ') as string}>
+      <NavLink to="/dashboard" end className="rail-logo" aria-label={t('shell.brand', 'АСУ КПИ') as string}>
         <span className="rail-logo-cell">
           <img
             src="/brand/gfh-mark.png"
@@ -113,9 +148,8 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
             <circle cx="23" cy="10" r="1.6" fill="currentColor"/>
           </svg>
         </span>
-        <span className="rail-build-chip" aria-hidden="true">v1.0</span>
-        <div className="rail-tooltip">{t('shell.brand', 'АСУ КПИ')}</div>
-      </a>
+        <div className="rail-tooltip" aria-hidden="true">{t('shell.brand', 'АСУ КПИ')} · v1.0</div>
+      </NavLink>
 
       {visibleSections.map(section => {
         const Icon = section.icon
@@ -129,18 +163,24 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
           <button
             key={section.key}
             className={`rail-icon${isActive ? ' active' : ''}${isActive && pinned ? ' pinned' : ''}`}
-            onClick={() => onSectionClick(section.key)}
+            onClick={(e) => onSectionClick(section.key, e.currentTarget)}
             onMouseEnter={() => onSectionHover(section.key)}
-            onFocus={() => onSectionHover(section.key)}
             type="button"
+            aria-pressed={isActive && pinned ? true : undefined}
+            aria-expanded={isActive}
+            aria-controls="gfh-nav-panel"
             title={isActive && pinned ? t('nav.pinnedHint', 'Закреплено · клик чтобы открепить') : undefined}
           >
-            <Icon />
+            <Icon aria-hidden="true" />
             {count > 0 && (
-              <span className={`rail-count rail-count--${tier}`} aria-label={`${count}`}>{label}</span>
+              <span
+                className={`rail-count rail-count--${tier}`}
+                role="status"
+                aria-label={t('nav.badgeCount', '{{count}} новых', { count }) as string}
+              >{label}</span>
             )}
             <span className="rail-label">{t(section.railKey)}</span>
-            <div className="rail-tooltip">{t(section.labelKey)}</div>
+            <div className="rail-tooltip" aria-hidden="true">{t(section.labelKey)}</div>
           </button>
         )
       })}
@@ -151,25 +191,41 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
         ref={avatarRef}
         className={`rail-avatar-btn${menuOpen ? ' active' : ''}${role ? ` rail-avatar-btn--${role.toLowerCase()}` : ''}`}
         type="button"
-        onClick={() => { cancelHoverClose(); setMenuOpen(o => !o) }}
-        onMouseEnter={() => { cancelHoverClose(); setMenuOpen(true) }}
+        onClick={() => { cancelHoverClose(); menuFocusOnOpenRef.current = true; setMenuOpen(o => !o) }}
+        onMouseEnter={() => { cancelHoverClose(); menuFocusOnOpenRef.current = false; setMenuOpen(true) }}
         onMouseLeave={scheduleHoverClose}
-        onFocus={() => { cancelHoverClose(); setMenuOpen(true) }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            menuFocusOnOpenRef.current = true
+            setMenuOpen(true)
+          }
+        }}
         aria-haspopup="menu"
         aria-expanded={menuOpen}
+        aria-controls="gfh-account-menu"
+        aria-label={displayName || (t('nav.menuAccount', 'Аккаунт') as string)}
       >
         {initials}
-        {!menuOpen && <div className="rail-tooltip">{displayName}</div>}
+        {!menuOpen && <div className="rail-tooltip" aria-hidden="true">{displayName}</div>}
       </button>
 
       {menuOpen && (
         <div
           ref={menuRef}
+          id="gfh-account-menu"
           className={`rail-menu${role ? ` rail-menu--${role.toLowerCase()}` : ''}`}
           role="menu"
           aria-label={displayName}
           onMouseEnter={cancelHoverClose}
           onMouseLeave={scheduleHoverClose}
+          onBlur={(e) => {
+            // Close when focus moves outside both menu and avatar trigger.
+            const next = e.relatedTarget as Node | null
+            if (!next) return
+            if (menuRef.current?.contains(next) || avatarRef.current?.contains(next)) return
+            setMenuOpen(false)
+          }}
         >
           <span className="rail-menu-mark" aria-hidden="true">АСУ</span>
           <div className="rail-menu-head">
@@ -180,7 +236,7 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
               {role && (
                 <div className="rail-menu-role">
                   <span className="rail-menu-role-dot" aria-hidden="true" />
-                  {roleLabel(role)}
+                  {t(ROLE_KEY[role] ?? '', { defaultValue: role })}
                 </div>
               )}
             </div>
@@ -194,7 +250,7 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
               role="menuitem"
               onClick={() => { setMenuOpen(false); navigate('/change-password') }}
             >
-              <Lock size={15} /> {t('auth.changePassword')}
+              <Lock size={15} aria-hidden="true" /> {t('auth.changePassword')}
             </button>
           </div>
 
@@ -206,11 +262,13 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
                 <button
                   type="button"
                   className={`rail-menu-seg-btn${currentLang === 'ru' ? ' active' : ''}`}
+                  aria-pressed={currentLang === 'ru'}
                   onClick={() => setLang('ru')}
                 >RU</button>
                 <button
                   type="button"
                   className={`rail-menu-seg-btn${currentLang === 'kg' ? ' active' : ''}`}
+                  aria-pressed={currentLang === 'kg'}
                   onClick={() => setLang('kg')}
                 >KG</button>
               </div>
@@ -221,11 +279,13 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
                 <button
                   type="button"
                   className={`rail-menu-seg-btn${theme === 'light' ? ' active' : ''}`}
+                  aria-pressed={theme === 'light'}
                   onClick={() => { if (theme !== 'light') toggle() }}
                 >{t('nav.lightTheme', 'Светлая')}</button>
                 <button
                   type="button"
                   className={`rail-menu-seg-btn${theme === 'dark' ? ' active' : ''}`}
+                  aria-pressed={theme === 'dark'}
                   onClick={() => { if (theme !== 'dark') toggle() }}
                 >{t('nav.darkTheme', 'Тёмная')}</button>
               </div>
@@ -235,11 +295,11 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
           <div className="rail-menu-section">
             <div className="rail-menu-section-title">{t('nav.menuSession', 'Сессия')}</div>
             <button className="rail-menu-item danger" type="button" role="menuitem" onClick={handleLogout}>
-              <LogOut size={15} /> {t('nav.logout')}
+              <LogOut size={15} aria-hidden="true" /> {t('nav.logout')}
             </button>
           </div>
         </div>
       )}
-    </aside>
+    </nav>
   )
 }

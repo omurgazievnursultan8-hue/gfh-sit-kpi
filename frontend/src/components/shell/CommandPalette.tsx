@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
@@ -33,6 +33,7 @@ export function CommandPalette({ open, onClose }: Props) {
   const [recents, setRecents] = useState<string[]>(() => getRecents(userId))
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   const allItems: PaletteItem[] = useMemo(() => {
     const out: PaletteItem[] = []
@@ -90,7 +91,17 @@ export function CommandPalette({ open, onClose }: Props) {
   }, [query, allItems, byTo, favs, recents])
 
   useEffect(() => {
-    if (!open) { setQuery(''); setCursor(0); return }
+    if (!open) {
+      setQuery(''); setCursor(0)
+      // Restore focus to whichever element opened palette (search btn, FAB item, hotkey caller).
+      const el = triggerRef.current
+      triggerRef.current = null
+      el?.focus?.()
+      return
+    }
+    // Capture trigger before stealing focus to input.
+    const active = document.activeElement
+    if (active instanceof HTMLElement) triggerRef.current = active
     setFavs(getFavs(userId))
     setRecents(getRecents(userId))
     const id = window.setTimeout(() => inputRef.current?.focus(), 20)
@@ -101,6 +112,7 @@ export function CommandPalette({ open, onClose }: Props) {
 
   const choose = (to: string) => { pushRecent(userId, to); navigate(to); onClose() }
 
+  const panelRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -111,6 +123,20 @@ export function CommandPalette({ open, onClose }: Props) {
         e.preventDefault()
         const pick = rows[cursor]
         if (pick) choose(pick.item.to)
+      } else if (e.key === 'Tab') {
+        // Trap focus within palette dialog.
+        const panel = panelRef.current
+        if (!panel) return
+        const focusables = panel.querySelectorAll<HTMLElement>(
+          'input, button, [tabindex]:not([tabindex="-1"])'
+        )
+        const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null)
+        if (list.length === 0) return
+        const first = list[0]
+        const last = list[list.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && active === first) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
       }
     }
     document.addEventListener('keydown', onKey)
@@ -136,32 +162,52 @@ export function CommandPalette({ open, onClose }: Props) {
 
   return (
     <div className="cmdk-backdrop" onMouseDown={onClose}>
-      <div className="cmdk-panel" onMouseDown={e => e.stopPropagation()}>
+      <div
+        ref={panelRef}
+        className="cmdk-panel"
+        onMouseDown={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('palette.placeholder', 'Поиск разделов…') as string}
+      >
         <div className="cmdk-input-row">
-          <Search size={16} className="cmdk-input-icon" />
+          <Search size={16} className="cmdk-input-icon" aria-hidden="true" />
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder={t('palette.placeholder', 'Поиск разделов…')}
             className="cmdk-input"
+            role="combobox"
+            aria-expanded="true"
+            aria-controls="cmdk-listbox"
+            aria-autocomplete="list"
+            aria-activedescendant={rows[cursor] ? `cmdk-opt-${cursor}` : undefined}
+            aria-label={t('palette.placeholder', 'Поиск разделов…') as string}
           />
-          <kbd className="cmdk-kbd">ESC</kbd>
+          <kbd className="cmdk-kbd" aria-hidden="true">ESC</kbd>
         </div>
-        <div ref={listRef} className="cmdk-list">
-          {rows.length === 0 && (
-            <div className="cmdk-empty">{t('palette.empty', 'Ничего не найдено')}</div>
-          )}
+        {rows.length === 0 && (
+          <div className="cmdk-empty" role="status">{t('palette.empty', 'Ничего не найдено')}</div>
+        )}
+        <div
+          ref={listRef}
+          className="cmdk-list"
+          id="cmdk-listbox"
+          role="listbox"
+          aria-label={t('palette.placeholder', 'Поиск разделов…') as string}
+        >
           {rows.map((row, i) => {
             const it = row.item
             const Icon = it.icon
             const isFav = favs.includes(it.to)
             const header = showSections && row.kind !== lastKind ? row.kind : null
             lastKind = row.kind
+            const isActive = i === cursor
             return (
-              <div key={it.to}>
+              <Fragment key={it.to}>
                 {header && (
-                  <div className="cmdk-section">
+                  <div className="cmdk-section" role="presentation">
                     <span className="cmdk-section-label">
                       {header === 'fav' && t('palette.favs', 'Закреплённые')}
                       {header === 'recent' && t('palette.recent', 'Недавнее')}
@@ -170,45 +216,53 @@ export function CommandPalette({ open, onClose }: Props) {
                     <span className="cmdk-section-rule" aria-hidden="true" />
                   </div>
                 )}
-                <button
+                <div
+                  id={`cmdk-opt-${i}`}
                   data-idx={i}
-                  className={`cmdk-item${i === cursor ? ' cmdk-item--active' : ''}`}
-                  onMouseEnter={() => setCursor(i)}
+                  className={`cmdk-item${isActive ? ' cmdk-item--active' : ''}`}
+                  onMouseMove={() => { if (cursor !== i) setCursor(i) }}
                   onClick={() => choose(it.to)}
-                  type="button"
+                  role="option"
+                  aria-selected={isActive}
+                  aria-label={`${it.label} — ${it.section}`}
+                  aria-keyshortcuts={it.chord ? `g ${it.chord}` : undefined}
                 >
                   <span className="cmdk-item-glyph" aria-hidden="true">
                     {row.kind === 'fav' && <Star size={13} className="cmdk-item-fav-on" fill="currentColor" />}
                     {row.kind === 'recent' && <RotateCcw size={13} className="cmdk-item-recent" />}
                     {row.kind === 'all' && <Hash size={13} className="cmdk-item-hash" />}
                   </span>
-                  <Icon size={16} className="cmdk-item-icon" />
+                  <Icon size={16} className="cmdk-item-icon" aria-hidden="true" />
                   <span className="cmdk-item-label">{it.label}</span>
                   <span className="cmdk-item-section">{it.section}</span>
                   {it.chord && (
-                    <span className="cmdk-item-chord" title="Keyboard shortcut">
-                      <kbd>g</kbd><kbd>{it.chord}</kbd>
+                    <span
+                      className="cmdk-item-chord"
+                      aria-label={t('palette.chordHint', 'Сочетание клавиш g {{chord}}', { chord: it.chord }) as string}
+                    >
+                      <kbd aria-hidden="true">g</kbd><kbd aria-hidden="true">{it.chord}</kbd>
                     </span>
                   )}
                   <button
                     type="button"
                     className={`cmdk-fav-btn${isFav ? ' active' : ''}`}
                     onClick={e => handleStar(e, it.to)}
-                    title={isFav ? t('palette.unpin', 'Открепить') : t('palette.pin', 'Закрепить')}
-                    aria-label={isFav ? 'unpin' : 'pin'}
+                    title={(isFav ? t('palette.unpin', 'Открепить') : t('palette.pin', 'Закрепить')) as string}
+                    aria-label={(isFav ? t('palette.unpin', 'Открепить') : t('palette.pin', 'Закрепить')) as string}
+                    aria-pressed={isFav}
                   >
-                    <Star size={14} fill={isFav ? 'currentColor' : 'none'} />
+                    <Star size={14} fill={isFav ? 'currentColor' : 'none'} aria-hidden="true" />
                   </button>
-                  {i === cursor && <CornerDownLeft size={14} className="cmdk-item-enter" />}
-                </button>
-              </div>
+                  {isActive && <CornerDownLeft size={14} className="cmdk-item-enter" aria-hidden="true" />}
+                </div>
+              </Fragment>
             )
           })}
         </div>
-        <div className="cmdk-footer">
-          <span><kbd className="cmdk-kbd">↑</kbd><kbd className="cmdk-kbd">↓</kbd> {t('palette.navigate', 'выбор')}</span>
-          <span><kbd className="cmdk-kbd">↵</kbd> {t('palette.open', 'открыть')}</span>
-          <span><Star size={11} /> {t('palette.pinHint', 'закрепить')}</span>
+        <div className="cmdk-footer" role="note">
+          <span><kbd className="cmdk-kbd" aria-hidden="true">↑</kbd><kbd className="cmdk-kbd" aria-hidden="true">↓</kbd> {t('palette.navigate', 'выбор')}</span>
+          <span><kbd className="cmdk-kbd" aria-hidden="true">↵</kbd> {t('palette.open', 'открыть')}</span>
+          <span><Star size={11} aria-hidden="true" /> {t('palette.pinHint', 'закрепить')}</span>
         </div>
       </div>
     </div>

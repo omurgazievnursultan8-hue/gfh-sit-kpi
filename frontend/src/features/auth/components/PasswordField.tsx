@@ -6,6 +6,7 @@ interface Props {
   id: string
   value: string
   onChange: (v: string) => void
+  onBlur?: () => void
   error?: boolean
   label: string
 }
@@ -31,13 +32,20 @@ const EyeOff = () => (
   </svg>
 )
 
-export function PasswordField({ id, value, onChange, error, label }: Props) {
+export function PasswordField({ id, value, onChange, onBlur, error, label }: Props) {
   const { t } = useTranslation()
   const [show, setShow] = useState(false)
   const [capsOn, setCapsOn] = useState(false)
 
+  // getModifierState may be absent on synthetic/IME/touch keyboard events
+  // (mobile autofill paths). Optional-chain guard prevents TypeError.
   const onCapsKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.getModifierState) setCapsOn(e.getModifierState('CapsLock'))
+    const native = e.nativeEvent as KeyboardEvent['nativeEvent'] & {
+      getModifierState?: (k: string) => boolean
+    }
+    if (typeof native.getModifierState === 'function') {
+      setCapsOn(native.getModifierState('CapsLock'))
+    }
   }
 
   const toggle = (
@@ -69,6 +77,7 @@ export function PasswordField({ id, value, onChange, error, label }: Props) {
       type={show ? 'text' : 'password'}
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onBlur={onBlur}
       required
       autoComplete="current-password"
       aria-required="true"

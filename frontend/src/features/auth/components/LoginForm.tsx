@@ -70,7 +70,10 @@ export function LoginForm() {
           icon={<UserIcon />}
           type="email"
           value={email}
-          onChange={(e) => { setEmail(e.target.value); clearErr() }}
+          // Clear on blur (not every keystroke) — avoids role=alert banner
+          // remount thrashing on each character + matching aria-live spam.
+          onChange={(e) => setEmail(e.target.value)}
+          onBlur={clearErr}
           required
           autoComplete="email"
           inputMode="email"
@@ -84,17 +87,20 @@ export function LoginForm() {
           id="lf-password"
           label={`02 — ${t('login.password')}`}
           value={password}
-          onChange={(v) => { setPassword(v); clearErr() }}
+          onChange={(v) => setPassword(v)}
+          onBlur={clearErr}
           error={isError}
         />
 
         <div className="login-row-between">
           <label className="login-checkbox">
+            {/* sr-only positioning keeps the input focusable + sized so the focus
+                ring CSS hop (login-checkbox input:focus-visible + box) can apply. */}
             <input
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
-              style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }}
+              className="sr-only"
             />
             <span className={`login-checkbox-box${remember ? ' login-checkbox-box--checked' : ''}`}>
               {remember && (
@@ -131,7 +137,14 @@ export function LoginForm() {
 
         <p className="login-notice">
           {t('login.noticePre')}{' '}
-          <a href="#" className="login-notice-link">{t('login.noticeLink')}</a>.
+          {/* placeholder link replaced — bare `href="#"` jumped to page top on click */}
+          <button
+            type="button"
+            className="login-notice-link"
+            onClick={() => {/* TODO: wire to policy modal */}}
+          >
+            {t('login.noticeLink')}
+          </button>.
         </p>
       </form>
     </div>

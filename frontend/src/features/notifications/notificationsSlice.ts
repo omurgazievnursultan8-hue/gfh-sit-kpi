@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit'
 import api from '../../app/api'
+import { logout, logoutAction } from '../auth/authSlice'
 
 export interface Notification {
   id: number
@@ -45,7 +46,13 @@ const notificationsSlice = createSlice({
   initialState,
   reducers: {
     pushNotification(state, action: PayloadAction<Notification>) {
+      // Dedupe by id — WS may double-deliver across reconnect.
+      const exists = state.items.some(n => n.id === action.payload.id)
+      if (exists) return
       state.items.unshift(action.payload)
+      // Cap in-memory list — bell shows top 10, /notifications page paginates.
+      // Prevents unbounded growth on long-running WS sessions.
+      if (state.items.length > 50) state.items.length = 50
       if (!action.payload.read) state.unreadCount += 1
     },
   },
@@ -59,10 +66,14 @@ const notificationsSlice = createSlice({
         state.items = action.payload
         state.loading = false
       })
+      .addCase(fetchNotifications.rejected, (state) => { state.loading = false })
       .addCase(markAllRead.fulfilled, (state) => {
         state.unreadCount = 0
         state.items = state.items.map(n => ({ ...n, read: true }))
       })
+      // Cross-slice clear on logout — prevents next session showing previous user's items.
+      .addCase(logout, () => initialState)
+      .addCase(logoutAction.fulfilled, () => initialState)
   },
 })
 

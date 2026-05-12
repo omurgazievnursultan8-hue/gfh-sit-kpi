@@ -1,3 +1,6 @@
+import { useEffect, useId, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+
 interface Props {
   open: boolean
   title: string
@@ -5,31 +8,105 @@ interface Props {
   onConfirm: () => void
   onCancel: () => void
   confirmLabel?: string
+  cancelLabel?: string
   variant?: 'danger' | 'default'
 }
 
-export function ConfirmDialog({ open, title, description, onConfirm, onCancel, confirmLabel = 'Подтвердить', variant = 'default' }: Props) {
+export function ConfirmDialog({
+  open,
+  title,
+  description,
+  onConfirm,
+  onCancel,
+  confirmLabel,
+  cancelLabel,
+  variant = 'default',
+}: Props) {
+  const { t } = useTranslation()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const confirmRef = useRef<HTMLButtonElement>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
+  const titleId = useId()
+  const descId = useId()
+
+  // Body scroll lock while dialog open — prevents background scroll
+  // through the backdrop on touch + wheel.
+  useEffect(() => {
+    if (!open || typeof document === 'undefined') return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [open])
+
+  // Focus management + Escape + Tab trap.
+  useEffect(() => {
+    if (!open) return
+    const trigger = document.activeElement
+    if (trigger instanceof HTMLElement) triggerRef.current = trigger
+
+    // Focus the primary action by default — fast keyboard confirm.
+    const raf = requestAnimationFrame(() => confirmRef.current?.focus())
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onCancel(); return }
+      if (e.key !== 'Tab') return
+      const panel = dialogRef.current
+      if (!panel) return
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>('button, [tabindex]:not([tabindex="-1"])')
+      ).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null)
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement
+      if (e.shiftKey && active === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus() }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      cancelAnimationFrame(raf)
+      document.removeEventListener('keydown', onKey)
+      // Restore focus to whichever element opened the dialog.
+      triggerRef.current?.focus?.()
+      triggerRef.current = null
+    }
+  }, [open, onCancel])
+
   if (!open) return null
+
+  const confirm = confirmLabel ?? (t('common.confirm', 'Подтвердить') as string)
+  const cancel = cancelLabel ?? (t('common.cancel', 'Отмена') as string)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-      <div className="relative bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-        <p className="text-sm text-gray-600 mb-6">{description}</p>
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} aria-hidden="true" />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className="relative bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4"
+      >
+        <h3 id={titleId} className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+        <p id={descId} className="text-sm text-gray-600 mb-6">{description}</p>
         <div className="flex gap-3 justify-end">
           <button
+            type="button"
             onClick={onCancel}
             className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
           >
-            Отмена
+            {cancel}
           </button>
           <button
+            ref={confirmRef}
+            type="button"
             onClick={onConfirm}
             className={`px-4 py-2 text-sm text-white rounded-md ${
               variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:bg-blue-700'
             }`}
           >
-            {confirmLabel}
+            {confirm}
           </button>
         </div>
       </div>

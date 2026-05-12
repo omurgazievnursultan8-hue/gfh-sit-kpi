@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { analyticsApi } from '../analytics/analyticsApi'
 import type { PersonalAnalytics, ScorecardResponse, TeamResponse, DashboardEvent } from '../analytics/analyticsApi'
 import { evaluationsApi } from '../evaluations/evaluationsApi'
 import type { PageResponse, Evaluation } from '../evaluations/evaluationsApi'
 import { periodsApi } from '../periods/periodsApi'
 import type { Period, AppealPending } from '../periods/periodsApi'
+import { usePageTitle } from '../../context/PageContext'
 import { DashboardHero } from './DashboardHero'
 import { DashboardQuickActions } from './DashboardQuickActions'
 import { DashboardScorecard } from './DashboardScorecard'
@@ -13,6 +15,9 @@ import { DashboardHistoryChart } from './DashboardHistoryChart'
 import { DashboardEventFeed } from './DashboardEventFeed'
 
 export function DashboardPage() {
+  const { t } = useTranslation()
+  usePageTitle('nav.dashboard')
+
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
   const [myTasks, setMyTasks] = useState<PageResponse<Evaluation> | null>(null)
   const [periods, setPeriods] = useState<Period[]>([])
@@ -20,15 +25,23 @@ export function DashboardPage() {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null)
   const [team, setTeam] = useState<TeamResponse | null>(null)
   const [events, setEvents] = useState<DashboardEvent[]>([])
+  const [partialFailure, setPartialFailure] = useState(false)
 
   useEffect(() => {
-    analyticsApi.personal().then(setAnalytics).catch(() => {})
-    evaluationsApi.myTasks(0, 200).then(setMyTasks).catch(() => {})
-    periodsApi.list().then(setPeriods).catch(() => {})
-    periodsApi.pendingAppeals().then(setPendingAppeals).catch(() => {})
-    analyticsApi.scorecard().then(v => { if (v) setScorecard(v) }).catch(() => {})
-    analyticsApi.team().then(setTeam).catch(() => {})
-    analyticsApi.events().then(setEvents).catch(() => {})
+    // allSettled — render whatever succeeds, surface partial-failure to AT
+    // instead of silently leaving panels blank.
+    const tasks = [
+      analyticsApi.personal().then(setAnalytics),
+      evaluationsApi.myTasks(0, 200).then(setMyTasks),
+      periodsApi.list().then(setPeriods),
+      periodsApi.pendingAppeals().then(setPendingAppeals),
+      analyticsApi.scorecard().then(v => { if (v) setScorecard(v) }),
+      analyticsApi.team().then(setTeam),
+      analyticsApi.events().then(setEvents),
+    ]
+    Promise.allSettled(tasks).then(results => {
+      if (results.some(r => r.status === 'rejected')) setPartialFailure(true)
+    })
   }, [])
 
   const activePeriod = periods.find(p => p.status === 'ACTIVE') ?? null
@@ -36,6 +49,10 @@ export function DashboardPage() {
 
   return (
     <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
+      {/* Partial-failure announcer — visible only to AT. */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {partialFailure ? t('dashboard.partialLoadFailure', 'Часть данных дашборда не загрузилась') : ''}
+      </div>
       <DashboardHero
         analytics={analytics}
         activePeriod={activePeriod}

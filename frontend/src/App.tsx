@@ -105,6 +105,9 @@ export default function App() {
         <Route path="monitoring" element={<AdminMonitoringPage />} />
       </Route>
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      {/* 404 catch-all — unknown paths return user to dashboard (ProtectedRoute
+          forwards anons to /login). Prevents blank page on broken/stale links. */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   )
 }

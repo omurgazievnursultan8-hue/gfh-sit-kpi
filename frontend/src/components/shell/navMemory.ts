@@ -54,7 +54,8 @@ export function getFavs(userId: number | null | undefined): string[] {
 /** Has the user ever toggled a pin? (Distinguishes "no pins" from "never set"). */
 export function hasFavsSet(userId: number | null | undefined): boolean {
   const key = `${FAVS_PREFIX}${suffix(userId)}`
-  return localStorage.getItem(key) !== null
+  // Safari private mode + locked-down profiles throw on localStorage access.
+  try { return localStorage.getItem(key) !== null } catch { return false }
 }
 
 /** Effective pins: user's list if they've ever set one, else role defaults. */

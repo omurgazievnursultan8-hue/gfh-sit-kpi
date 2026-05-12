@@ -1,4 +1,8 @@
 {
+  "shell": {
+    "brand": "АБС КПК",
+    "skipToContent": "Мазмунга өтүү"
+  },
   "login": {
     "title": "Системага кирүү",
     "email": "Email",
@@ -48,6 +52,7 @@
     "monitoring": "Мониторинг",
     "home": "Башкы",
     "toggleMenu": "Багыттоо менюсу",
+    "chordHint": "g аккорду — экинчи клавишаны басыңыз: d, m, e, v, a, h, t, u, s",
     "cabinet": "Менин кабинетим",
     "cabinetSub": "Жеке кабинет",
     "analyticsSub": "Отчёттор жана аналитика",
@@ -80,7 +85,18 @@
     "groupTasks": "Тапшырмалар",
     "groupAnalytics": "Отчёттор",
     "groupAdmin": "Башкаруу",
-    "groupSystem": "Система"
+    "groupSystem": "Система",
+    "primary": "Негизги навигация",
+    "breadcrumbs": "Нан күкүмдөрү",
+    "notifications": "Билдирүүлөр",
+    "notificationsWithCount": "Билдирүүлөр ({{count}} окулган эмес)",
+    "badgeCount": "{{count}} жаңы",
+    "roleAdmin": "Администратор",
+    "roleChairman": "Төрага",
+    "roleDeputyChairman": "Төраганын орун басары",
+    "roleHeadOfDepartment": "Бөлүм башчысы",
+    "roleHeadOfDepartmentUnit": "Бөлүкчө башчысы",
+    "roleEmployee": "Кызматкер"
   },
   "palette": {
     "placeholder": "Бөлүмдөрдү издөө…",
@@ -92,7 +108,8 @@
     "unpin": "Бошотуу",
     "navigate": "тандоо",
     "open": "ачуу",
-    "pinHint": "бекитүү"
+    "pinHint": "бекитүү",
+    "chordHint": "g {{chord}} клавиатура айкалышы"
   },
   "period": {
     "active": "Активдүү мезгил",
@@ -277,7 +294,8 @@
     "appealReceived": "Даттануу келди",
     "appealDecided": "Даттануу боюнча чечим",
     "deadlineReminder": "Мөөнөт эскертүүсү",
-    "viewAll": "Бардык билдирмелер"
+    "viewAll": "Бардык билдирмелер",
+    "unread": "Окулган эмес"
   },
   "analytics": {
     "title": "Аналитика",

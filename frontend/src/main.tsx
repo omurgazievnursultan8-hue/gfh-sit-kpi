@@ -8,7 +8,10 @@ import { AppShell } from './components/shell/AppShell'
 import './index.css'
 import './i18n'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root')
+if (!rootEl) throw new Error('#root element missing from index.html — cannot mount React app')
+
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>

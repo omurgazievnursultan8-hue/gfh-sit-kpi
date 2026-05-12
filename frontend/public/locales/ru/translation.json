@@ -1,4 +1,8 @@
 {
+  "shell": {
+    "brand": "АСУ КПИ",
+    "skipToContent": "Перейти к содержимому"
+  },
   "login": {
     "title": "Вход в систему",
     "email": "Email",
@@ -48,6 +52,7 @@
     "monitoring": "Мониторинг",
     "home": "Главная",
     "toggleMenu": "Меню навигации",
+    "chordHint": "Аккорд g — нажмите вторую клавишу: d, m, e, v, a, h, t, u, s",
     "cabinet": "Мой кабинет",
     "cabinetSub": "Личный кабинет",
     "analyticsSub": "Отчёты и аналитика",
@@ -80,7 +85,18 @@
     "groupTasks": "Задачи",
     "groupAnalytics": "Отчёты",
     "groupAdmin": "Управление",
-    "groupSystem": "Система"
+    "groupSystem": "Система",
+    "primary": "Основная навигация",
+    "breadcrumbs": "Хлебные крошки",
+    "notifications": "Уведомления",
+    "notificationsWithCount": "Уведомления ({{count}} непрочитанных)",
+    "badgeCount": "{{count}} новых",
+    "roleAdmin": "Администратор",
+    "roleChairman": "Председатель",
+    "roleDeputyChairman": "Зам. председателя",
+    "roleHeadOfDepartment": "Нач. отдела",
+    "roleHeadOfDepartmentUnit": "Нач. подотдела",
+    "roleEmployee": "Сотрудник"
   },
   "palette": {
     "placeholder": "Поиск разделов…",
@@ -92,7 +108,8 @@
     "unpin": "Открепить",
     "navigate": "выбор",
     "open": "открыть",
-    "pinHint": "закрепить"
+    "pinHint": "закрепить",
+    "chordHint": "Сочетание клавиш g {{chord}}"
   },
   "period": {
     "active": "Активный период",
@@ -277,7 +294,8 @@
     "appealReceived": "Получена апелляция",
     "appealDecided": "Решение по апелляции",
     "deadlineReminder": "Напоминание о дедлайне",
-    "viewAll": "Все уведомления"
+    "viewAll": "Все уведомления",
+    "unread": "Не прочитано"
   },
   "analytics": {
     "title": "Аналитика",

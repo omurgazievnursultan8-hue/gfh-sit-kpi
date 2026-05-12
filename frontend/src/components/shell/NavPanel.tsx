@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
@@ -75,17 +75,50 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
     setFavsTick(n => n + 1)
   }
 
+  // Focus first nav item when panel opens via click/keyboard (pinned mode).
+  // Skip when hover-opened to avoid stealing focus from mouse users.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const prevPinnedRef = useRef(pinned)
+  useEffect(() => {
+    if (section && pinned && !prevPinnedRef.current) {
+      const first = scrollRef.current?.querySelector<HTMLAnchorElement>('a.nav-item')
+      first?.focus()
+    }
+    prevPinnedRef.current = pinned
+  }, [section, pinned])
+
+  // Preserve nav-scroll position per section across switches.
+  const scrollMemoryRef = useRef<Map<string, number>>(new Map())
+  const prevSectionKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    const el = scrollRef.current
+    const prev = prevSectionKeyRef.current
+    if (prev && el) scrollMemoryRef.current.set(prev, el.scrollTop)
+    const nextKey = section?.key ?? null
+    if (nextKey && el) el.scrollTop = scrollMemoryRef.current.get(nextKey) ?? 0
+    prevSectionKeyRef.current = nextKey
+  }, [section])
+
   return (
+    <>
+    {/* Live region outside aria-hidden subtree so AT actually announces section change. */}
+    <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {section ? t(section.labelKey) : ''}
+    </div>
     <div
+      id="gfh-nav-panel"
       className={`nav-panel${section ? ' nav-panel--visible' : ''}${pinned ? ' nav-panel--pinned' : ''}`}
       onMouseEnter={onPanelEnter}
       onMouseLeave={onPanelLeave}
+      role="navigation"
+      aria-label={section ? (t(section.labelKey) as string) : undefined}
+      aria-hidden={!section}
     >
       {section && (
         <>
           <div className="nav-brand">
             <div className="nav-brand-text">
-              <div className="nav-brand-name">{t(section.labelKey)}</div>
+              <div className="nav-brand-name" title={t(section.labelKey) as string}>{t(section.labelKey)}</div>
               <div className="nav-brand-rule" aria-hidden="true" />
               <div className="nav-brand-sub" title={crumb ?? undefined}>
                 {crumb ?? t(section.subKey)}
@@ -105,11 +138,13 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
           </div>
 
 
-          <div className="nav-scroll">
+          <div className="nav-scroll" ref={scrollRef}>
             {pinnedItems.length > 0 && (
               <div className="nav-group">
                 <div className="nav-group-title">
-                  <span className="nav-group-num">★</span>
+                  <span className="nav-group-num" aria-hidden="true">
+                    <Star size={11} fill="currentColor" />
+                  </span>
                   <span className="nav-group-label">{t('nav.groupPinned', 'Закреплённое')}</span>
                   <span className="nav-group-rule" aria-hidden="true" />
                 </div>
@@ -121,21 +156,33 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                       to={item.to}
                       end={item.end}
                       title={t(item.labelKey) as string}
-                      onClick={() => { pushRecent(userId, item.to); if (!pinned) onClose() }}
+                      onClick={() => {
+                        pushRecent(userId, item.to)
+                        const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+                        if (!pinned || isMobile) onClose()
+                      }}
                       className={({ isActive }) =>
                         `nav-item${isActive ? ' nav-item--active' : ''}`
                       }
                     >
-                      <Icon />
+                      <Icon aria-hidden="true" />
                       <span className="nav-item-label">{t(item.labelKey)}</span>
-                      <button
-                        type="button"
+                      {/* span+role=button avoids invalid <a>-contains-<button> nesting (HTML "interactive content" rule). */}
+                      <span
+                        role="button"
+                        tabIndex={0}
                         className="nav-pin nav-pin--on"
                         aria-label={t('nav.unpin', 'Открепить') as string}
+                        aria-pressed={true}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleTogglePin(item.to) }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault(); e.stopPropagation(); handleTogglePin(item.to)
+                          }
+                        }}
                       >
-                        <Star size={13} fill="currentColor" />
-                      </button>
+                        <Star size={13} fill="currentColor" aria-hidden="true" />
+                      </span>
                     </NavLink>
                   )
                 })}
@@ -144,7 +191,7 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
             {visibleGroups.map((group, idx) => (
               <div key={group.groupKey} className="nav-group">
                 <div className="nav-group-title">
-                  <span className="nav-group-num">{String(idx + 1).padStart(2, '0')}</span>
+                  <span className="nav-group-num" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
                   <span className="nav-group-label">{t(group.groupKey)}</span>
                   <span className="nav-group-rule" aria-hidden="true" />
                 </div>
@@ -157,21 +204,32 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
                       to={item.to}
                       end={item.end}
                       title={t(item.labelKey) as string}
-                      onClick={() => { pushRecent(userId, item.to); if (!pinned) onClose() }}
+                      onClick={() => {
+                        pushRecent(userId, item.to)
+                        const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+                        if (!pinned || isMobile) onClose()
+                      }}
                       className={({ isActive }) =>
                         `nav-item${isActive ? ' nav-item--active' : ''}`
                       }
                     >
-                      <Icon />
+                      <Icon aria-hidden="true" />
                       <span className="nav-item-label">{t(item.labelKey)}</span>
-                      <button
-                        type="button"
+                      <span
+                        role="button"
+                        tabIndex={0}
                         className={`nav-pin${isFav ? ' nav-pin--on' : ''}`}
                         aria-label={(isFav ? t('nav.unpin', 'Открепить') : t('nav.pin', 'Закрепить')) as string}
+                        aria-pressed={isFav}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleTogglePin(item.to) }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault(); e.stopPropagation(); handleTogglePin(item.to)
+                          }
+                        }}
                       >
-                        <Star size={13} fill={isFav ? 'currentColor' : 'none'} />
-                      </button>
+                        <Star size={13} fill={isFav ? 'currentColor' : 'none'} aria-hidden="true" />
+                      </span>
                     </NavLink>
                   )
                 })}
@@ -189,5 +247,6 @@ export function NavPanel({ activeSection, pinned, onClose, onUnpin, onPanelEnter
         </>
       )}
     </div>
+    </>
   )
 }

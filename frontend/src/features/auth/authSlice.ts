@@ -35,8 +35,11 @@ export const login = createAsyncThunk(
       const { data } = await api.post('/auth/login', credentials)
       return data
     } catch (err) {
-      const axiosErr = err as AxiosError<{ message_ru?: string }>
-      return rejectWithValue(axiosErr.response?.data?.message_ru || 'Ошибка входа')
+      // Backend contract (per CLAUDE.md) returns `messageRu` (camelCase).
+      // Legacy `message_ru` kept as fallback during migration window.
+      const axiosErr = err as AxiosError<{ messageRu?: string; message_ru?: string }>
+      const data = axiosErr.response?.data
+      return rejectWithValue(data?.messageRu ?? data?.message_ru ?? 'Ошибка входа')
     }
   }
 )
@@ -65,11 +68,17 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
+      // Full reset — partial clears leaked stale flags (passwordExpired,
+      // pdpaRequired, error, loading) into the next session.
       state.isAuthenticated = false
       state.userId = null
       state.email = null
       state.fullName = null
       state.role = null
+      state.passwordExpired = false
+      state.pdpaRequired = false
+      state.error = null
+      state.loading = false
     },
     setAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
       Object.assign(state, action.payload)
@@ -101,6 +110,10 @@ const authSlice = createSlice({
         state.email = null
         state.fullName = null
         state.role = null
+        state.passwordExpired = false
+        state.pdpaRequired = false
+        state.error = null
+        state.loading = false
       })
       .addCase(bootstrapAuth.fulfilled, (state, action) => {
         state.isAuthenticated = true

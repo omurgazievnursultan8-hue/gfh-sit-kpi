@@ -8,7 +8,8 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  if (['post', 'put', 'delete', 'patch'].includes(config.method || '')) {
+  // Method may arrive uppercase or lowercase from callers; normalise before check.
+  if (['post', 'put', 'delete', 'patch'].includes((config.method || '').toLowerCase())) {
     const csrfToken = document.cookie
       .split('; ')
       .find((row) => row.startsWith('XSRF-TOKEN='))
@@ -37,7 +38,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     const skipRedirect = !!originalRequest?.headers?.['X-Skip-Auth-Redirect']
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Network failures (CORS, DNS, offline) reject before a config is attached.
+    // Guard so `_retry` assignment + recursion below don't crash on undefined.
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })

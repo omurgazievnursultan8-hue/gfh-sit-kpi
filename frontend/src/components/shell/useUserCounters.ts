@@ -13,6 +13,7 @@ const POLL_MS = 60_000
 let cache: { value: UserCounters; ts: number } | null = null
 const subscribers = new Set<(c: UserCounters) => void>()
 let intervalId: number | null = null
+let visibilityListenerAttached = false
 
 async function fetchOnce() {
   try {
@@ -26,16 +27,50 @@ async function fetchOnce() {
   }
 }
 
-function ensurePolling() {
+function startInterval() {
   if (intervalId !== null) return
-  fetchOnce()
-  intervalId = window.setInterval(fetchOnce, POLL_MS)
+  intervalId = window.setInterval(() => {
+    // Skip polling while tab hidden — backend save, fetch resumes on focus.
+    if (typeof document !== 'undefined' && document.hidden) return
+    fetchOnce()
+  }, POLL_MS)
 }
 
-function stopPolling() {
-  if (intervalId !== null && subscribers.size === 0) {
+function stopInterval() {
+  if (intervalId !== null) {
     window.clearInterval(intervalId)
     intervalId = null
+  }
+}
+
+function onVisibilityChange() {
+  if (subscribers.size === 0) return
+  if (!document.hidden) {
+    // Returned to foreground — refresh immediately if cache stale.
+    if (!cache || Date.now() - cache.ts >= POLL_MS) fetchOnce()
+  }
+}
+
+function ensurePolling() {
+  if (intervalId !== null) {
+    // Already polling — refresh on subscribe if cache stale.
+    if (!cache || Date.now() - cache.ts >= POLL_MS) fetchOnce()
+    return
+  }
+  fetchOnce()
+  startInterval()
+  if (!visibilityListenerAttached && typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    visibilityListenerAttached = true
+  }
+}
+
+function teardownIfEmpty() {
+  if (subscribers.size !== 0) return
+  stopInterval()
+  if (visibilityListenerAttached && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    visibilityListenerAttached = false
   }
 }
 
@@ -47,7 +82,7 @@ export function useUserCounters(): UserCounters {
     ensurePolling()
     return () => {
       subscribers.delete(setValue)
-      stopPolling()
+      teardownIfEmpty()
     }
   }, [])
 
