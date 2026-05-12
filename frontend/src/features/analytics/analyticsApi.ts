@@ -105,9 +105,18 @@ export interface AntiBonusAnalytics {
   }>
 }
 
+export interface PendingSummary {
+  pendingEvaluations: number
+  pendingAppeals: number
+}
+
 export const analyticsApi = {
   personal: () =>
     api.get<PersonalAnalytics>('/analytics/personal').then(r => r.data),
+
+  pendingSummary: () =>
+    api.get<PendingSummary>('/analytics/pending-summary').then(r => r.data),
+
 
   scorecard: () =>
     api.get<ScorecardResponse>('/analytics/personal/scorecard')

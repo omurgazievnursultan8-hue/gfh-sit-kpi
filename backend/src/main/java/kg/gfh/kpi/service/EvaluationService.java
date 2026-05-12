@@ -46,6 +46,10 @@ public class EvaluationService {
         return list.isEmpty() ? null : list.get(0);
     }
 
+    public List<EvaluationPeriod> listAllPeriods() {
+        return periodRepository.findAllByOrderByCreatedAtDesc(org.springframework.data.domain.Pageable.unpaged()).getContent();
+    }
+
     @Transactional
     public EvaluationPeriod createPeriod(EvaluationPeriodRequest req, Long createdBy) {
         EvaluationPeriod period = new EvaluationPeriod();

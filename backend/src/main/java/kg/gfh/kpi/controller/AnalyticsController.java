@@ -4,6 +4,11 @@ import kg.gfh.kpi.dto.DashboardEventResponse;
 import kg.gfh.kpi.dto.PersonalAnalyticsResponse;
 import kg.gfh.kpi.dto.ScorecardResponse;
 import kg.gfh.kpi.dto.TeamResponse;
+import kg.gfh.kpi.entity.Appeal.AppealStatus;
+import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
+import kg.gfh.kpi.enums.Role;
+import kg.gfh.kpi.repository.AppealRepository;
+import kg.gfh.kpi.repository.EvaluationRepository;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.AnalyticsService;
 import kg.gfh.kpi.service.HierarchicalAnalyticsService;
@@ -23,6 +28,26 @@ public class AnalyticsController {
     private final AnalyticsService analyticsService;
     private final HierarchicalAnalyticsService hierarchicalService;
     private final UserRepository userRepository;
+    private final EvaluationRepository evaluationRepository;
+    private final AppealRepository appealRepository;
+
+    public record PendingSummary(long pendingEvaluations, long pendingAppeals) {}
+
+    @GetMapping("/pending-summary")
+    public PendingSummary pendingSummary(Authentication auth) {
+        Long userId = resolveUserId(auth);
+        Role role = userRepository.findById(userId).map(u -> u.getRole()).orElse(Role.EMPLOYEE);
+        if (role == Role.ADMIN) {
+            return new PendingSummary(
+                    evaluationRepository.countByStatus(EvaluationStatus.DRAFT),
+                    appealRepository.countByStatus(AppealStatus.PENDING)
+            );
+        }
+        return new PendingSummary(
+                evaluationRepository.countByEvaluatorIdAndStatus(userId, EvaluationStatus.DRAFT),
+                appealRepository.countByEvaluatorIdAndStatus(userId, AppealStatus.PENDING)
+        );
+    }
 
     @GetMapping("/personal")
     public PersonalAnalyticsResponse personal(Authentication auth) {

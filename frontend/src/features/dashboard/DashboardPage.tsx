@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { analyticsApi } from '../analytics/analyticsApi'
-import type { PersonalAnalytics, ScorecardResponse, TeamResponse, DashboardEvent } from '../analytics/analyticsApi'
+import type { PersonalAnalytics, ScorecardResponse, TeamResponse, DashboardEvent, PendingSummary } from '../analytics/analyticsApi'
 import { evaluationsApi } from '../evaluations/evaluationsApi'
 import type { PageResponse, Evaluation } from '../evaluations/evaluationsApi'
 import { periodsApi } from '../periods/periodsApi'
@@ -25,6 +25,7 @@ export function DashboardPage() {
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null)
   const [team, setTeam] = useState<TeamResponse | null>(null)
   const [events, setEvents] = useState<DashboardEvent[]>([])
+  const [pendingSummary, setPendingSummary] = useState<PendingSummary | null>(null)
   const [partialFailure, setPartialFailure] = useState(false)
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export function DashboardPage() {
       analyticsApi.scorecard().then(v => { if (v) setScorecard(v) }),
       analyticsApi.team().then(setTeam),
       analyticsApi.events().then(setEvents),
+      analyticsApi.pendingSummary().then(setPendingSummary),
     ]
     Promise.allSettled(tasks).then(results => {
       if (results.some(r => r.status === 'rejected')) setPartialFailure(true)
@@ -46,6 +48,10 @@ export function DashboardPage() {
 
   const activePeriod = periods.find(p => p.status === 'ACTIVE') ?? null
   const draftCount = myTasks?.content.filter(e => e.status === 'DRAFT').length ?? 0
+  // Hero counts come from the role-aware summary endpoint (admins see system totals).
+  // Fallback to user-scoped data while the summary is loading.
+  const heroPendingEvaluations = pendingSummary?.pendingEvaluations ?? draftCount
+  const heroPendingAppeals = pendingSummary?.pendingAppeals ?? pendingAppeals.length
 
   return (
     <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
@@ -56,8 +62,8 @@ export function DashboardPage() {
       <DashboardHero
         analytics={analytics}
         activePeriod={activePeriod}
-        pendingEvaluations={draftCount}
-        pendingAppeals={pendingAppeals.length}
+        pendingEvaluations={heroPendingEvaluations}
+        pendingAppeals={heroPendingAppeals}
       />
       <DashboardQuickActions
         myTasks={myTasks}

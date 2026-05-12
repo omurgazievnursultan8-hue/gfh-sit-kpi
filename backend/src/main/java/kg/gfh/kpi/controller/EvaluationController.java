@@ -50,6 +50,37 @@ public class EvaluationController {
             String status
     ) {}
 
+    public record PeriodResponse(
+            Long id,
+            String type,
+            java.time.LocalDate startDate,
+            java.time.LocalDate endDate,
+            java.time.LocalDateTime submissionDeadline,
+            String status,
+            boolean autoCreated,
+            java.time.LocalDateTime createdAt
+    ) {
+        static PeriodResponse from(kg.gfh.kpi.entity.EvaluationPeriod p) {
+            return new PeriodResponse(
+                    p.getId(),
+                    p.getType().name(),
+                    p.getStartDate(),
+                    p.getEndDate(),
+                    p.getSubmissionDeadline(),
+                    p.getStatus().name(),
+                    p.isAutoCreated(),
+                    p.getCreatedAt()
+            );
+        }
+    }
+
+    @GetMapping("/periods")
+    public List<PeriodResponse> listPeriods() {
+        return evaluationService.listAllPeriods().stream()
+                .map(PeriodResponse::from)
+                .toList();
+    }
+
     @PostMapping("/periods")
     @PreAuthorize("hasRole('ADMIN')")
     @ResponseStatus(HttpStatus.CREATED)
