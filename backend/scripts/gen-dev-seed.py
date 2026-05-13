@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-"""Generate dev seed SQL for evaluations / scores / history.
+"""Generate dev seed SQL for evaluation periods / evaluations / scores / history.
 
 Usage:
     python3 backend/scripts/gen-dev-seed.py
 
 Writes:
+    backend/src/main/resources/db/changelog/m6/028-seed-periods.sql
     backend/src/main/resources/db/changelog/m6/029-seed-evaluations.sql
     backend/src/main/resources/db/changelog/m6/030-seed-evaluation-scores.sql
     backend/src/main/resources/db/changelog/m6/031-seed-score-history.sql
+
+Layout (today = 2026-05-13):
+    P1  QUARTERLY  2025-10-01..2025-12-31  CLOSED  — all 27 evals CLOSED
+    P2  QUARTERLY  2026-01-01..2026-03-31  CLOSED  — all 27 evals CLOSED (+ appeals)
+    P3  MONTHLY    2026-05-01..2026-05-31  ACTIVE  — all 27 evals SUBMITTED w/ final_score
+    P4  QUARTERLY  2026-04-01..2026-06-30  ACTIVE  — 14 SUBMITTED, 13 DRAFT (half-filled)
 """
 from pathlib import Path
 
 OUT_DIR = Path(__file__).resolve().parents[1] / "src/main/resources/db/changelog/m6"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# (user_id, manager_id) — copy of the table from Task 4, chairman excluded
+# (user_id, manager_id) — chairman excluded
 USERS = [
     (3, 2), (4, 2), (5, 3), (6, 3), (7, 4), (8, 4), (9, 4), (10, 7), (11, 7),
     (12, 5), (13, 5), (14, 5), (15, 5),
@@ -44,125 +51,192 @@ CRITERIA = [
     (10, "ANTI_BONUS",  5.0),
 ]
 
-# Q1 appeal outcomes by user_id
-Q1_APPEAL_DELTA = {16: 5.0, 23: 3.0, 28: 0.0}  # 28 = OVERTURNED → no change
+# Periods: (id, type, start, end, deadline, status, created_at, closed_at)
+PERIODS = [
+    (1, 'QUARTERLY', '2025-10-01', '2025-12-31', '2026-01-05 18:00:00', 'CLOSED',
+     '2025-09-15 10:00:00', '2026-01-10 10:00:00'),
+    (2, 'QUARTERLY', '2026-01-01', '2026-03-31', '2026-04-05 18:00:00', 'CLOSED',
+     '2025-12-15 10:00:00', '2026-04-10 10:00:00'),
+    (3, 'MONTHLY',   '2026-05-01', '2026-05-31', '2026-06-05 18:00:00', 'ACTIVE',
+     '2026-04-20 10:00:00', None),
+    (4, 'QUARTERLY', '2026-04-01', '2026-06-30', '2026-07-05 18:00:00', 'ACTIVE',
+     '2026-03-20 10:00:00', None),
+]
 
-def raw_value(user_id: int, criteria_id: int, ctype: str, target: int) -> float:
+# When evaluations got created / submitted, per period.
+PERIOD_DATES = {
+    1: {'created': '2025-10-05 09:00:00', 'submitted': '2026-01-03 14:00:00',
+        'updated':  '2026-01-10 10:00:00'},
+    2: {'created': '2026-01-15 09:00:00', 'submitted': '2026-04-03 14:00:00',
+        'updated':  '2026-04-10 10:00:00'},
+    3: {'created': '2026-05-02 09:00:00', 'submitted': '2026-05-12 11:00:00',
+        'updated':  '2026-05-12 11:00:00'},
+    4: {'created': '2026-04-02 09:00:00', 'submitted': '2026-05-10 11:00:00',
+        'updated':  '2026-05-10 11:00:00'},
+}
+
+# P2 (Q1 2026) appeal outcomes by user_id — applied to final score
+P2_APPEAL_DELTA = {16: 5.0, 23: 3.0, 28: 0.0}  # 28 = OVERTURNED → no change
+
+
+def raw_value(user_id, criteria_id, ctype, target, salt=0):
     if ctype == "POSITIVE":
-        offset = ((user_id * 7 + criteria_id * 13) % 11) - 5
+        offset = ((user_id * 7 + criteria_id * 13 + salt * 17) % 11) - 5
         return float(max(50, min(100, target + offset)))
-    else:
-        v = ((user_id * 3 + criteria_id * 5) % 7) - 3
-        return float(max(0, v))
+    v = ((user_id * 3 + criteria_id * 5 + salt * 11) % 7) - 3
+    return float(max(0, v))
 
-def final_score(user_id: int) -> float:
+
+def final_score(user_id, salt=0):
     target = TARGET[PERSONALITY.get(user_id, "avg")]
-    pos = sum(raw_value(user_id, cid, t, target) * w / 100
+    pos = sum(raw_value(user_id, cid, t, target, salt) * w / 100
               for (cid, t, w) in CRITERIA if t == "POSITIVE")
-    anti = sum(raw_value(user_id, cid, t, target) * w / 100
+    anti = sum(raw_value(user_id, cid, t, target, salt) * w / 100
                for (cid, t, w) in CRITERIA if t == "ANTI_BONUS")
     return round(max(0.0, pos - anti), 2)
 
-def q1_eval_rows():
-    rows = []
-    for idx, (uid, mid) in enumerate(USERS):
-        eval_id = idx + 1
-        score = final_score(uid) + Q1_APPEAL_DELTA.get(uid, 0.0)
-        # columns: id, period_id, evaluatee_id, evaluator_id, status, final_score,
-        #          version, evaluatee_comment, submitted_at, created_at, updated_at
-        rows.append((eval_id, 1, uid, mid, "CLOSED",
-                     round(score, 2),
-                     0,
-                     "Период закрыт; оценка зафиксирована.",
-                     "2026-04-03 14:00:00",
-                     "2026-01-15 09:00:00", "2026-04-10 10:00:00"))
-    return rows
-
-def q2_eval_rows():
-    rows = []
-    for idx, (uid, mid) in enumerate(USERS):
-        eval_id = idx + 28
-        if idx <= 10:
-            status, submitted, fs = "SUBMITTED", "2026-05-08 11:00:00", final_score(uid)
-            comment = "Оценка отправлена руководителем."
-        elif idx <= 18:
-            status, submitted, fs = "DRAFT", None, None
-            comment = None
-        elif idx <= 23:
-            status, submitted, fs = "DRAFT", None, None
-            comment = None
-        else:
-            status, submitted, fs = "APPEALED", "2026-05-06 11:00:00", final_score(uid)
-            comment = "Оценка отправлена; подана апелляция."
-        # columns: id, period_id, evaluatee_id, evaluator_id, status, final_score,
-        #          version, evaluatee_comment, submitted_at, created_at, updated_at
-        rows.append((eval_id, 2, uid, mid, status, fs, 0, comment, submitted,
-                     "2026-04-02 09:00:00", "2026-05-08 11:00:00"))
-    return rows
 
 def sql_lit(v):
-    if v is None: return "NULL"
-    if isinstance(v, str): return "'" + v.replace("'", "''") + "'"
+    if v is None:
+        return "NULL"
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, str):
+        return "'" + v.replace("'", "''") + "'"
     return str(v)
 
+
+# ---- period seeding -------------------------------------------------------
+
+def write_periods():
+    cols = ("(id, type, start_date, end_date, submission_deadline, status, "
+            "auto_created, created_by, created_at, closed_at)")
+    rows = []
+    for (pid, typ, sd, ed, dl, st, ca, closed) in PERIODS:
+        rows.append((pid, typ, sd, ed, dl, st, False, 1, ca, closed))
+    body = ",\n  ".join("(" + ", ".join(sql_lit(c) for c in r) + ")" for r in rows)
+    (OUT_DIR / "028-seed-periods.sql").write_text(
+        "-- generated by backend/scripts/gen-dev-seed.py — do not hand-edit\n"
+        f"INSERT INTO evaluation_periods {cols} VALUES\n  {body};\n"
+    )
+
+
+# ---- evaluations ----------------------------------------------------------
+
+def period_eval_rows(pid, start_eval_id):
+    """Return (rows, next_eval_id) for one period."""
+    d = PERIOD_DATES[pid]
+    rows = []
+    for idx, (uid, mid) in enumerate(USERS):
+        eval_id = start_eval_id + idx
+
+        if pid == 1:
+            status, fs = "CLOSED", final_score(uid, salt=1)
+            comment = "Период закрыт; оценка зафиксирована."
+            submitted = d['submitted']
+        elif pid == 2:
+            score = final_score(uid, salt=2) + P2_APPEAL_DELTA.get(uid, 0.0)
+            status, fs = "CLOSED", round(score, 2)
+            comment = "Период закрыт; оценка зафиксирована."
+            submitted = d['submitted']
+        elif pid == 3:
+            status, fs = "SUBMITTED", final_score(uid, salt=3)
+            comment = "Оценка отправлена руководителем."
+            submitted = d['submitted']
+        else:  # pid == 4 — half SUBMITTED, half DRAFT
+            if idx < 14:
+                status, fs = "SUBMITTED", final_score(uid, salt=4)
+                comment = "Оценка отправлена руководителем."
+                submitted = d['submitted']
+            else:
+                status, fs, comment, submitted = "DRAFT", None, None, None
+
+        rows.append((eval_id, pid, uid, mid, status, fs, 0,
+                     comment, submitted, d['created'], d['updated']))
+    return rows, start_eval_id + len(USERS)
+
+
 def write_evaluations():
-    rows = q1_eval_rows() + q2_eval_rows()
-    cols = "(id, period_id, evaluatee_id, evaluator_id, status, final_score, version, evaluatee_comment, submitted_at, created_at, updated_at)"
+    rows = []
+    next_id = 1
+    for (pid, *_rest) in PERIODS:
+        r, next_id = period_eval_rows(pid, next_id)
+        rows.extend(r)
+    cols = ("(id, period_id, evaluatee_id, evaluator_id, status, final_score, "
+            "version, evaluatee_comment, submitted_at, created_at, updated_at)")
     body = ",\n  ".join("(" + ", ".join(sql_lit(c) for c in r) + ")" for r in rows)
     (OUT_DIR / "029-seed-evaluations.sql").write_text(
-        f"-- generated by backend/scripts/gen-dev-seed.py — do not hand-edit\n"
+        "-- generated by backend/scripts/gen-dev-seed.py — do not hand-edit\n"
         f"INSERT INTO evaluations {cols} VALUES\n  {body};\n"
     )
 
+
+# ---- evaluation_scores ----------------------------------------------------
+
 def write_scores():
-    out = ["-- generated by backend/scripts/gen-dev-seed.py — do not hand-edit"]
     cols = "(evaluation_id, criteria_id, value, note, updated_at)"
     score_rows = []
 
-    for idx, (uid, _mid) in enumerate(USERS):
-        eval_id = idx + 1
-        target = TARGET[PERSONALITY.get(uid, "avg")]
-        for (cid, ctype, _w) in CRITERIA:
-            v = raw_value(uid, cid, ctype, target)
-            score_rows.append((eval_id, cid, round(v, 4), None, "2026-04-03 14:00:00"))
+    eval_id = 1
+    for (pid, *_rest) in PERIODS:
+        d = PERIOD_DATES[pid]
+        for idx, (uid, _mid) in enumerate(USERS):
+            target = TARGET[PERSONALITY.get(uid, "avg")]
 
-    for idx, (uid, _mid) in enumerate(USERS):
-        eval_id = idx + 28
-        target = TARGET[PERSONALITY.get(uid, "avg")]
-        if idx <= 10 or idx >= 24:
-            for (cid, ctype, _w) in CRITERIA:
-                v = raw_value(uid, cid, ctype, target)
-                score_rows.append((eval_id, cid, round(v, 4), None, "2026-05-08 11:00:00"))
-        elif idx <= 18:
-            for (cid, ctype, _w) in CRITERIA[:4]:
-                v = raw_value(uid, cid, ctype, target)
-                score_rows.append((eval_id, cid, round(v, 4), None, "2026-05-05 11:00:00"))
+            if pid == 4 and idx >= 14:
+                # DRAFT — partial scores on first 4 criteria
+                for (cid, ctype, _w) in CRITERIA[:4]:
+                    v = raw_value(uid, cid, ctype, target, salt=pid)
+                    score_rows.append((eval_id, cid, round(v, 4), None,
+                                       '2026-05-08 11:00:00'))
+            else:
+                for (cid, ctype, _w) in CRITERIA:
+                    v = raw_value(uid, cid, ctype, target, salt=pid)
+                    score_rows.append((eval_id, cid, round(v, 4), None,
+                                       d['submitted']))
+            eval_id += 1
 
     body = ",\n  ".join("(" + ", ".join(sql_lit(c) for c in r) + ")" for r in score_rows)
-    out.append(f"INSERT INTO evaluation_scores {cols} VALUES\n  {body};")
-    (OUT_DIR / "030-seed-evaluation-scores.sql").write_text("\n".join(out) + "\n")
+    (OUT_DIR / "030-seed-evaluation-scores.sql").write_text(
+        "-- generated by backend/scripts/gen-dev-seed.py — do not hand-edit\n"
+        f"INSERT INTO evaluation_scores {cols} VALUES\n  {body};\n"
+    )
+
+
+# ---- evaluation_score_history --------------------------------------------
 
 def write_history():
-    cols = "(evaluation_id, criteria_id, raw_value, weighted_value, weight_snapshot, recorded_at, criteria_type)"
-    history_rows = []
-    for idx, (uid, _mid) in enumerate(USERS):
-        eval_id = idx + 1
-        target = TARGET[PERSONALITY.get(uid, "avg")]
-        for (cid, ctype, w) in CRITERIA:
-            raw = raw_value(uid, cid, ctype, target)
-            weighted = round(raw * w / 100, 4)
-            history_rows.append((eval_id, cid, round(raw, 4), weighted, w,
-                                 "2026-04-10 10:00:00", ctype))
-    body = ",\n  ".join("(" + ", ".join(sql_lit(c) for c in r) + ")" for r in history_rows)
+    """Score history only for CLOSED evaluations (P1, P2)."""
+    cols = ("(evaluation_id, criteria_id, raw_value, weighted_value, "
+            "weight_snapshot, recorded_at, criteria_type)")
+    rows = []
+    eval_id = 1
+    for (pid, *_rest) in PERIODS:
+        d = PERIOD_DATES[pid]
+        for idx, (uid, _mid) in enumerate(USERS):
+            if pid in (1, 2):
+                target = TARGET[PERSONALITY.get(uid, "avg")]
+                for (cid, ctype, w) in CRITERIA:
+                    raw = raw_value(uid, cid, ctype, target, salt=pid)
+                    weighted = round(raw * w / 100, 4)
+                    rows.append((eval_id, cid, round(raw, 4), weighted, w,
+                                 d['updated'], ctype))
+            eval_id += 1
+    body = ",\n  ".join("(" + ", ".join(sql_lit(c) for c in r) + ")" for r in rows)
     (OUT_DIR / "031-seed-score-history.sql").write_text(
         "-- generated by backend/scripts/gen-dev-seed.py — do not hand-edit\n"
         f"INSERT INTO evaluation_score_history {cols} VALUES\n  {body};\n"
     )
 
+
 if __name__ == "__main__":
+    write_periods()
     write_evaluations()
     write_scores()
     write_history()
     print("Wrote:")
-    for f in ("029-seed-evaluations.sql", "030-seed-evaluation-scores.sql", "031-seed-score-history.sql"):
+    for f in ("028-seed-periods.sql",
+              "029-seed-evaluations.sql",
+              "030-seed-evaluation-scores.sql",
+              "031-seed-score-history.sql"):
         print(" ", OUT_DIR / f)
