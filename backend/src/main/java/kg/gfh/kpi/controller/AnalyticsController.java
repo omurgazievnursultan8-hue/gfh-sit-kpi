@@ -6,8 +6,11 @@ import kg.gfh.kpi.dto.ScorecardResponse;
 import kg.gfh.kpi.dto.TeamResponse;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
+import kg.gfh.kpi.entity.EvaluationPeriod;
+import kg.gfh.kpi.entity.EvaluationPeriod.PeriodStatus;
 import kg.gfh.kpi.enums.Role;
 import kg.gfh.kpi.repository.AppealRepository;
+import kg.gfh.kpi.repository.EvaluationPeriodRepository;
 import kg.gfh.kpi.repository.EvaluationRepository;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.AnalyticsService;
@@ -30,22 +33,50 @@ public class AnalyticsController {
     private final UserRepository userRepository;
     private final EvaluationRepository evaluationRepository;
     private final AppealRepository appealRepository;
+    private final EvaluationPeriodRepository periodRepository;
 
-    public record PendingSummary(long pendingEvaluations, long pendingAppeals) {}
+    public record PendingSummary(
+            long pendingEvaluations,
+            long pendingAppeals,
+            long totalEvaluations,
+            long completedEvaluations
+    ) {}
 
     @GetMapping("/pending-summary")
     public PendingSummary pendingSummary(Authentication auth) {
         Long userId = resolveUserId(auth);
         Role role = userRepository.findById(userId).map(u -> u.getRole()).orElse(Role.EMPLOYEE);
+
+        // Active period scope for completion bars; absent → zeros.
+        EvaluationPeriod active = periodRepository.findByStatus(PeriodStatus.ACTIVE)
+                .stream().findFirst().orElse(null);
+
+        long total = 0;
+        long completed = 0;
+        if (active != null) {
+            if (role == Role.ADMIN) {
+                total = evaluationRepository.countByPeriodId(active.getId());
+                completed = evaluationRepository.countByPeriodIdAndStatusNot(active.getId(), EvaluationStatus.DRAFT);
+            } else {
+                total = evaluationRepository.countByPeriodIdAndEvaluatorId(active.getId(), userId);
+                completed = evaluationRepository.countByPeriodIdAndEvaluatorIdAndStatusNot(
+                        active.getId(), userId, EvaluationStatus.DRAFT);
+            }
+        }
+
         if (role == Role.ADMIN) {
             return new PendingSummary(
                     evaluationRepository.countByStatus(EvaluationStatus.DRAFT),
-                    appealRepository.countByStatus(AppealStatus.PENDING)
+                    appealRepository.countByStatus(AppealStatus.PENDING),
+                    total,
+                    completed
             );
         }
         return new PendingSummary(
                 evaluationRepository.countByEvaluatorIdAndStatus(userId, EvaluationStatus.DRAFT),
-                appealRepository.countByEvaluatorIdAndStatus(userId, AppealStatus.PENDING)
+                appealRepository.countByEvaluatorIdAndStatus(userId, AppealStatus.PENDING),
+                total,
+                completed
         );
     }
 

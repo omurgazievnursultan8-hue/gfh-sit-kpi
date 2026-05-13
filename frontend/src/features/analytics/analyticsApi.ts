@@ -108,6 +108,8 @@ export interface AntiBonusAnalytics {
 export interface PendingSummary {
   pendingEvaluations: number
   pendingAppeals: number
+  totalEvaluations: number
+  completedEvaluations: number
 }
 
 export const analyticsApi = {

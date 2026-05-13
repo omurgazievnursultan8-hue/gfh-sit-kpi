@@ -1,18 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { analyticsApi } from '../analytics/analyticsApi'
-import type { PersonalAnalytics, ScorecardResponse, TeamResponse, DashboardEvent, PendingSummary } from '../analytics/analyticsApi'
+import type { PersonalAnalytics, PendingSummary } from '../analytics/analyticsApi'
 import { evaluationsApi } from '../evaluations/evaluationsApi'
 import type { PageResponse, Evaluation } from '../evaluations/evaluationsApi'
 import { periodsApi } from '../periods/periodsApi'
 import type { Period, AppealPending } from '../periods/periodsApi'
 import { usePageTitle } from '../../context/PageContext'
 import { DashboardHero } from './DashboardHero'
+import { DashboardPeriodStrip } from './DashboardPeriodStrip'
 import { DashboardQuickActions } from './DashboardQuickActions'
-import { DashboardScorecard } from './DashboardScorecard'
-import { DashboardTeam } from './DashboardTeam'
-import { DashboardHistoryChart } from './DashboardHistoryChart'
-import { DashboardEventFeed } from './DashboardEventFeed'
 
 export function DashboardPage() {
   const { t } = useTranslation()
@@ -22,9 +19,6 @@ export function DashboardPage() {
   const [myTasks, setMyTasks] = useState<PageResponse<Evaluation> | null>(null)
   const [periods, setPeriods] = useState<Period[]>([])
   const [pendingAppeals, setPendingAppeals] = useState<AppealPending[]>([])
-  const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null)
-  const [team, setTeam] = useState<TeamResponse | null>(null)
-  const [events, setEvents] = useState<DashboardEvent[]>([])
   const [pendingSummary, setPendingSummary] = useState<PendingSummary | null>(null)
   const [partialFailure, setPartialFailure] = useState(false)
 
@@ -36,9 +30,6 @@ export function DashboardPage() {
       evaluationsApi.myTasks(0, 200).then(setMyTasks),
       periodsApi.list().then(setPeriods),
       periodsApi.pendingAppeals().then(setPendingAppeals),
-      analyticsApi.scorecard().then(v => { if (v) setScorecard(v) }),
-      analyticsApi.team().then(setTeam),
-      analyticsApi.events().then(setEvents),
       analyticsApi.pendingSummary().then(setPendingSummary),
     ]
     Promise.allSettled(tasks).then(results => {
@@ -46,7 +37,11 @@ export function DashboardPage() {
     })
   }, [])
 
-  const activePeriod = periods.find(p => p.status === 'ACTIVE') ?? null
+  // All active periods (monthly + quarterly can run concurrently). Earliest end first.
+  const activePeriods = periods
+    .filter(p => p.status === 'ACTIVE')
+    .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
+  const activePeriod = activePeriods[0] ?? null
   const draftCount = myTasks?.content.filter(e => e.status === 'DRAFT').length ?? 0
   // Hero counts come from the role-aware summary endpoint (admins see system totals).
   // Fallback to user-scoped data while the summary is loading.
@@ -65,15 +60,15 @@ export function DashboardPage() {
         pendingEvaluations={heroPendingEvaluations}
         pendingAppeals={heroPendingAppeals}
       />
+      <DashboardPeriodStrip
+        activePeriods={activePeriods}
+        pendingSummary={pendingSummary}
+      />
       <DashboardQuickActions
         myTasks={myTasks}
         pendingAppeals={pendingAppeals}
         activePeriod={activePeriod}
       />
-      <DashboardScorecard scorecard={scorecard} />
-      <DashboardTeam team={team} />
-      {analytics && <DashboardHistoryChart history={analytics.history} />}
-      <DashboardEventFeed events={events} />
     </div>
   )
 }
