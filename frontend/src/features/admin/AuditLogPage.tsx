@@ -7,6 +7,8 @@ import {
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
 import { Layout } from '../../components/Layout'
 import { DataTable, type Column } from '../../components/DataTable'
+import { TableCard } from '../../components/TableCard'
+import { Badge, type BadgeTone } from '../../components/Badge'
 
 const KNOWN_ACTIONS = [
   'CREATE_USER', 'UPDATE_USER', 'DEACTIVATE_USER',
@@ -23,13 +25,13 @@ const KNOWN_ENTITY_TYPES = [
 
 const PAGE_SIZE = 20
 
-/** Map an action verb prefix to a semantic badge palette. */
-function actionTone(action: string): string {
-  if (/^(CREATE|SUBMIT)/.test(action)) return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-  if (/^(DELETE|DEACTIVATE)/.test(action)) return 'bg-rose-50 text-rose-700 ring-rose-600/20'
-  if (/^UPDATE/.test(action)) return 'bg-amber-50 text-amber-700 ring-amber-600/20'
-  if (/^(DOWNLOAD|EXPORT)/.test(action)) return 'bg-sky-50 text-sky-700 ring-sky-600/20'
-  return 'bg-slate-100 text-slate-600 ring-slate-500/20'
+/** Map an action verb prefix to a semantic Badge tone. */
+function actionTone(action: string): BadgeTone {
+  if (/^(CREATE|SUBMIT)/.test(action)) return 'success'
+  if (/^(DELETE|DEACTIVATE)/.test(action)) return 'danger'
+  if (/^UPDATE/.test(action)) return 'warn'
+  if (/^(DOWNLOAD|EXPORT)/.test(action)) return 'gold'
+  return 'neutral'
 }
 
 /** Initials avatar fallback for an actor email. */
@@ -102,8 +104,10 @@ export function AuditLogPage() {
   const handleExport = () => auditApi.export(buildParams())
 
   const selectCls =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 ' +
-    'transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30'
+    'w-full rounded-lg px-3 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]'
+  const selectStyle = {
+    border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)',
+  }
 
   const columns: Column<AuditLogEntry>[] = [
     {
@@ -118,7 +122,8 @@ export function AuditLogPage() {
             type="button"
             aria-expanded={isOpen}
             aria-label={t('audit.details') as string}
-            className="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+            className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--accent-mute)]"
+            style={{ color: 'var(--ink-faint)' }}
             onClick={e => { e.stopPropagation(); setExpanded(isOpen ? null : entry.id) }}
           >
             <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
@@ -131,42 +136,41 @@ export function AuditLogPage() {
       header: t('audit.actor'),
       render: entry => (
         <div className="flex items-center gap-2">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-semibold text-slate-600">
+          <span
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold"
+            style={{ background: 'var(--surface-mute)', color: 'var(--ink-soft)' }}
+          >
             {initials(entry.actorEmail)}
           </span>
-          <span className="font-medium text-slate-900">{entry.actorEmail}</span>
+          <span className="font-medium" style={{ color: 'var(--ink)' }}>{entry.actorEmail}</span>
         </div>
       ),
     },
     {
       key: 'action',
       header: t('audit.action'),
-      render: entry => (
-        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${actionTone(entry.action)}`}>
-          {entry.action}
-        </span>
-      ),
+      render: entry => <Badge tone={actionTone(entry.action)}>{entry.action}</Badge>,
     },
     {
       key: 'entityType',
       header: t('audit.entityType'),
-      render: entry => <span className="text-slate-600">{entry.entityType ?? '—'}</span>,
+      render: entry => <span style={{ color: 'var(--ink-soft)' }}>{entry.entityType ?? '—'}</span>,
     },
     {
       key: 'entityId',
       header: t('audit.entityId'),
-      render: entry => <span className="tabular-nums text-slate-600">{entry.entityId ?? '—'}</span>,
+      render: entry => <span className="tabular-nums" style={{ color: 'var(--ink-soft)' }}>{entry.entityId ?? '—'}</span>,
     },
     {
       key: 'ipAddress',
       header: t('audit.ipAddress'),
-      render: entry => <span className="font-mono text-xs text-slate-500">{entry.ipAddress ?? '—'}</span>,
+      render: entry => <span className="font-mono text-xs" style={{ color: 'var(--ink-faint)' }}>{entry.ipAddress ?? '—'}</span>,
     },
     {
       key: 'timestamp',
       header: t('audit.timestamp'),
       render: entry => (
-        <time dateTime={entry.createdAt} className="whitespace-nowrap tabular-nums text-slate-500">
+        <time dateTime={entry.createdAt} className="whitespace-nowrap tabular-nums" style={{ color: 'var(--ink-faint)' }}>
           {new Date(entry.createdAt).toLocaleString(dateLocale)}
         </time>
       ),
@@ -177,12 +181,12 @@ export function AuditLogPage() {
     <div className="px-12 py-3">
       <dl className="grid grid-cols-1 gap-x-8 gap-y-1 text-xs sm:grid-cols-2">
         <div className="flex gap-2">
-          <dt className="font-medium text-slate-500">ID:</dt>
-          <dd className="tabular-nums text-slate-700">{entry.id}</dd>
+          <dt className="font-medium" style={{ color: 'var(--ink-faint)' }}>ID:</dt>
+          <dd className="tabular-nums" style={{ color: 'var(--ink-soft)' }}>{entry.id}</dd>
         </div>
         <div className="flex gap-2">
-          <dt className="font-medium text-slate-500">{t('audit.details')}:</dt>
-          <dd className="break-all text-slate-700">{entry.details ?? '—'}</dd>
+          <dt className="font-medium" style={{ color: 'var(--ink-faint)' }}>{t('audit.details')}:</dt>
+          <dd className="break-all" style={{ color: 'var(--ink-soft)' }}>{entry.details ?? '—'}</dd>
         </div>
       </dl>
     </div>
@@ -190,13 +194,14 @@ export function AuditLogPage() {
 
   const emptyState = (
     <div>
-      <FileSearch className="mx-auto h-10 w-10 text-slate-300" aria-hidden="true" />
-      <p className="mt-3 text-sm font-medium text-slate-500">{t('common.noData')}</p>
+      <FileSearch className="mx-auto h-10 w-10" style={{ color: 'var(--ink-faint)' }} aria-hidden="true" />
+      <p className="mt-3 text-sm font-medium" style={{ color: 'var(--ink-soft)' }}>{t('common.noData')}</p>
       {hasFilters && (
         <button
           type="button"
           onClick={handleReset}
-          className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+          className="mt-2 text-sm font-medium hover:underline"
+          style={{ color: 'var(--accent-2)' }}
         >
           {t('common.reset', 'Сбросить')}
         </button>
@@ -232,43 +237,44 @@ export function AuditLogPage() {
 
         {/* Filters */}
         <div
-          className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+          className="rounded-xl p-4 shadow-sm"
+          style={{ background: 'var(--surface)', border: '1px solid var(--line-soft)' }}
           role="search"
           aria-label={t('audit.filters', 'Фильтры журнала аудита') as string}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <label htmlFor={actionId} className="mb-1 block text-xs font-medium text-slate-600">
+              <label htmlFor={actionId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
                 {t('audit.action')}
               </label>
-              <select id={actionId} value={action} onChange={e => setAction(e.target.value)} className={selectCls}>
+              <select id={actionId} value={action} onChange={e => setAction(e.target.value)} className={selectCls} style={selectStyle}>
                 <option value="">{t('audit.allActions', '— все —')}</option>
                 {KNOWN_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
 
             <div>
-              <label htmlFor={entityTypeId} className="mb-1 block text-xs font-medium text-slate-600">
+              <label htmlFor={entityTypeId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
                 {t('audit.entityType')}
               </label>
-              <select id={entityTypeId} value={entityType} onChange={e => setEntityType(e.target.value)} className={selectCls}>
+              <select id={entityTypeId} value={entityType} onChange={e => setEntityType(e.target.value)} className={selectCls} style={selectStyle}>
                 <option value="">{t('audit.allEntityTypes', '— все —')}</option>
                 {KNOWN_ENTITY_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
               </select>
             </div>
 
             <div>
-              <label htmlFor={fromId} className="mb-1 block text-xs font-medium text-slate-600">
+              <label htmlFor={fromId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
                 {t('audit.filterFrom')}
               </label>
-              <input id={fromId} type="date" value={from} onChange={e => setFrom(e.target.value)} className={selectCls} />
+              <input id={fromId} type="date" value={from} onChange={e => setFrom(e.target.value)} className={selectCls} style={selectStyle} />
             </div>
 
             <div>
-              <label htmlFor={toId} className="mb-1 block text-xs font-medium text-slate-600">
+              <label htmlFor={toId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
                 {t('audit.filterTo')}
               </label>
-              <input id={toId} type="date" value={to} onChange={e => setTo(e.target.value)} className={selectCls} />
+              <input id={toId} type="date" value={to} onChange={e => setTo(e.target.value)} className={selectCls} style={selectStyle} />
             </div>
           </div>
 
@@ -285,7 +291,8 @@ export function AuditLogPage() {
               type="button"
               onClick={handleReset}
               disabled={!hasFilters}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-slate-400/40"
+              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-[var(--accent-mute)] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              style={{ borderColor: 'var(--line)', color: 'var(--ink-soft)' }}
             >
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
               {t('common.reset', 'Сбросить')}
@@ -294,7 +301,43 @@ export function AuditLogPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+        <TableCard
+          footer={
+            <div
+              className="flex items-center justify-between text-sm"
+              style={{ color: 'var(--ink-soft)' }}
+              role="navigation"
+              aria-label={t('common.pagination', 'Пагинация') as string}
+            >
+              <span aria-live="polite">
+                {t('common.page')} <span className="font-medium" style={{ color: 'var(--ink)' }}>{page + 1}</span>{' '}
+                {t('common.of')} {Math.max(totalPages, 1)}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0}
+                  onClick={() => setPage(p => p - 1)}
+                  aria-label={t('common.prevPage', 'Предыдущая страница') as string}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border transition hover:bg-[var(--accent-mute)] disabled:opacity-40"
+                  style={{ borderColor: 'var(--line)', color: 'var(--ink-soft)' }}
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage(p => p + 1)}
+                  aria-label={t('common.nextPage', 'Следующая страница') as string}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border transition hover:bg-[var(--accent-mute)] disabled:opacity-40"
+                  style={{ borderColor: 'var(--line)', color: 'var(--ink-soft)' }}
+                >
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          }
+        >
           <DataTable<AuditLogEntry>
             columns={columns}
             rows={entries}
@@ -307,39 +350,7 @@ export function AuditLogPage() {
             empty={emptyState}
             totalCount={totalElements}
           />
-        </div>
-
-        {/* Pagination */}
-        <div
-          className="flex items-center justify-between text-sm text-slate-600"
-          role="navigation"
-          aria-label={t('common.pagination', 'Пагинация') as string}
-        >
-          <span aria-live="polite">
-            {t('common.page')} <span className="font-medium text-slate-900">{page + 1}</span> {t('common.of')}{' '}
-            {Math.max(totalPages, 1)}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => setPage(p => p - 1)}
-              aria-label={t('common.prevPage', 'Предыдущая страница') as string}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage(p => p + 1)}
-              aria-label={t('common.nextPage', 'Следующая страница') as string}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-        </div>
+        </TableCard>
       </div>
     </Layout>
   )
