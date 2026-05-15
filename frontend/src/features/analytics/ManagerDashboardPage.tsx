@@ -4,6 +4,8 @@ import { Trophy, TrendingDown, Users, ArrowRight } from 'lucide-react'
 import { evaluationsApi, Evaluation } from '../evaluations/evaluationsApi'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DataTable, type Column } from '../../components/DataTable'
+import { TableCard } from '../../components/TableCard'
+import { Badge } from '../../components/Badge'
 
 interface SubordinateRow {
   userId: number
@@ -14,9 +16,9 @@ interface SubordinateRow {
 }
 
 function ScoreCell({ score }: { score: number | null }) {
-  if (score === null) return <span className="text-gray-400 text-sm">—</span>
-  const color = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'
-  return <span className={`font-mono font-semibold ${color}`}>{score.toFixed(1)}</span>
+  if (score === null) return <span style={{ fontSize: 13, color: 'var(--ink-faint)' }}>—</span>
+  const color = score >= 80 ? 'var(--accent-2)' : score >= 60 ? 'var(--gold)' : 'var(--danger)'
+  return <span className="font-mono font-semibold" style={{ color }}>{score.toFixed(1)}</span>
 }
 
 type RankedRow = SubordinateRow & { rank: number }
@@ -32,11 +34,9 @@ function buildSubordinateColumns(onOpen: (r: RankedRow) => void): Column<RankedR
     {
       key: 'status', header: 'Статус',
       render: r => (
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-          r.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-        }`}>
+        <Badge tone={r.status === 'DRAFT' ? 'warn' : 'success'}>
           {r.status === 'DRAFT' ? 'Ожидает' : 'Готово'}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -45,7 +45,8 @@ function buildSubordinateColumns(onOpen: (r: RankedRow) => void): Column<RankedR
         <button
           type="button"
           onClick={() => onOpen(r)}
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition hover:bg-[var(--accent-mute)]"
+          style={{ color: 'var(--accent-2)' }}
         >
           Открыть
           <ArrowRight size={13} aria-hidden="true" />
@@ -169,13 +170,16 @@ export function ManagerDashboardPage() {
       )}
 
       {/* Full subordinates table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50">
-          <Users size={16} className="text-gray-500" />
-          <span className="font-semibold text-gray-800 text-sm">
-            Все подчинённые ({subordinates.length})
-          </span>
-        </div>
+      <TableCard
+        header={
+          <div className="flex items-center gap-2">
+            <Users size={16} style={{ color: 'var(--ink-soft)' }} />
+            <span className="font-display" style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+              Все подчинённые ({subordinates.length})
+            </span>
+          </div>
+        }
+      >
         <DataTable<RankedRow>
           caption="Все подчинённые"
           columns={subordinateColumns}
@@ -184,7 +188,7 @@ export function ManagerDashboardPage() {
           totalCount={rankedRows.length}
           empty="Нет данных для текущего периода"
         />
-      </div>
+      </TableCard>
     </div>
   )
 }
