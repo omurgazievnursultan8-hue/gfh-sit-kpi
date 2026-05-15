@@ -21,10 +21,10 @@ import { CalendarPage } from './features/calendar/CalendarPage'
 import { EvaluationFormPage } from './features/evaluations/EvaluationFormPage'
 import { MyTasksPage } from './features/evaluations/MyTasksPage'
 import { MyEvaluationsPage } from './features/evaluations/MyEvaluationsPage'
+import { EvaluatorEvaluationsPage } from './features/evaluations/EvaluatorEvaluationsPage'
 import { EvaluationDetailPage } from './features/evaluations/EvaluationDetailPage'
 import { AppealPage } from './features/appeals/AppealPage'
 import { NotificationsPage } from './features/notifications/NotificationsPage'
-import { ManagerTodoPage } from './features/periods/ManagerTodoPage'
 import { PersonalDashboardPage } from './features/analytics/PersonalDashboardPage'
 import { ManagerDashboardPage } from './features/analytics/ManagerDashboardPage'
 import { HierarchicalAnalyticsPage } from './features/analytics/HierarchicalAnalyticsPage'
@@ -33,6 +33,7 @@ import { AdminLayout } from './features/admin/AdminLayout'
 import { AdminDashboardPage } from './features/admin/AdminDashboardPage'
 import { AuditLogPage } from './features/admin/AuditLogPage'
 import { AdminMonitoringPage } from './features/admin/AdminMonitoringPage'
+import { PeriodsPage } from './features/periods/PeriodsPage'
 
 export default function App() {
   const dispatch = useDispatch<AppDispatch>()
@@ -65,6 +66,11 @@ export default function App() {
           <EvaluationFormPage />
         </ProtectedRoute>
       } />
+      <Route path="/evaluations" element={
+        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+          <EvaluatorEvaluationsPage />
+        </ProtectedRoute>
+      } />
       <Route path="/my-evaluations" element={<ProtectedRoute><MyEvaluationsPage /></ProtectedRoute>} />
       <Route path="/my-evaluations/:id" element={<ProtectedRoute><EvaluationDetailPage /></ProtectedRoute>} />
       <Route path="/appeals/new" element={<ProtectedRoute><AppealPage /></ProtectedRoute>} />
@@ -85,11 +91,7 @@ export default function App() {
           <ManagerDashboardPage />
         </ProtectedRoute>
       } />
-      <Route path="/manager-tasks" element={
-        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
-          <ManagerTodoPage />
-        </ProtectedRoute>
-      } />
+      <Route path="/manager-tasks" element={<Navigate to="/my-tasks" replace />} />
       <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><SettingsPage /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLayout /></ProtectedRoute>}>
@@ -98,7 +100,7 @@ export default function App() {
         <Route path="org" element={<OrgPage />} />
         <Route path="delegations" element={<DelegationsPage />} />
         <Route path="criteria" element={<CriteriaPage />} />
-        <Route path="periods" element={<ManagerTodoPage />} />
+        <Route path="periods" element={<PeriodsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="audit" element={<AuditLogPage />} />
