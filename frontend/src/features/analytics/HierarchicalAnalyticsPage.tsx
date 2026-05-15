@@ -255,7 +255,6 @@ export function HierarchicalAnalyticsPage() {
                 rows={flatRows}
                 rowKey={n => n.orgUnitId}
                 onRowClick={n => setDrillDown(n)}
-                density="compact"
                 empty={<div className="text-gray-400">Нет данных</div>}
               />
             </div>

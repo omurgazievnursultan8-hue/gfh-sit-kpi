@@ -130,7 +130,6 @@ export function AntiBonusAnalyticsPage() {
               rows={data.top10}
               rowKey={(e) => e.userId}
               caption="Топ-10 по антибонусным удержаниям"
-              density="compact"
               empty={<span className="text-sm text-gray-400">Нет данных</span>}
               totalCount={data.top10.length}
             />

@@ -1566,7 +1566,6 @@ function BulkEditDialog({
             </div>
             <DataTable<Criteria>
               caption="Предпросмотр массовых изменений"
-              density="compact"
               rowKey={(c) => c.id}
               rows={rows}
               columns={[
