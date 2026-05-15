@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { store } from './app/store'
 import App from './App'
 import { AppShell } from './components/shell/AppShell'
+import { DensityProvider } from './hooks/useDensity'
 import './index.css'
 import './i18n'
 
@@ -15,9 +16,11 @@ ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <AppShell>
-          <App />
-        </AppShell>
+        <DensityProvider>
+          <AppShell>
+            <App />
+          </AppShell>
+        </DensityProvider>
       </BrowserRouter>
     </Provider>
   </React.StrictMode>
