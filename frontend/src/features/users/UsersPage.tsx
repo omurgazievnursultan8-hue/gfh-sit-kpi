@@ -181,7 +181,7 @@ export function UsersPage() {
         {/* Saved-view tabs */}
         <UsersSavedViews users={users} role={role} status={status} onApply={applyView} />
 
-        {/* Toolbar — search + filters + density + view switch */}
+        {/* Toolbar — search + filters + view switch */}
         <UsersFilters
           search={search}
           onSearch={setSearch}
