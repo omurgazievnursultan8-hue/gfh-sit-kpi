@@ -51,6 +51,8 @@ export interface DataTableProps<T> {
   /** When set, renders a row-count footer below the table.
    *  Pass server total for paginated tables; rows.length otherwise. */
   totalCount?: number
+  /** Optional per-row className — e.g. to dim or highlight rows. */
+  rowClassName?: (row: T) => string | undefined
 }
 
 interface DensityTokens {
@@ -72,6 +74,7 @@ export function DataTable<T>({
   columns, rows, rowKey, caption, loading = false,
   sort, onSort, onRowClick, density: densityProp,
   empty, skeletonRows = 8, renderExpanded, expandedKeys, totalCount,
+  rowClassName,
 }: DataTableProps<T>) {
   const { density: contextDensity } = useDensity()
   const density = densityProp ?? contextDensity
@@ -160,7 +163,7 @@ export function DataTable<T>({
                 return (
                   <Fragment key={key}>
                     <tr
-                      className="dt-row"
+                      className={['dt-row', rowClassName?.(row)].filter(Boolean).join(' ')}
                       onClick={clickable ? () => onRowClick!(row) : undefined}
                       tabIndex={clickable ? 0 : undefined}
                       role={clickable ? 'button' : undefined}
