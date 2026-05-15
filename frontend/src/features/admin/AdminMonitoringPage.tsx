@@ -4,16 +4,18 @@ import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { adminApi, QuartzJobInfo } from './adminApi'
 import { Layout } from '../../components/Layout'
 import { DataTable, type Column } from '../../components/DataTable'
+import { TableCard } from '../../components/TableCard'
+import { Badge, type BadgeTone } from '../../components/Badge'
 
 type HealthStatus = 'up' | 'down' | 'checking'
 
-const JOB_STATE_COLORS: Record<string, string> = {
-  NORMAL: 'bg-green-100 text-green-800',
-  PAUSED: 'bg-yellow-100 text-yellow-800',
-  BLOCKED: 'bg-red-100 text-red-800',
-  ERROR: 'bg-red-100 text-red-800',
-  NONE: 'bg-gray-100 text-gray-600',
-  UNKNOWN: 'bg-gray-100 text-gray-600',
+const JOB_STATE_TONE: Record<string, BadgeTone> = {
+  NORMAL: 'success',
+  PAUSED: 'warn',
+  BLOCKED: 'danger',
+  ERROR: 'danger',
+  NONE: 'neutral',
+  UNKNOWN: 'neutral',
 }
 
 function formatDate(dateStr: string | null): string {
@@ -56,36 +58,32 @@ export function AdminMonitoringPage() {
     {
       key: 'name',
       header: t('monitoring.jobName'),
-      render: job => <span className="font-medium text-gray-900">{job.name}</span>,
+      render: job => <span className="font-medium" style={{ color: 'var(--ink)' }}>{job.name}</span>,
     },
     {
       key: 'group',
       header: t('monitoring.jobGroup'),
-      render: job => <span className="text-gray-500">{job.group}</span>,
+      render: job => <span style={{ color: 'var(--ink-soft)' }}>{job.group}</span>,
     },
     {
       key: 'cronExpression',
       header: t('monitoring.cronExpression'),
-      render: job => <span className="font-mono text-xs text-gray-600">{job.cronExpression ?? '—'}</span>,
+      render: job => <span className="font-mono text-xs" style={{ color: 'var(--ink-soft)' }}>{job.cronExpression ?? '—'}</span>,
     },
     {
       key: 'previousFireTime',
       header: t('monitoring.lastFire'),
-      render: job => <span className="text-gray-500">{formatDate(job.previousFireTime)}</span>,
+      render: job => <span style={{ color: 'var(--ink-soft)' }}>{formatDate(job.previousFireTime)}</span>,
     },
     {
       key: 'nextFireTime',
       header: t('monitoring.nextFire'),
-      render: job => <span className="text-gray-500">{formatDate(job.nextFireTime)}</span>,
+      render: job => <span style={{ color: 'var(--ink-soft)' }}>{formatDate(job.nextFireTime)}</span>,
     },
     {
       key: 'state',
       header: t('monitoring.state'),
-      render: job => (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${JOB_STATE_COLORS[job.state] ?? JOB_STATE_COLORS.UNKNOWN}`}>
-          {job.state}
-        </span>
-      ),
+      render: job => <Badge tone={JOB_STATE_TONE[job.state] ?? 'neutral'}>{job.state}</Badge>,
     },
   ]
 
@@ -123,10 +121,13 @@ export function AdminMonitoringPage() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-800">{t('admin.quartzJobs')}</h2>
-        </div>
+      <TableCard
+        header={
+          <h2 className="font-display" style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+            {t('admin.quartzJobs')}
+          </h2>
+        }
+      >
         <DataTable<QuartzJobInfo>
           caption={t('admin.quartzJobs')}
           rows={jobs}
@@ -136,7 +137,7 @@ export function AdminMonitoringPage() {
           columns={jobColumns}
           totalCount={jobs.length}
         />
-      </section>
+      </TableCard>
 
       <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 px-5 py-4">
