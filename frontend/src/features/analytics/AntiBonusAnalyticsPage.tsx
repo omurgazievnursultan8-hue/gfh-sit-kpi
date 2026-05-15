@@ -7,6 +7,7 @@ import { analyticsApi, AntiBonusAnalytics } from './analyticsApi'
 import api from '../../app/api'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DataTable, type Column } from '../../components/DataTable'
+import { TableCard } from '../../components/TableCard'
 
 interface OrgUnitOption { id: number; nameRu: string; children?: OrgUnitOption[] }
 
@@ -59,29 +60,29 @@ export function AntiBonusAnalyticsPage() {
       width: '48px',
       render: (_r) => {
         const i = (data?.top10 ?? []).indexOf(_r)
-        return <span className="text-sm font-bold text-gray-500">#{i + 1}</span>
+        return <span className="font-mono font-bold" style={{ fontSize: 13, color: 'var(--ink-faint)' }}>#{i + 1}</span>
       },
     },
     {
       key: 'fullName',
       header: 'Сотрудник',
-      render: (r) => <span className="text-sm text-gray-900">{r.fullName}</span>,
+      render: (r) => <span style={{ fontSize: 13, color: 'var(--ink)' }}>{r.fullName}</span>,
     },
     {
       key: 'orgUnitName',
       header: 'Подразделение',
-      render: (r) => <span className="text-xs text-gray-500">{r.orgUnitName ?? '—'}</span>,
+      render: (r) => <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{r.orgUnitName ?? '—'}</span>,
     },
     {
       key: 'incidentCount',
       header: 'Инциденты',
-      render: (r) => <span className="text-sm font-mono text-orange-600">{r.incidentCount}</span>,
+      render: (r) => <span className="font-mono" style={{ fontSize: 13, color: 'var(--gold)' }}>{r.incidentCount}</span>,
     },
     {
       key: 'totalDeduction',
       header: 'Удержание',
       render: (r) => (
-        <span className="text-sm font-mono font-bold text-red-600">
+        <span className="font-mono font-bold" style={{ fontSize: 13, color: 'var(--danger)' }}>
           -{Number(r.totalDeduction).toFixed(2)}
         </span>
       ),
@@ -95,19 +96,20 @@ export function AntiBonusAnalyticsPage() {
         <ExportButtons type="period" />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex gap-4 items-end">
+      <div className="rounded-lg p-4 mb-6 flex gap-4 items-end"
+           style={{ background: 'var(--surface)', border: '1px solid var(--line-soft)' }}>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Подразделение</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>Подразделение</label>
           <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary">
+            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-primary" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
             <option value="">Все подразделения</option>
             {orgUnits.map(u => <option key={u.id} value={u.id}>{u.nameRu}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Тип периода</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>Тип периода</label>
           <select value={periodType} onChange={e => setPeriodType(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary">
+            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-primary" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
             <option value="MONTHLY">Ежемесячный</option>
             <option value="QUARTERLY">Квартальный</option>
             <option value="ANNUAL">Годовой</option>
@@ -121,19 +123,22 @@ export function AntiBonusAnalyticsPage() {
         <div className="text-center py-12 text-red-500">Ошибка загрузки</div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-              <h2 className="font-semibold text-gray-800 text-sm">Топ-10 по антибонусным удержаниям</h2>
-            </div>
+          <TableCard
+            header={
+              <h2 className="font-display" style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+                Топ-10 по антибонусным удержаниям
+              </h2>
+            }
+          >
             <DataTable<Top10Row>
               columns={top10Columns}
               rows={data.top10}
               rowKey={(e) => e.userId}
               caption="Топ-10 по антибонусным удержаниям"
-              empty={<span className="text-sm text-gray-400">Нет данных</span>}
+              empty={<span style={{ fontSize: 13, color: 'var(--ink-faint)' }}>Нет данных</span>}
               totalCount={data.top10.length}
             />
-          </div>
+          </TableCard>
 
           <div>
             <div className="flex gap-1 mb-4 border-b border-gray-200">
