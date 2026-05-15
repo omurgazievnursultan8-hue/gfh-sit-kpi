@@ -101,7 +101,7 @@ export function AntiBonusAnalyticsPage() {
         <div>
           <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>Подразделение</label>
           <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}
-            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-primary" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
+            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-[var(--accent)]" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
             <option value="">Все подразделения</option>
             {orgUnits.map(u => <option key={u.id} value={u.id}>{u.nameRu}</option>)}
           </select>
@@ -109,7 +109,7 @@ export function AntiBonusAnalyticsPage() {
         <div>
           <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>Тип периода</label>
           <select value={periodType} onChange={e => setPeriodType(e.target.value)}
-            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-primary" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
+            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-[var(--accent)]" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
             <option value="MONTHLY">Ежемесячный</option>
             <option value="QUARTERLY">Квартальный</option>
             <option value="ANNUAL">Годовой</option>

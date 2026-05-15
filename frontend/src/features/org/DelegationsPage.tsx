@@ -545,7 +545,7 @@ function Pagination({ page, totalPages, onChange }: {
   onChange: (p: number) => void
 }) {
   return (
-    <div className="flex justify-center gap-1 mt-4">
+    <div className="flex justify-center gap-1">
       {Array.from({ length: totalPages }, (_, i) => (
         <button
           key={i}
