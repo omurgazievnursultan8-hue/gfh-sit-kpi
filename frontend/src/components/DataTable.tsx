@@ -1,4 +1,5 @@
 import React, { Fragment } from 'react'
+import { useDensity } from '../hooks/useDensity'
 
 /**
  * Generic data table — sortable, sticky header, density modes, skeleton + empty
@@ -36,6 +37,7 @@ export interface DataTableProps<T> {
   sort?: { key: string; dir: SortDir }
   onSort?: (key: string) => void
   onRowClick?: (row: T) => void
+  /** Row density. Omit to follow the app-wide density preference. */
   density?: Density
   /** Shown when rows is empty and not loading. */
   empty?: React.ReactNode
@@ -68,9 +70,11 @@ const srOnly: React.CSSProperties = {
 
 export function DataTable<T>({
   columns, rows, rowKey, caption, loading = false,
-  sort, onSort, onRowClick, density = 'comfortable',
+  sort, onSort, onRowClick, density: densityProp,
   empty, skeletonRows = 8, renderExpanded, expandedKeys, totalCount,
 }: DataTableProps<T>) {
+  const { density: contextDensity } = useDensity()
+  const density = densityProp ?? contextDensity
   const d = DENSITY[density]
   const clickable = !!onRowClick
 
