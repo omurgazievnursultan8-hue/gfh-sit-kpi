@@ -3,7 +3,6 @@ import { FilterDropdown, type FilterOption } from './FilterDropdown'
 
 export type StatusFilter = 'all' | 'active' | 'inactive'
 export type ViewMode = 'table' | 'cards'
-export type Density = 'comfortable' | 'compact'
 
 const ROLE_OPTIONS: FilterOption[] = [
   { value: '',                        label: 'Все роли' },
@@ -28,8 +27,6 @@ interface UsersFiltersProps {
   onRole: (v: string) => void
   status: StatusFilter
   onStatus: (v: StatusFilter) => void
-  density: Density
-  onDensity: (v: Density) => void
   view: ViewMode
   onView: (v: ViewMode) => void
   matchedCount: number
@@ -38,7 +35,7 @@ interface UsersFiltersProps {
 
 export function UsersFilters({
   search, onSearch, role, onRole, status, onStatus,
-  density, onDensity, view, onView, matchedCount, totalCount,
+  view, onView, matchedCount, totalCount,
 }: UsersFiltersProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -113,15 +110,6 @@ export function UsersFilters({
       <div className="flex-1" />
 
       <Segmented
-        ariaLabel="Плотность строк"
-        value={density}
-        options={[
-          { value: 'comfortable', icon: <IconDensityRoomy />,   title: 'Просторно' },
-          { value: 'compact',     icon: <IconDensityCompact />, title: 'Плотно' },
-        ]}
-        onChange={onDensity}
-      />
-      <Segmented
         ariaLabel="Режим отображения"
         value={view}
         options={[
@@ -141,26 +129,6 @@ export function UsersFilters({
   )
 }
 
-/* Density: stacked bars — 2 roomy rows vs 4 tight rows. Reads as row-height,
-   intentionally unlike the bordered-table / grid view-switch icons. */
-function IconDensityRoomy() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden style={{ width: 14, height: 14, fill: 'currentColor' }}>
-      <rect x="3" y="5"  width="18" height="6" rx="1.6" />
-      <rect x="3" y="13" width="18" height="6" rx="1.6" />
-    </svg>
-  )
-}
-function IconDensityCompact() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden style={{ width: 14, height: 14, fill: 'currentColor' }}>
-      <rect x="3" y="4"  width="18" height="2.6" rx="1" />
-      <rect x="3" y="9"  width="18" height="2.6" rx="1" />
-      <rect x="3" y="14" width="18" height="2.6" rx="1" />
-      <rect x="3" y="19" width="18" height="2.6" rx="1" />
-    </svg>
-  )
-}
 function IconViewTable() {
   return (
     <svg

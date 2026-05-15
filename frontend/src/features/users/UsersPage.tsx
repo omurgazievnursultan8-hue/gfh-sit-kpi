@@ -5,21 +5,17 @@ import { UserTable, type SortKey, type SortDir } from './components/UserTable'
 import { UserCardGrid } from './components/UserCardGrid'
 import { UserFormModal } from './components/UserFormModal'
 import { UsersSavedViews } from './components/UsersSavedViews'
-import { UsersFilters, type StatusFilter, type ViewMode, type Density } from './components/UsersFilters'
+import { UsersFilters, type StatusFilter, type ViewMode } from './components/UsersFilters'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
 import type { UserActions } from './components/UserRowMenu'
 import { ROLE_RANK } from './components/usersMeta'
 import { User, usersApi } from './usersApi'
 
 const VIEW_KEY = 'gfh_users_view'
-const DENSITY_KEY = 'gfh_users_density'
 const PAGE_SIZE = 25
 
 function loadView(): ViewMode {
   return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'table'
-}
-function loadDensity(): Density {
-  return localStorage.getItem(DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'
 }
 
 export function UsersPage() {
@@ -37,7 +33,6 @@ export function UsersPage() {
   const [page, setPage] = useState(0)
 
   const [view, setView] = useState<ViewMode>(loadView)
-  const [density, setDensity] = useState<Density>(loadDensity)
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
 
@@ -57,7 +52,6 @@ export function UsersPage() {
 
   useEffect(() => { loadUsers() }, [loadUsers])
   useEffect(() => { localStorage.setItem(VIEW_KEY, view) }, [view])
-  useEffect(() => { localStorage.setItem(DENSITY_KEY, density) }, [density])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -195,8 +189,6 @@ export function UsersPage() {
           onRole={setRole}
           status={status}
           onStatus={setStatus}
-          density={density}
-          onDensity={setDensity}
           view={view}
           onView={setView}
           matchedCount={sorted.length}
@@ -233,7 +225,6 @@ export function UsersPage() {
               onSort={handleSort}
               onRowClick={openDrawer}
               actions={actions}
-              density={density}
             />
           </div>
         )}

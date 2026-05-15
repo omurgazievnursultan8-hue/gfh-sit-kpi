@@ -1,5 +1,5 @@
 import type { User } from '../usersApi'
-import type { Density } from './UsersFilters'
+import { useDensity, type Density } from '../../../hooks/useDensity'
 import { Avatar, RoleBadge, StatusPill } from './usersMeta'
 import { UserRowMenu, type UserActions } from './UserRowMenu'
 
@@ -13,7 +13,6 @@ interface Props {
   onSort: (key: SortKey) => void
   onRowClick: (user: User) => void
   actions: UserActions
-  density: Density
 }
 
 interface DensityTokens {
@@ -27,7 +26,8 @@ const DENSITY: Record<Density, DensityTokens> = {
   compact:     { pad: '6px 14px',  avatar: 26, name: 13 },
 }
 
-export function UserTable({ users, sortKey, sortDir, onSort, onRowClick, actions, density }: Props) {
+export function UserTable({ users, sortKey, sortDir, onSort, onRowClick, actions }: Props) {
+  const { density } = useDensity()
   if (users.length === 0) {
     return (
       <div className="text-center" style={{ padding: '56px 24px', fontSize: 13.5, color: 'var(--ink-faint)' }}>
