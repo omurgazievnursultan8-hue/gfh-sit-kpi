@@ -22,6 +22,7 @@ export function PeriodsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [closeTarget, setCloseTarget] = useState<number | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,7 +59,10 @@ export function PeriodsPage() {
     setBusyId(id)
     try {
       await periodsApi.activate(id)
+      setActionError(null)
       await load()
+    } catch {
+      setActionError('Не удалось активировать период')
     } finally {
       setBusyId(null)
     }
@@ -71,7 +75,10 @@ export function PeriodsPage() {
     setBusyId(id)
     try {
       await periodsApi.close(id)
+      setActionError(null)
       await load()
+    } catch {
+      setActionError('Не удалось закрыть период')
     } finally {
       setBusyId(null)
     }
@@ -92,6 +99,10 @@ export function PeriodsPage() {
           <Plus size={14} /> Создать период
         </button>
       </div>
+
+      {actionError && (
+        <div className="font-mono" style={{ fontSize: 12, color: 'var(--danger)' }}>{actionError}</div>
+      )}
 
       {loading && (
         <div className="font-mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>Загрузка…</div>
