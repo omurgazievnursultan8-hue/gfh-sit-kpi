@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { adminApi, QuartzJobInfo } from './adminApi'
 import { Layout } from '../../components/Layout'
+import { DataTable, type Column } from '../../components/DataTable'
 
 type HealthStatus = 'up' | 'down' | 'checking'
 
@@ -51,6 +52,43 @@ export function AdminMonitoringPage() {
     refresh()
   }, [refresh])
 
+  const jobColumns: Column<QuartzJobInfo>[] = [
+    {
+      key: 'name',
+      header: t('monitoring.jobName'),
+      render: job => <span className="font-medium text-gray-900">{job.name}</span>,
+    },
+    {
+      key: 'group',
+      header: t('monitoring.jobGroup'),
+      render: job => <span className="text-gray-500">{job.group}</span>,
+    },
+    {
+      key: 'cronExpression',
+      header: t('monitoring.cronExpression'),
+      render: job => <span className="font-mono text-xs text-gray-600">{job.cronExpression ?? '—'}</span>,
+    },
+    {
+      key: 'previousFireTime',
+      header: t('monitoring.lastFire'),
+      render: job => <span className="text-gray-500">{formatDate(job.previousFireTime)}</span>,
+    },
+    {
+      key: 'nextFireTime',
+      header: t('monitoring.nextFire'),
+      render: job => <span className="text-gray-500">{formatDate(job.nextFireTime)}</span>,
+    },
+    {
+      key: 'state',
+      header: t('monitoring.state'),
+      render: job => (
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${JOB_STATE_COLORS[job.state] ?? JOB_STATE_COLORS.UNKNOWN}`}>
+          {job.state}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -89,46 +127,15 @@ export function AdminMonitoringPage() {
         <div className="border-b border-gray-200 px-5 py-4">
           <h2 className="text-base font-semibold text-gray-800">{t('admin.quartzJobs')}</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100 text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">{t('monitoring.jobName')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">{t('monitoring.jobGroup')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">{t('monitoring.cronExpression')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">{t('monitoring.lastFire')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">{t('monitoring.nextFire')}</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">{t('monitoring.state')}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {jobs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-gray-400">
-                    {loading ? t('common.loading') : t('common.noData')}
-                  </td>
-                </tr>
-              ) : (
-                jobs.map(job => (
-                  <tr key={`${job.group}.${job.name}`} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{job.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{job.group}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600">
-                      {job.cronExpression ?? '—'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(job.previousFireTime)}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(job.nextFireTime)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${JOB_STATE_COLORS[job.state] ?? JOB_STATE_COLORS.UNKNOWN}`}>
-                        {job.state}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<QuartzJobInfo>
+          caption={t('admin.quartzJobs')}
+          rows={jobs}
+          rowKey={job => `${job.group}.${job.name}`}
+          loading={loading}
+          empty={t('common.noData')}
+          columns={jobColumns}
+          totalCount={jobs.length}
+        />
       </section>
 
       <section className="rounded-lg border border-gray-200 bg-white shadow-sm">

@@ -6,6 +6,7 @@ import { Table, BarChart2, Grid, X } from 'lucide-react'
 import { analyticsApi, HierarchicalNode } from './analyticsApi'
 import api from '../../app/api'
 import { ExportButtons } from '../../components/ExportButtons'
+import { DataTable, type Column } from '../../components/DataTable'
 
 type DisplayMode = 'table' | 'bar' | 'tree' | 'heatmap'
 
@@ -32,6 +33,18 @@ function flattenTree(nodes: HierarchicalNode[]): HierarchicalNode[] {
     n.children.forEach(visit)
   }
   nodes.forEach(visit)
+  return result
+}
+
+type FlatRow = HierarchicalNode & { depth: number }
+
+function flattenTreeWithDepth(nodes: HierarchicalNode[]): FlatRow[] {
+  const result: FlatRow[] = []
+  const visit = (n: HierarchicalNode, depth: number) => {
+    result.push({ ...n, depth })
+    n.children.forEach(c => visit(c, depth + 1))
+  }
+  nodes.forEach(n => visit(n, 0))
   return result
 }
 
@@ -108,6 +121,55 @@ export function HierarchicalAnalyticsPage() {
   }, [selectedUnit, periodType, startDate, endDate])
 
   const flat = flattenTree(nodes)
+  const flatRows = flattenTreeWithDepth(nodes)
+
+  const tableColumns: Column<FlatRow>[] = [
+    {
+      key: 'orgUnit',
+      header: 'Подразделение',
+      render: n => (
+        <span
+          className="text-sm font-medium text-gray-900"
+          style={{ paddingLeft: n.depth * 18, display: 'inline-block' }}
+        >
+          {n.orgUnitNameRu}
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Тип',
+      render: n => <span className="text-xs text-gray-500">{n.type}</span>,
+    },
+    {
+      key: 'employeeCount',
+      header: 'Сотр.',
+      render: n => <span className="text-sm text-gray-700">{n.employeeCount}</span>,
+    },
+    {
+      key: 'avgScore',
+      header: 'Ср. балл',
+      render: n =>
+        n.avgScore !== null ? (
+          <span className="font-mono font-bold" style={{ color: scoreColor(n.avgScore) }}>
+            {Number(n.avgScore).toFixed(1)}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      key: 'minMax',
+      header: 'Мин / Макс',
+      render: n => (
+        <span className="text-xs text-gray-500">
+          {n.minScore !== null ? Number(n.minScore).toFixed(1) : '—'} /{' '}
+          {n.maxScore !== null ? Number(n.maxScore).toFixed(1) : '—'}
+        </span>
+      ),
+    },
+  ]
+
   const barData = flat.map(n => ({
     name: n.orgUnitNameRu,
     score: n.avgScore !== null ? Number(Number(n.avgScore).toFixed(1)) : 0
@@ -186,38 +248,17 @@ export function HierarchicalAnalyticsPage() {
 
           {/* Table mode */}
           {mode === 'table' && (
-            <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-100">
-              <thead>
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Подразделение</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Тип</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Сотр.</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Ср. балл</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Мин / Макс</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {flat.map(n => (
-                  <tr key={n.orgUnitId} onClick={() => setDrillDown(n)}
-                    className="hover:bg-gray-50 cursor-pointer">
-                    <td className="px-3 py-2 text-sm font-medium text-gray-900">{n.orgUnitNameRu}</td>
-                    <td className="px-3 py-2 text-xs text-gray-500">{n.type}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{n.employeeCount}</td>
-                    <td className="px-3 py-2">
-                      {n.avgScore !== null ? (
-                        <span className="font-mono font-bold"
-                          style={{ color: scoreColor(n.avgScore) }}>
-                          {Number(n.avgScore).toFixed(1)}
-                        </span>
-                      ) : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-gray-500">
-                      {n.minScore !== null ? Number(n.minScore).toFixed(1) : '—'} / {n.maxScore !== null ? Number(n.maxScore).toFixed(1) : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table></div>
+            <div className="overflow-x-auto">
+              <DataTable<FlatRow>
+                caption="Иерархическая аналитика подразделений"
+                columns={tableColumns}
+                rows={flatRows}
+                rowKey={n => n.orgUnitId}
+                onRowClick={n => setDrillDown(n)}
+                density="compact"
+                empty={<div className="text-gray-400">Нет данных</div>}
+              />
+            </div>
           )}
 
           {/* Bar chart mode */}

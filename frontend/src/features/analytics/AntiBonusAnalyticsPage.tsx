@@ -6,10 +6,13 @@ import {
 import { analyticsApi, AntiBonusAnalytics } from './analyticsApi'
 import api from '../../app/api'
 import { ExportButtons } from '../../components/ExportButtons'
+import { DataTable, type Column } from '../../components/DataTable'
 
 interface OrgUnitOption { id: number; nameRu: string; children?: OrgUnitOption[] }
 
 type Tab = 'distribution' | 'dynamics'
+
+type Top10Row = AntiBonusAnalytics['top10'][number]
 
 const LINE_COLORS = ['#dc2626', '#ea580c', '#d97706', '#65a30d', '#0284c7', '#7c3aed']
 
@@ -49,6 +52,42 @@ export function AntiBonusAnalyticsPage() {
       })
     : []
 
+  const top10Columns: Column<Top10Row>[] = [
+    {
+      key: 'rank',
+      header: '#',
+      width: '48px',
+      render: (_r) => {
+        const i = (data?.top10 ?? []).indexOf(_r)
+        return <span className="text-sm font-bold text-gray-500">#{i + 1}</span>
+      },
+    },
+    {
+      key: 'fullName',
+      header: 'Сотрудник',
+      render: (r) => <span className="text-sm text-gray-900">{r.fullName}</span>,
+    },
+    {
+      key: 'orgUnitName',
+      header: 'Подразделение',
+      render: (r) => <span className="text-xs text-gray-500">{r.orgUnitName ?? '—'}</span>,
+    },
+    {
+      key: 'incidentCount',
+      header: 'Инциденты',
+      render: (r) => <span className="text-sm font-mono text-orange-600">{r.incidentCount}</span>,
+    },
+    {
+      key: 'totalDeduction',
+      header: 'Удержание',
+      render: (r) => (
+        <span className="text-sm font-mono font-bold text-red-600">
+          -{Number(r.totalDeduction).toFixed(2)}
+        </span>
+      ),
+    },
+  ]
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -86,34 +125,15 @@ export function AntiBonusAnalyticsPage() {
             <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
               <h2 className="font-semibold text-gray-800 text-sm">Топ-10 по антибонусным удержаниям</h2>
             </div>
-            {data.top10.length === 0 ? (
-              <div className="py-6 text-center text-gray-400 text-sm">Нет данных</div>
-            ) : (
-              <div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-100">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Сотрудник</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Подразделение</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Инциденты</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Удержание</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {data.top10.map((e, i) => (
-                    <tr key={e.userId} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 text-sm font-bold text-gray-500">#{i + 1}</td>
-                      <td className="px-3 py-2 text-sm text-gray-900">{e.fullName}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500">{e.orgUnitName ?? '—'}</td>
-                      <td className="px-3 py-2 text-sm font-mono text-orange-600">{e.incidentCount}</td>
-                      <td className="px-3 py-2 text-sm font-mono font-bold text-red-600">
-                        -{Number(e.totalDeduction).toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table></div>
-            )}
+            <DataTable<Top10Row>
+              columns={top10Columns}
+              rows={data.top10}
+              rowKey={(e) => e.userId}
+              caption="Топ-10 по антибонусным удержаниям"
+              density="compact"
+              empty={<span className="text-sm text-gray-400">Нет данных</span>}
+              totalCount={data.top10.length}
+            />
           </div>
 
           <div>

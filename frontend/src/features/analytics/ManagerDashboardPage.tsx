@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy, TrendingDown, Users } from 'lucide-react'
+import { Trophy, TrendingDown, Users, ArrowRight } from 'lucide-react'
 import { evaluationsApi, Evaluation } from '../evaluations/evaluationsApi'
 import { ExportButtons } from '../../components/ExportButtons'
+import { DataTable, type Column } from '../../components/DataTable'
 
 interface SubordinateRow {
   userId: number
+  evaluationId: number
   fullName: string
   score: number | null
   status: string
@@ -15,6 +17,42 @@ function ScoreCell({ score }: { score: number | null }) {
   if (score === null) return <span className="text-gray-400 text-sm">—</span>
   const color = score >= 80 ? 'text-green-600' : score >= 60 ? 'text-yellow-600' : 'text-red-600'
   return <span className={`font-mono font-semibold ${color}`}>{score.toFixed(1)}</span>
+}
+
+type RankedRow = SubordinateRow & { rank: number }
+
+function buildSubordinateColumns(onOpen: (r: RankedRow) => void): Column<RankedRow>[] {
+  return [
+    {
+      key: 'rank', header: '#', width: '56px',
+      render: r => <span style={{ fontWeight: 500, color: 'var(--ink-dim)' }}>#{r.rank}</span>,
+    },
+    { key: 'fullName', header: 'ФИО', render: r => r.fullName },
+    { key: 'score', header: 'Рейтинг', render: r => <ScoreCell score={r.score} /> },
+    {
+      key: 'status', header: 'Статус',
+      render: r => (
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+          r.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
+        }`}>
+          {r.status === 'DRAFT' ? 'Ожидает' : 'Готово'}
+        </span>
+      ),
+    },
+    {
+      key: '__actions', header: 'Действия', srOnlyHeader: true, align: 'right', width: '120px',
+      render: r => (
+        <button
+          type="button"
+          onClick={() => onOpen(r)}
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-blue-600 transition hover:bg-blue-50"
+        >
+          Открыть
+          <ArrowRight size={13} aria-hidden="true" />
+        </button>
+      ),
+    },
+  ]
 }
 
 export function ManagerDashboardPage() {
@@ -41,6 +79,7 @@ export function ManagerDashboardPage() {
       for (const e of pending) {
         byEvaluatee.set(e.evaluateeId, {
           userId: e.evaluateeId,
+          evaluationId: e.id,
           fullName: e.evaluateeName,
           score: e.finalScore,
           status: e.status,
@@ -54,6 +93,8 @@ export function ManagerDashboardPage() {
   const withScores = subordinates.filter(s => s.score !== null)
   const sorted = [...withScores].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
   const allSorted = [...subordinates].sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
+  const rankedRows: RankedRow[] = allSorted.map((s, i) => ({ ...s, rank: i + 1 }))
+  const subordinateColumns = buildSubordinateColumns(r => navigate(`/evaluations/${r.evaluationId}`))
   const top3 = sorted.slice(0, 3)
   const bottom3 = sorted.length >= 3 ? sorted.slice(-3).reverse() : []
 
@@ -135,40 +176,14 @@ export function ManagerDashboardPage() {
             Все подчинённые ({subordinates.length})
           </span>
         </div>
-        {subordinates.length === 0 ? (
-          <div className="py-8 text-center text-gray-400 text-sm">
-            Нет данных для текущего периода
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-100">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">ФИО</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Рейтинг</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Статус</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {allSorted.map((s, i) => (
-                <tr key={s.userId} className="hover:bg-gray-50">
-                  <td className="px-4 py-2 text-sm font-medium text-gray-500">#{i + 1}</td>
-                  <td className="px-4 py-2 text-sm text-gray-900">{s.fullName}</td>
-                  <td className="px-4 py-2"><ScoreCell score={s.score} /></td>
-                  <td className="px-4 py-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      s.status === 'DRAFT' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {s.status === 'DRAFT' ? 'Ожидает' : 'Готово'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        )}
+        <DataTable<RankedRow>
+          caption="Все подчинённые"
+          columns={subordinateColumns}
+          rows={rankedRows}
+          rowKey={r => r.userId}
+          totalCount={rankedRows.length}
+          empty="Нет данных для текущего периода"
+        />
       </div>
     </div>
   )
