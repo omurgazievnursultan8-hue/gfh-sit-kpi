@@ -299,13 +299,13 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
                   type="button"
                   className={`rail-menu-seg-btn${density === 'comfortable' ? ' active' : ''}`}
                   aria-pressed={density === 'comfortable'}
-                  onClick={() => { if (density !== 'comfortable') setDensity('comfortable') }}
+                  onClick={() => setDensity('comfortable')}
                 >{t('nav.densityComfortable', 'Просторно')}</button>
                 <button
                   type="button"
                   className={`rail-menu-seg-btn${density === 'compact' ? ' active' : ''}`}
                   aria-pressed={density === 'compact'}
-                  onClick={() => { if (density !== 'compact') setDensity('compact') }}
+                  onClick={() => setDensity('compact')}
                 >{t('nav.densityCompact', 'Компактно')}</button>
               </div>
             </div>
