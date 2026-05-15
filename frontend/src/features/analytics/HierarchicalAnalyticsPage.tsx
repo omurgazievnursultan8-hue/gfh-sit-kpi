@@ -7,6 +7,7 @@ import { analyticsApi, HierarchicalNode } from './analyticsApi'
 import api from '../../app/api'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DataTable, type Column } from '../../components/DataTable'
+import { TableCard } from '../../components/TableCard'
 
 type DisplayMode = 'table' | 'bar' | 'tree' | 'heatmap'
 
@@ -17,6 +18,14 @@ function scoreColor(score: number | null): string {
   if (score >= 80) return '#16a34a'
   if (score >= 60) return '#ca8a04'
   return '#dc2626'
+}
+
+/** Cream-theme score color for table cells (scoreColor stays hex for charts). */
+function scoreVar(score: number | null): string {
+  if (score === null) return 'var(--ink-faint)'
+  if (score >= 80) return 'var(--accent-2)'
+  if (score >= 60) return 'var(--gold)'
+  return 'var(--danger)'
 }
 
 function scoreBgClass(score: number | null): string {
@@ -129,8 +138,8 @@ export function HierarchicalAnalyticsPage() {
       header: 'Подразделение',
       render: n => (
         <span
-          className="text-sm font-medium text-gray-900"
-          style={{ paddingLeft: n.depth * 18, display: 'inline-block' }}
+          className="text-sm font-medium"
+          style={{ paddingLeft: n.depth * 18, display: 'inline-block', color: 'var(--ink)' }}
         >
           {n.orgUnitNameRu}
         </span>
@@ -139,19 +148,19 @@ export function HierarchicalAnalyticsPage() {
     {
       key: 'type',
       header: 'Тип',
-      render: n => <span className="text-xs text-gray-500">{n.type}</span>,
+      render: n => <span className="text-xs" style={{ color: 'var(--ink-soft)' }}>{n.type}</span>,
     },
     {
       key: 'employeeCount',
       header: 'Сотр.',
-      render: n => <span className="text-sm text-gray-700">{n.employeeCount}</span>,
+      render: n => <span className="text-sm" style={{ color: 'var(--ink-soft)' }}>{n.employeeCount}</span>,
     },
     {
       key: 'avgScore',
       header: 'Ср. балл',
       render: n =>
         n.avgScore !== null ? (
-          <span className="font-mono font-bold" style={{ color: scoreColor(n.avgScore) }}>
+          <span className="font-mono font-bold" style={{ color: scoreVar(n.avgScore) }}>
             {Number(n.avgScore).toFixed(1)}
           </span>
         ) : (
@@ -162,7 +171,7 @@ export function HierarchicalAnalyticsPage() {
       key: 'minMax',
       header: 'Мин / Макс',
       render: n => (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs" style={{ color: 'var(--ink-soft)' }}>
           {n.minScore !== null ? Number(n.minScore).toFixed(1) : '—'} /{' '}
           {n.maxScore !== null ? Number(n.maxScore).toFixed(1) : '—'}
         </span>
@@ -190,112 +199,121 @@ export function HierarchicalAnalyticsPage() {
       </div>
 
       {/* Filter controls */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 flex flex-wrap gap-3 items-end">
+      <div className="rounded-lg p-4 mb-6 flex flex-wrap gap-3 items-end"
+           style={{ background: 'var(--surface)', border: '1px solid var(--line-soft)' }}>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Подразделение</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>Подразделение</label>
           <select value={selectedUnit} onChange={e => setSelectedUnit(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary">
+            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-primary" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
             <option value="">Все подразделения</option>
             {orgUnits.map(u => <option key={u.id} value={u.id}>{u.nameRu}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Тип периода</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>Тип периода</label>
           <select value={periodType} onChange={e => setPeriodType(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary">
+            className="px-3 py-1.5 rounded text-sm focus:ring-2 focus:ring-primary" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }}>
             <option value="MONTHLY">Ежемесячный</option>
             <option value="QUARTERLY">Квартальный</option>
             <option value="ANNUAL">Годовой</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">С</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>С</label>
           <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm" />
+            className="px-3 py-1.5 rounded text-sm" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }} />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">По</label>
+          <label className="block text-xs mb-1" style={{ color: 'var(--ink-faint)' }}>По</label>
           <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
             min={startDate}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm" />
+            className="px-3 py-1.5 rounded text-sm" style={{ border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)' }} />
         </div>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex gap-1 mb-4">
-        {modes.map(m => (
-          <button key={m.key} onClick={() => setMode(m.key)}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm border ${
-              mode === m.key
-                ? 'bg-primary text-white border-primary'
-                : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}>
-            {m.icon} {m.label}
-          </button>
-        ))}
+      <div className="flex gap-1.5 mb-4">
+        {modes.map(m => {
+          const active = mode === m.key
+          return (
+            <button key={m.key} onClick={() => setMode(m.key)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-sm font-medium transition-colors"
+              style={{
+                background: active ? 'var(--ink)' : 'transparent',
+                color: active ? 'var(--bg)' : 'var(--ink-soft)',
+                border: `1px solid ${active ? 'var(--ink)' : 'var(--line)'}`,
+              }}>
+              {m.icon} {m.label}
+            </button>
+          )
+        })}
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">Загрузка...</div>
+        <div className="text-center py-12" style={{ color: 'var(--ink-faint)' }}>Загрузка...</div>
       ) : (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <TableCard>
           {/* Tree mode */}
           {mode === 'tree' && (
-            nodes.length === 0
-              ? <div className="text-center py-8 text-gray-400">Нет данных</div>
-              : nodes.map(n => <TreeNode key={n.orgUnitId} node={n} onDrillDown={setDrillDown} />)
+            <div className="p-4">
+              {nodes.length === 0
+                ? <div className="text-center py-8" style={{ color: 'var(--ink-faint)' }}>Нет данных</div>
+                : nodes.map(n => <TreeNode key={n.orgUnitId} node={n} onDrillDown={setDrillDown} />)}
+            </div>
           )}
 
           {/* Table mode */}
           {mode === 'table' && (
-            <div className="overflow-x-auto">
-              <DataTable<FlatRow>
-                caption="Иерархическая аналитика подразделений"
-                columns={tableColumns}
-                rows={flatRows}
-                rowKey={n => n.orgUnitId}
-                onRowClick={n => setDrillDown(n)}
-                empty={<div className="text-gray-400">Нет данных</div>}
-              />
-            </div>
+            <DataTable<FlatRow>
+              caption="Иерархическая аналитика подразделений"
+              columns={tableColumns}
+              rows={flatRows}
+              rowKey={n => n.orgUnitId}
+              onRowClick={n => setDrillDown(n)}
+              empty={<span style={{ color: 'var(--ink-faint)' }}>Нет данных</span>}
+            />
           )}
 
           {/* Bar chart mode */}
           {mode === 'bar' && barData.length > 0 && (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={barData} margin={{ left: 10, right: 10, bottom: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" angle={-30} textAnchor="end" tick={{ fontSize: 10 }} interval={0} />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <Bar dataKey="score" name="Средний балл">
-                  {barData.map((entry, i) => (
-                    <Cell key={i} fill={scoreColor(entry.score)} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={barData} margin={{ left: 10, right: 10, bottom: 40 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" angle={-30} textAnchor="end" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis domain={[0, 100]} />
+                  <Tooltip />
+                  <Bar dataKey="score" name="Средний балл">
+                    {barData.map((entry, i) => (
+                      <Cell key={i} fill={scoreColor(entry.score)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           )}
 
           {/* Heatmap mode */}
           {mode === 'heatmap' && (
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
-              {flat.map(n => (
-                <div key={n.orgUnitId}
-                  onClick={() => setDrillDown(n)}
-                  title={n.orgUnitNameRu}
-                  className="rounded-lg p-3 text-white text-center cursor-pointer hover:opacity-80 transition-opacity"
-                  style={{ backgroundColor: scoreColor(n.avgScore) }}>
-                  <div className="text-xs font-medium truncate">{n.orgUnitNameRu}</div>
-                  <div className="text-lg font-bold mt-1">
-                    {n.avgScore !== null ? Number(n.avgScore).toFixed(0) : '—'}
+            <div className="p-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+                {flat.map(n => (
+                  <div key={n.orgUnitId}
+                    onClick={() => setDrillDown(n)}
+                    title={n.orgUnitNameRu}
+                    className="rounded-lg p-3 text-white text-center cursor-pointer hover:opacity-80 transition-opacity"
+                    style={{ backgroundColor: scoreColor(n.avgScore) }}>
+                    <div className="text-xs font-medium truncate">{n.orgUnitNameRu}</div>
+                    <div className="text-lg font-bold mt-1">
+                      {n.avgScore !== null ? Number(n.avgScore).toFixed(0) : '—'}
+                    </div>
+                    <div className="text-xs opacity-80">{n.employeeCount} чел.</div>
                   </div>
-                  <div className="text-xs opacity-80">{n.employeeCount} чел.</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
-        </div>
+        </TableCard>
       )}
 
       {/* Drill-down modal */}
