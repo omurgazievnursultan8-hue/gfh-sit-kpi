@@ -6,6 +6,7 @@ import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
 import { useTheme } from '../../hooks/useTheme'
+import { useDensity } from '../../hooks/useDensity'
 import { useTranslation } from 'react-i18next'
 import { getInitials } from './shellUtils'
 import { useUserCounters } from './useUserCounters'
@@ -37,6 +38,7 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const { theme, toggle } = useTheme()
+  const { density, setDensity } = useDensity()
   const currentLang = (i18n.language?.startsWith('kg') ? 'kg' : 'ru') as 'ru' | 'kg'
   const setLang = (lng: 'ru' | 'kg') => {
     i18n.changeLanguage(lng)
@@ -288,6 +290,23 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
                   aria-pressed={theme === 'dark'}
                   onClick={() => { if (theme !== 'dark') toggle() }}
                 >{t('nav.darkTheme', 'Тёмная')}</button>
+              </div>
+            </div>
+            <div className="rail-menu-toggle" role="group" aria-label={t('nav.density', 'Плотность') as string}>
+              <span className="rail-menu-toggle-label">{t('nav.density', 'Плотность')}</span>
+              <div className="rail-menu-seg">
+                <button
+                  type="button"
+                  className={`rail-menu-seg-btn${density === 'comfortable' ? ' active' : ''}`}
+                  aria-pressed={density === 'comfortable'}
+                  onClick={() => { if (density !== 'comfortable') setDensity('comfortable') }}
+                >{t('nav.densityComfortable', 'Просторно')}</button>
+                <button
+                  type="button"
+                  className={`rail-menu-seg-btn${density === 'compact' ? ' active' : ''}`}
+                  aria-pressed={density === 'compact'}
+                  onClick={() => { if (density !== 'compact') setDensity('compact') }}
+                >{t('nav.densityCompact', 'Компактно')}</button>
               </div>
             </div>
           </div>
