@@ -43,8 +43,9 @@ export function UsersPageV2() {
 
   const [drawerId, setDrawerId] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [savedViewRole, setSavedViewRole] = useState('')
-  const [savedViewStatus, setSavedViewStatus] = useState<StatusFilter>('all')
+  // Single source of truth for table filters — shared by the saved-view tabs
+  // and the DataPanel filter dropdowns.
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
@@ -234,9 +235,14 @@ export function UsersPageV2() {
 
         <UsersSavedViews
           users={users}
-          role={savedViewRole}
-          status={savedViewStatus}
-          onApply={(r, s) => { setSavedViewRole(r); setSavedViewStatus(s) }}
+          role={filterValues.role ?? ''}
+          status={(filterValues.status || 'all') as StatusFilter}
+          onApply={(r, s) => {
+            const next: Record<string, string> = {}
+            if (r) next.role = r
+            if (s !== 'all') next.status = s
+            setFilterValues(next)
+          }}
         />
 
         <DataPanel<User>
@@ -251,13 +257,14 @@ export function UsersPageV2() {
           searchText={searchText}
           searchPlaceholder="Поиск по ФИО или email…"
           filters={FILTERS}
+          filterValues={filterValues}
+          onFilterValuesChange={setFilterValues}
           clientFilter={clientFilter}
           comparator={comparator}
           defaultSort={{ key: 'name', dir: 'asc' }}
           views={['table', 'cards']}
           renderCard={renderCard}
           viewStorageKey={VIEW_KEY}
-          pageSize={25}
           onRowClick={openDrawer}
           toolbarActions={addButton}
         />

@@ -1,0 +1,97 @@
+// Shared presentation metadata for the Users feature — role labels/accents,
+// avatar, status pill, role badge. Single source so table, card grid and
+// detail drawer stay visually consistent.
+
+export const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Администратор',
+  CHAIRMAN: 'Председатель',
+  DEPUTY_CHAIRMAN: 'Зам. председателя',
+  HEAD_OF_DEPARTMENT: 'Нач. департамента',
+  HEAD_OF_DEPARTMENT_UNIT: 'Нач. отдела',
+  EMPLOYEE: 'Сотрудник',
+}
+
+// Lower rank = higher in hierarchy. Drives role-column sorting.
+export const ROLE_RANK: Record<string, number> = {
+  ADMIN: 0,
+  CHAIRMAN: 1,
+  DEPUTY_CHAIRMAN: 2,
+  HEAD_OF_DEPARTMENT: 3,
+  HEAD_OF_DEPARTMENT_UNIT: 4,
+  EMPLOYEE: 5,
+}
+
+interface RoleAccent { bg: string; fg: string; border: string }
+
+export const ROLE_ACCENT: Record<string, RoleAccent> = {
+  ADMIN:                   { bg: 'var(--gold-soft)',        fg: 'var(--gold)', border: 'color-mix(in srgb,var(--gold) 30%,transparent)' },
+  CHAIRMAN:                { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
+  DEPUTY_CHAIRMAN:         { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
+  HEAD_OF_DEPARTMENT:      { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
+  HEAD_OF_DEPARTMENT_UNIT: { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
+  EMPLOYEE:                { bg: 'rgba(120,200,150,0.14)',  fg: '#2f9e6d',     border: 'rgba(120,200,150,0.32)' },
+}
+
+export function roleAccent(role: string): RoleAccent {
+  return ROLE_ACCENT[role] ?? ROLE_ACCENT.EMPLOYEE
+}
+
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).slice(0, 2)
+  return parts.map(p => p.charAt(0).toUpperCase()).join('') || '—'
+}
+
+// Round avatar — role-tinted fill, deactivated users render muted.
+export function Avatar({ name, role, active, size = 34 }: {
+  name: string; role?: string; active: boolean; size?: number
+}) {
+  const a = role ? roleAccent(role) : null
+  return (
+    <span
+      className="inline-flex items-center justify-center flex-shrink-0"
+      style={{
+        width: size, height: size, borderRadius: '50%',
+        background: !active ? 'var(--surface-mute)' : a ? a.bg : 'var(--accent-mute)',
+        color: !active ? 'var(--ink-dim)' : a ? a.fg : 'var(--accent)',
+        border: `1px solid ${!active ? 'var(--line)' : a ? a.border : 'var(--accent-soft)'}`,
+        fontSize: Math.round(size * 0.36), fontWeight: 600, letterSpacing: '0.01em',
+      }}
+    >
+      {initials(name)}
+    </span>
+  )
+}
+
+export function RoleBadge({ role }: { role: string }) {
+  const a = roleAccent(role)
+  return (
+    <span
+      style={{
+        display: 'inline-flex', fontSize: 11.5, fontWeight: 500,
+        padding: '3px 9px', borderRadius: 999,
+        background: a.bg, color: a.fg, border: `1px solid ${a.border}`,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {ROLE_LABELS[role] ?? role}
+    </span>
+  )
+}
+
+export function StatusPill({ active }: { active: boolean }) {
+  const s = active
+    ? { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d', border: 'rgba(120,200,150,0.32)', text: 'Активен', dot: '#2f9e6d' }
+    : { bg: 'var(--danger-soft)', fg: 'var(--danger)', border: 'color-mix(in srgb,var(--danger) 30%,transparent)', text: 'Заблокирован', dot: 'var(--danger)' }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      style={{
+        fontSize: 11.5, fontWeight: 500, padding: '3px 10px', borderRadius: 999,
+        background: s.bg, color: s.fg, border: `1px solid ${s.border}`,
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: s.dot, flexShrink: 0 }} />
+      {s.text}
+    </span>
+  )
+}
