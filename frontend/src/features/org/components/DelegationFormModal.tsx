@@ -18,27 +18,34 @@ interface Props {
 
 export function DelegationFormModal({ open, users, onSave, onClose }: Props) {
   const [evaluateeId, setEvaluateeId] = useState('')
-  const [evaluatorId, setEvaluatorId] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [delegatedToId, setDelegatedToId] = useState('')
+  const [validFrom, setValidFrom] = useState('')
+  const [validTo, setValidTo] = useState('')
+  const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
     if (!open) return
-    setEvaluateeId(''); setEvaluatorId(''); setStartDate(''); setEndDate(''); setError('')
+    setEvaluateeId(''); setDelegatedToId(''); setValidFrom(''); setValidTo(''); setReason(''); setError('')
   }, [open])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (evaluateeId === evaluatorId) {
+    if (evaluateeId === delegatedToId) {
       setError('Оцениваемый и делегат не могут быть одним лицом')
       return
     }
     setLoading(true)
     setError('')
     try {
-      await onSave({ evaluateeId: Number(evaluateeId), evaluatorId: Number(evaluatorId), startDate, endDate })
+      await onSave({
+        evaluateeId: Number(evaluateeId),
+        delegatedToId: Number(delegatedToId),
+        validFrom,
+        validTo,
+        reason: reason.trim() || undefined,
+      })
       onClose()
     } catch (err) {
       const msg = axios.isAxiosError(err) ? (err.response?.data as { message_ru?: string })?.message_ru : undefined
@@ -68,7 +75,7 @@ export function DelegationFormModal({ open, users, onSave, onClose }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Делегированный оценщик</label>
-            <select value={evaluatorId} onChange={e => setEvaluatorId(e.target.value)} required
+            <select value={delegatedToId} onChange={e => setDelegatedToId(e.target.value)} required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary">
               <option value="">— выберите —</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.fullName} ({u.email})</option>)}
@@ -77,14 +84,20 @@ export function DelegationFormModal({ open, users, onSave, onClose }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата начала</label>
-              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required
+              <input type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Дата окончания</label>
-              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} required min={startDate}
+              <input type="date" value={validTo} onChange={e => setValidTo(e.target.value)} required min={validFrom}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Причина (необязательно)</label>
+            <input type="text" value={reason} onChange={e => setReason(e.target.value)}
+              placeholder="Напр.: отпуск, командировка"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-3 pt-2">

@@ -1,81 +1,155 @@
-import { useState } from 'react'
-import { ChevronRight, ChevronDown, Pencil, Trash2, Plus } from 'lucide-react'
+import { ChevronRight, ChevronDown } from 'lucide-react'
 import { OrgUnit } from '../orgApi'
 
 const TYPE_LABELS: Record<OrgUnit['type'], string> = {
   BLOCK: 'Блок',
   DEPARTMENT: 'Отдел',
-  UNIT: 'Подразделение',
+  UNIT: 'Подразд.',
 }
 
-const TYPE_COLORS: Record<OrgUnit['type'], string> = {
-  BLOCK: 'bg-blue-100 text-blue-800',
-  DEPARTMENT: 'bg-green-100 text-green-800',
-  UNIT: 'bg-gray-100 text-gray-700',
+const TYPE_ACCENT: Record<OrgUnit['type'], { bg: string; fg: string; border: string; rail: string }> = {
+  BLOCK:      { bg: 'var(--gold-soft)',       fg: 'var(--gold)', border: 'color-mix(in srgb,var(--gold) 30%,transparent)', rail: 'var(--gold)' },
+  DEPARTMENT: { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)',                          rail: '#4a73c7' },
+  UNIT:       { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d',     border: 'rgba(120,200,150,0.32)',                          rail: '#2f9e6d' },
 }
 
 interface Props {
   node: OrgUnit
   isAdmin: boolean
-  onEdit: (node: OrgUnit) => void
-  onDelete: (node: OrgUnit) => void
-  onAddChild: (parent: OrgUnit) => void
+  outline: string
+  expanded: Set<number>
+  selectedId: number | null
+  toggleExpanded: (id: number) => void
+  onSelect: (node: OrgUnit) => void
   depth?: number
 }
 
-export function OrgTreeNode({ node, isAdmin, onEdit, onDelete, onAddChild, depth = 0 }: Props) {
-  const [expanded, setExpanded] = useState(true)
+export function OrgTreeNode({
+  node, isAdmin, outline, expanded, selectedId, toggleExpanded, onSelect, depth = 0,
+}: Props) {
+  const isExpanded = expanded.has(node.id)
   const hasChildren = node.children.length > 0
+  const accent = TYPE_ACCENT[node.type]
+  const selected = selectedId === node.id
 
   return (
-    <div className={depth > 0 ? 'ml-6 border-l border-gray-200 pl-4' : ''}>
-      <div className="flex items-center gap-2 py-2 group">
+    <div style={{ marginLeft: depth > 0 ? 18 : 0, position: 'relative' }}>
+      {depth > 0 && (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: -10, top: 0, bottom: 0,
+            borderLeft: '1px solid var(--line-soft)',
+          }}
+        />
+      )}
+
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onSelect(node)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(node) } }}
+        className="org-row flex items-center gap-2.5"
+        style={{
+          padding: '7px 8px 7px 6px',
+          borderRadius: 5,
+          margin: '1px 0',
+          position: 'relative',
+          cursor: 'pointer',
+          background: selected ? 'var(--accent-mute)' : 'transparent',
+          transition: 'background 120ms ease',
+        }}
+      >
+        {selected && (
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute',
+              left: -2, top: 5, bottom: 5,
+              width: 3, borderRadius: 2,
+              background: accent.rail,
+            }}
+          />
+        )}
+
         <button
-          onClick={() => setExpanded(e => !e)}
-          className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600"
+          onClick={e => { e.stopPropagation(); if (hasChildren) toggleExpanded(node.id) }}
+          aria-label={hasChildren ? (isExpanded ? 'Свернуть' : 'Развернуть') : undefined}
+          className="flex items-center justify-center flex-shrink-0"
+          style={{
+            width: 16, height: 16,
+            color: hasChildren ? 'var(--ink-soft)' : 'var(--ink-dim)',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            cursor: hasChildren ? 'pointer' : 'default',
+          }}
         >
           {hasChildren ? (
-            expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+            isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />
           ) : (
-            <span className="w-4" />
+            <span style={{ width: 4, height: 4, borderRadius: 1, background: 'var(--line-strong)' }} />
           )}
         </button>
 
-        <span className={`text-xs px-2 py-0.5 rounded font-medium ${TYPE_COLORS[node.type]}`}>
+        <span
+          className="font-mono flex-shrink-0"
+          style={{
+            fontSize: 10,
+            color: selected ? 'var(--accent)' : 'var(--ink-dim)',
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            minWidth: outline.length * 6.5,
+          }}
+        >
+          {outline}
+        </span>
+
+        <span
+          className="font-mono font-semibold uppercase tracking-widest flex-shrink-0"
+          style={{
+            fontSize: 9, padding: '1.5px 6px', borderRadius: 3,
+            background: accent.bg, color: accent.fg, border: `1px solid ${accent.border}`,
+          }}
+        >
           {TYPE_LABELS[node.type]}
         </span>
 
-        <span className="font-medium text-gray-900">{node.nameRu}</span>
+        <span
+          className="font-display truncate flex-1"
+          style={{
+            fontSize: 13.5,
+            fontWeight: selected ? 600 : 500,
+            color: 'var(--ink)',
+          }}
+        >
+          {node.nameRu}
+        </span>
 
-        {isAdmin && (
-          <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => onAddChild(node)} title="Добавить дочернее"
-              className="p-1 text-gray-400 hover:text-blue-600">
-              <Plus size={14} />
-            </button>
-            <button onClick={() => onEdit(node)} title="Редактировать"
-              className="p-1 text-gray-400 hover:text-blue-600">
-              <Pencil size={14} />
-            </button>
-            <button onClick={() => onDelete(node)} title="Удалить"
-              className="p-1 text-gray-400 hover:text-red-600">
-              <Trash2 size={14} />
-            </button>
-          </div>
+        {hasChildren && (
+          <span
+            className="font-mono flex-shrink-0"
+            style={{ fontSize: 10, color: 'var(--ink-dim)' }}
+          >
+            {node.children.length}
+          </span>
         )}
       </div>
 
-      {expanded && hasChildren && (
+      {isExpanded && hasChildren && (
         <div>
-          {node.children.map(child => (
+          {node.children.map((child, i) => (
             <OrgTreeNode
               key={child.id}
               node={child}
               isAdmin={isAdmin}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onAddChild={onAddChild}
-              depth={(depth ?? 0) + 1}
+              outline={`${outline}.${i + 1}`}
+              expanded={expanded}
+              selectedId={selectedId}
+              toggleExpanded={toggleExpanded}
+              onSelect={onSelect}
+              depth={depth + 1}
             />
           ))}
         </div>

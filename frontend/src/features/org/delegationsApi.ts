@@ -4,19 +4,23 @@ export interface Delegation {
   id: number
   evaluateeId: number
   evaluateeName: string
-  evaluatorId: number
-  evaluatorName: string
-  startDate: string
-  endDate: string
+  originalEvaluatorId: number
+  originalEvaluatorName: string
+  delegatedToId: number
+  delegatedToName: string
+  validFrom: string
+  validTo: string
+  reason?: string | null
   isActive: boolean
   createdAt: string
 }
 
 export interface DelegationRequest {
   evaluateeId: number
-  evaluatorId: number
-  startDate: string
-  endDate: string
+  delegatedToId: number
+  validFrom: string
+  validTo: string
+  reason?: string
 }
 
 export interface PageResponse<T> {
@@ -28,8 +32,8 @@ export interface PageResponse<T> {
 }
 
 export const delegationsApi = {
-  list: (page = 0, size = 20, activeOnly = false) =>
-    api.get<PageResponse<Delegation>>('/delegations', { params: { page, size, activeOnly } }).then(r => r.data),
+  list: (page = 0, size = 20) =>
+    api.get<PageResponse<Delegation>>('/delegations', { params: { page, size } }).then(r => r.data),
   create: (data: DelegationRequest) =>
     api.post<Delegation>('/delegations', data).then(r => r.data),
   deactivate: (id: number) =>
