@@ -9,6 +9,7 @@ interface Props {
   onBlur?: () => void
   error?: boolean
   label: string
+  describedBy?: string
 }
 
 const LockIcon = () => (
@@ -32,7 +33,7 @@ const EyeOff = () => (
   </svg>
 )
 
-export function PasswordField({ id, value, onChange, onBlur, error, label }: Props) {
+export function PasswordField({ id, value, onChange, onBlur, error, label, describedBy }: Props) {
   const { t } = useTranslation()
   const [show, setShow] = useState(false)
   const [capsOn, setCapsOn] = useState(false)
@@ -81,6 +82,7 @@ export function PasswordField({ id, value, onChange, onBlur, error, label }: Pro
       required
       autoComplete="current-password"
       aria-required="true"
+      aria-describedby={describedBy}
       error={error}
       rightSlot={toggle}
       hint={caps}

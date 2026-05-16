@@ -40,6 +40,10 @@ export function LoginForm() {
         else if (pdpaRequired) navigate('/pdpa-consent')
         else navigate('/dashboard')
       }, 900)
+    } else {
+      // Failed login — move focus to the first field so keyboard/SR users
+      // land on the input to correct, not stranded on the submit button.
+      document.getElementById('lf-email')?.focus()
     }
   }
 
@@ -49,6 +53,7 @@ export function LoginForm() {
     <div>
       {isError && (
         <LoginBanner
+          id="login-error"
           variant="error"
           title={t('login.errorTitle')}
           body={t('login.errorBody')}
@@ -80,6 +85,8 @@ export function LoginForm() {
           spellCheck={false}
           autoCapitalize="none"
           aria-required="true"
+          aria-describedby={isError ? 'login-error' : undefined}
+          autoFocus
           error={isError}
         />
 
@@ -89,6 +96,7 @@ export function LoginForm() {
           value={password}
           onChange={(v) => setPassword(v)}
           onBlur={clearErr}
+          describedBy={isError ? 'login-error' : undefined}
           error={isError}
         />
 
@@ -137,14 +145,9 @@ export function LoginForm() {
 
         <p className="login-notice">
           {t('login.noticePre')}{' '}
-          {/* placeholder link replaced — bare `href="#"` jumped to page top on click */}
-          <button
-            type="button"
-            className="login-notice-link"
-            onClick={() => {/* TODO: wire to policy modal */}}
-          >
-            {t('login.noticeLink')}
-          </button>.
+          {/* Policy modal not built yet — render as plain emphasized text, not a
+              fake button, so it does not look interactive while doing nothing. */}
+          <span className="login-notice-link">{t('login.noticeLink')}</span>.
         </p>
       </form>
     </div>
