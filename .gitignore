@@ -12,7 +12,5 @@ backups/
 .dev-logs/
 
 # Local tooling / scratch
-.claude/
-.playwright-mcp/
-.superpowers/
+.*/
 /*.png
