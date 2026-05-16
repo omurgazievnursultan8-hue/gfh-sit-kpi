@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
 import { DataTable, type Column, type SortDir } from './DataTable'
 import { DataPanelToolbar, type FilterDef, type ViewKind } from './DataPanelToolbar'
 import { DataPanelPager } from './DataPanelPager'
@@ -84,20 +84,25 @@ export function DataPanel<T>({
 
   const page = mode === 'server' ? (pageProp ?? 0) : clientPage
 
+  // Latest onStateChange kept in a ref so the state-reporting effects below can
+  // call the current callback without listing it as a dependency (which would
+  // re-fire them whenever an unmemoized parent callback changes identity).
+  const onStateChangeRef = useRef(onStateChange)
+  useEffect(() => { onStateChangeRef.current = onStateChange }, [onStateChange])
+
   useEffect(() => {
     if (viewStorageKey) localStorage.setItem(viewStorageKey, view)
   }, [view, viewStorageKey])
 
   // server mode: report state changes to the parent.
   useEffect(() => {
-    if (mode === 'server') onStateChange?.({ search, filters: filterValues, sort, page })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (mode === 'server') onStateChangeRef.current?.({ search, filters: filterValues, sort, page })
   }, [mode, search, filterValues, sort, page])
 
   // Reset to the first page whenever a filter/search/sort changes.
   useEffect(() => {
     if (mode === 'client') setClientPage(0)
-    else onStateChange?.({ search, filters: filterValues, sort, page: 0 })
+    else onStateChangeRef.current?.({ search, filters: filterValues, sort, page: 0 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, filterValues, sort])
 
