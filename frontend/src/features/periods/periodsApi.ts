@@ -14,6 +14,11 @@ export interface Period {
   createdAt: string
 }
 
+export interface PeriodProgress {
+  total: number
+  completed: number
+}
+
 export interface AppealPending {
   id: number
   evaluationId: number
@@ -31,4 +36,6 @@ export const periodsApi = {
   close: (id: number) => api.post<Period>(`/periods/${id}/close`).then(r => r.data),
   pendingAppeals: () =>
     api.get<AppealPending[]>('/appeals/pending').then(r => r.data),
+  progress: (id: number) =>
+    api.get<PeriodProgress>(`/periods/${id}/progress`).then(r => r.data),
 }
