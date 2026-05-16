@@ -1,9 +1,9 @@
 import type { ElementType } from 'react'
 import {
   Home, BarChart2, Shield,
-  LayoutDashboard, Target, FileCheck, ClipboardCheck, CheckSquare, ListTodo,
+  LayoutDashboard, Target, FileCheck, ClipboardCheck, CheckSquare,
   ListChecks, TrendingUp, Building2, BarChart3,
-  Users, GitBranch, Settings, CalendarDays, ClipboardList, Activity, Calendar,
+  Users, UserCog, GitBranch, Settings, CalendarDays, ClipboardList, Activity, Calendar,
 } from 'lucide-react'
 
 export type Role =
@@ -65,14 +65,13 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true, roles: ALL_ROLES, chord: 'd' },
           { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'HEAD_OF_DEPARTMENT_UNIT', 'HEAD_OF_DEPARTMENT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'], chord: 'm' },
           { to: '/my-evaluations', labelKey: 'nav.myEvaluations', icon: FileCheck, roles: ALL_ROLES, chord: 'e' },
-          { to: '/evaluations', labelKey: 'nav.evaluations', icon: ClipboardCheck, roles: ALL_ROLES, chord: 'v' },
+          { to: '/evaluations', labelKey: 'nav.evaluations', icon: ClipboardCheck, roles: MANAGERS, chord: 'v' },
         ],
       },
       {
         groupKey: 'nav.groupTasks',
         items: [
           { to: '/my-tasks', labelKey: 'nav.myTasks', icon: CheckSquare, roles: MANAGERS, chord: 't' },
-          { to: '/manager-tasks', labelKey: 'nav.managerTasks', icon: ListTodo, roles: MANAGERS },
         ],
       },
     ],
@@ -112,6 +111,7 @@ export const NAV_SECTIONS: NavSection[] = [
         items: [
           { to: '/admin', labelKey: 'admin.stats', icon: BarChart3, end: true, roles: ADMIN_ONLY },
           { to: '/admin/users', labelKey: 'admin.users', icon: Users, roles: ADMIN_ONLY, chord: 'u' },
+          { to: '/users-v2', labelKey: 'admin.usersV2', icon: UserCog, roles: ADMIN_ONLY },
           { to: '/admin/org', labelKey: 'admin.orgStructure', icon: Building2, roles: ADMIN_ONLY },
           { to: '/admin/criteria', labelKey: 'admin.criteria', icon: ListChecks, roles: ADMIN_ONLY },
           { to: '/admin/periods', labelKey: 'admin.periods', icon: Calendar, roles: ADMIN_ONLY },
