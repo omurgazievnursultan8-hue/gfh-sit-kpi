@@ -64,6 +64,7 @@ export const NAV_SECTIONS: NavSection[] = [
         items: [
           { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true, roles: ALL_ROLES, chord: 'd' },
           { to: '/dashboard-v2', labelKey: 'nav.dashboardV2', icon: Activity, roles: ALL_ROLES },
+          { to: '/dashboard-v3', labelKey: 'nav.dashboardV3', icon: Activity, roles: ALL_ROLES },
           { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'HEAD_OF_DEPARTMENT_UNIT', 'HEAD_OF_DEPARTMENT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'], chord: 'm' },
           { to: '/my-evaluations', labelKey: 'nav.myEvaluations', icon: FileCheck, roles: ALL_ROLES, chord: 'e' },
           { to: '/evaluations', labelKey: 'nav.evaluations', icon: ClipboardCheck, roles: MANAGERS, chord: 'v' },
