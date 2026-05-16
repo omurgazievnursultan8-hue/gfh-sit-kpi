@@ -140,12 +140,19 @@ export function CriteriaPageV2() {
   const renderCard = (c: Criteria): ReactNode => (
     <div
       className="criteria-card"
-      onClick={() => setEditing(c.frozen ? null : c)}
+      onClick={() => { if (!c.frozen) setEditing(c) }}
+      tabIndex={c.frozen ? undefined : 0}
+      role={c.frozen ? undefined : 'button'}
+      aria-label={c.frozen ? undefined : `Редактировать критерий: ${c.nameRu}`}
+      onKeyDown={e => {
+        if (!c.frozen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditing(c) }
+      }}
       style={{
         background: 'var(--surface)', border: '1px solid var(--line)',
         borderRadius: 12, padding: 16,
         display: 'flex', flexDirection: 'column', gap: 12,
         cursor: c.frozen ? 'default' : 'pointer',
+        outline: 'none',
       }}
     >
       <div className="flex items-start justify-between gap-3">
@@ -171,6 +178,7 @@ export function CriteriaPageV2() {
       <style>{`
         .criteria-card { transition: border-color 120ms ease, box-shadow 120ms ease; }
         .criteria-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-md); }
+        .criteria-card:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
       `}</style>
     </div>
   )
