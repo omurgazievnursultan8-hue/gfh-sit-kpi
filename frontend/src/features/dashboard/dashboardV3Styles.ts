@@ -41,7 +41,7 @@ export const DASHBOARD_V3_CSS = `
 .dv3-down { color: var(--dv3-zone-down); }
 .dv3-ml { margin-left: 8px; }
 
-.dv3-terminal { max-width: 1440px; margin: 0 auto; padding: 24px; }
+.dv3-terminal { max-width: 1280px; margin: 0 auto; padding: 28px 32px 48px; }
 @media (max-width: 640px) { .dv3-terminal { padding: 12px; } }
 
 /* HEADER */
@@ -148,9 +148,11 @@ export const DASHBOARD_V3_CSS = `
   font-weight: 600; font-size: 80px; line-height: 0.9;
   letter-spacing: -0.04em; color: var(--dv3-text);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .dv3-kpi-dec { color: var(--dv3-text2); font-weight: 400; }
 .dv3-kpi-unit { font-size: 16px; color: var(--dv3-text3); margin-left: 8px; font-weight: 400; }
+.dv3-kpi-label { font-size: 11px; color: var(--dv3-text3); margin-left: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
 .dv3-kpi-meta { display: flex; flex-direction: column; gap: 6px; text-align: right; align-items: flex-end; padding-bottom: 8px; }
 .dv3-kpi-delta { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .dv3-kpi-delta-lab { font-size: 10px; color: var(--dv3-text3); letter-spacing: 0.06em; text-transform: uppercase; }
@@ -209,13 +211,15 @@ export const DASHBOARD_V3_CSS = `
 .dv3-line-annot { font-family: 'Geist Mono', monospace; font-size: 10px; fill: var(--dv3-accent); font-weight: 600; }
 
 /* GAUGE */
-.dv3-gauge { margin-top: 12px; font-size: 11px; color: var(--dv3-text3); }
-.dv3-gauge-bar { letter-spacing: 0.05em; margin: 6px 0; line-height: 1; word-break: break-all; }
+.dv3-gauge { align-self: flex-start; margin-top: 12px; font-size: 11px; color: var(--dv3-text3); }
+.dv3-gauge-bar { letter-spacing: 0.05em; margin: 6px 0; line-height: 1; white-space: nowrap; }
 .dv3-gauge-bar--lg { font-size: 13px; letter-spacing: 0; }
 .dv3-fill { color: var(--dv3-accent); }
 .dv3-dim { color: var(--dv3-border-hi); }
 .dv3-gauge-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--dv3-text3); }
 .dv3-gauge-meta strong { color: var(--dv3-text); font-weight: 600; }
+.dv3-gauge-meta--mark { position: relative; }
+.dv3-gauge-cur { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
 
 /* LADDER */
 .dv3-ladder { font-size: 11px; margin-top: 4px; }
@@ -283,4 +287,53 @@ export const DASHBOARD_V3_CSS = `
 .dv3-status-item { display: flex; align-items: center; gap: 6px; }
 .dv3-status-dot { width: 6px; height: 6px; background: var(--dv3-zone-up); border-radius: 50%; }
 .dv3-status-dot.dv3-warn-dot { background: var(--dv3-zone-warn); }
+
+/* HERO — copied from Dashboard V1 hero */
+.dv3-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #06120f;
+  background: linear-gradient(135deg, #0e2724 0%, #0d4d3f 55%, #1a7558 100%);
+  color: #ecf2f0;
+  box-shadow: var(--shadow-md);
+  padding: 28px 32px;
+  margin-bottom: 16px;
+}
+/* blueprint grid texture */
+.dv3-hero::before {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.020) 0 1px, transparent 1px 24px);
+}
+/* gold radial glow */
+.dv3-hero::after {
+  content: "";
+  position: absolute;
+  top: -80px; right: -80px; width: 280px; height: 280px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(168,133,43,.12), transparent 60%);
+}
+.dv3-hero > * { position: relative; z-index: 1; }
+
+.dv3-hero-stamp {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(245,236,210,0.7); margin-bottom: 8px;
+}
+.dv3-hero-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--gold);
+  animation: dv3-pulse 2s ease-in-out infinite;
+}
+@keyframes dv3-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.dv3-hero-greet {
+  font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
+  color: #ecf2f0; margin: 0 0 6px;
+}
+.dv3-hero-greet .dv3-accent { color: var(--gold); }
+.dv3-hero-greet { margin-bottom: 0; }
 `

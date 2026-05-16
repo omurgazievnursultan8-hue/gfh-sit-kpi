@@ -37,6 +37,26 @@ function flattenOrgTree(units: OrgUnit[]): OrgUnit[] {
 
 const scopeLabel = (c: Criteria) => (c.orgUnitId == null ? 'Глобальный' : (c.orgUnitNameRu ?? 'Локальный'))
 
+function ScopePill({ c }: { c: Criteria }) {
+  const global = c.orgUnitId == null
+  const s = global
+    ? { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7', border: 'rgba(120,150,200,0.32)' }
+    : { bg: 'var(--surface-mute)', fg: 'var(--ink-soft)', border: 'var(--line)' }
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      style={{
+        fontSize: 11.5, fontWeight: 500, padding: '3px 10px', borderRadius: 999,
+        background: s.bg, color: s.fg, border: `1px solid ${s.border}`,
+        whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: s.fg, flexShrink: 0 }} />
+      {scopeLabel(c)}
+    </span>
+  )
+}
+
 export function CriteriaPageV2() {
   const [criteria, setCriteria] = useState<Criteria[]>([])
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
@@ -90,11 +110,7 @@ export function CriteriaPageV2() {
     },
     {
       key: 'scope', header: 'Область', sortable: true,
-      render: (c) => (
-        <span style={{ fontSize: 13, color: c.orgUnitId == null ? 'var(--ink-dim)' : 'var(--ink-soft)' }}>
-          {scopeLabel(c)}
-        </span>
-      ),
+      render: (c) => <ScopePill c={c} />,
     },
     {
       key: 'weight', header: 'Вес', sortable: true, align: 'right',
@@ -169,9 +185,7 @@ export function CriteriaPageV2() {
         </div>
       </div>
       <div className="flex flex-col gap-2.5" style={{ paddingTop: 12, borderTop: '1px dashed var(--line)' }}>
-        <CardMetaRow k="Область">
-          <span style={{ color: c.orgUnitId == null ? 'var(--ink-dim)' : 'var(--ink)' }}>{scopeLabel(c)}</span>
-        </CardMetaRow>
+        <CardMetaRow k="Область"><ScopePill c={c} /></CardMetaRow>
         <CardMetaRow k="Вес"><span className="tabular-nums">{c.weight}%</span></CardMetaRow>
         <CardMetaRow k="Статус"><StatusPill active={c.active} /></CardMetaRow>
       </div>

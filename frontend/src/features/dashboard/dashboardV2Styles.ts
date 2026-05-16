@@ -1,5 +1,6 @@
 // Terminal / Swiss-grid aesthetic for DashboardV2Page.
-// Scoped entirely under .dv2-root; theme switched via [data-dv2-theme].
+// Scoped under .dv2-root; follows the global app theme set on <html data-theme>.
+// Dark is the base/default; [data-theme="light"] overrides it.
 export const DASHBOARD_V2_CSS = `
 .dv2-root {
   --dv2-green: #a3c585;
@@ -8,15 +9,14 @@ export const DASHBOARD_V2_CSS = `
   --dv2-zone-down: #e07a6a;
   --dv2-zone-warn: #e0b34f;
   --dv2-zone-info: #7fb3c4;
-}
-.dv2-root[data-dv2-theme="dark"] {
+
   --dv2-bg: #0d1410; --dv2-bg2: #141a15; --dv2-bg3: #1c241d;
   --dv2-text: #e8ece4; --dv2-text2: #9ba798; --dv2-text3: #6b756a; --dv2-text4: #454e46;
   --dv2-border: #1f2820; --dv2-border2: #2a342b; --dv2-border-hi: #3d4a3e;
   --dv2-accent: var(--dv2-green);
   --dv2-accent-bg: rgba(163,197,133,0.10);
 }
-.dv2-root[data-dv2-theme="light"] {
+[data-theme="light"] .dv2-root {
   --dv2-bg: #f4f6ee; --dv2-bg2: #fbfcf6; --dv2-bg3: #e8ecdc;
   --dv2-text: #1a2014; --dv2-text2: #4d5544; --dv2-text3: #828a76; --dv2-text4: #b0b8a3;
   --dv2-border: #d9ddc8; --dv2-border2: #c5cab2; --dv2-border-hi: #98a07f;
@@ -67,14 +67,6 @@ export const DASHBOARD_V2_CSS = `
 }
 @keyframes dv2-blink { 50% { border-color: transparent; } }
 .dv2-head-right { display: flex; align-items: center; gap: 16px; font-size: 11px; color: var(--dv2-text3); letter-spacing: 0.05em; }
-.dv2-theme-btn {
-  border: 1px solid var(--dv2-border2); background: var(--dv2-bg);
-  color: var(--dv2-text2); padding: 5px 10px;
-  font-family: inherit; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.1em;
-  cursor: pointer; transition: all 0.15s ease;
-}
-.dv2-theme-btn:hover { color: var(--dv2-accent); border-color: var(--dv2-accent); }
 @media (max-width: 640px) {
   .dv2-head { grid-template-columns: 1fr; gap: 12px; }
   .dv2-head-cmd { display: none; }

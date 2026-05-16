@@ -121,7 +121,6 @@ export function DashboardV2Page() {
   const unreadCount = useSelector((s: RootState) => s.notifications.unreadCount)
   const isManager = role !== 'EMPLOYEE'
 
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
   const [clock, setClock] = useState('')
 
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
@@ -231,7 +230,7 @@ export function DashboardV2Page() {
     t === 'success' ? 'OK' : t === 'warn' ? 'WARN' : 'INFO'
 
   return (
-    <div className="dv2-root" data-dv2-theme={theme}>
+    <div className="dv2-root">
       <style>{DASHBOARD_V2_CSS}</style>
 
       <div className="dv2-terminal">
@@ -254,12 +253,6 @@ export function DashboardV2Page() {
             <span>SESS <span className="dv2-mono">{clock}</span></span>
             <span>·</span>
             <span className="dv2-mono">UTC+6</span>
-            <button
-              className="dv2-theme-btn"
-              onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
-            >
-              [ THEME ]
-            </button>
           </div>
         </header>
 
