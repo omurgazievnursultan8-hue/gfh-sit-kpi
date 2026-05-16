@@ -31,6 +31,7 @@
   },
   "nav": {
     "dashboard": "Башкы бет",
+    "dashboardV2": "Башкы бет V2",
     "users": "Колдонуучулар",
     "orgStructure": "Уюм структурасы",
     "delegations": "Делегирлөөлөр",

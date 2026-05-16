@@ -31,6 +31,7 @@
   },
   "nav": {
     "dashboard": "Дашборд",
+    "dashboardV2": "Дашборд V2",
     "users": "Пользователи",
     "orgStructure": "Оргструктура",
     "delegations": "Делегирования",
