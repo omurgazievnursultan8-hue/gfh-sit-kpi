@@ -212,6 +212,7 @@ export function DataTable<T>({
       <style>{`
         .dt-row td { border-bottom: 1px solid var(--line-soft); }
         .dt-row:last-child td { border-bottom: none; }
+        .dt-row:nth-child(even) td { background: var(--surface-mute); }
         .dt-expanded-row td { background: var(--surface-mute); border-bottom: 1px solid var(--line); }
         ${clickable ? `
         .dt-row { cursor: pointer; transition: background 100ms ease; outline: none; }

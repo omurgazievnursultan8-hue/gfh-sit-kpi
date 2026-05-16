@@ -129,7 +129,7 @@ html, body {
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(15,23,42,0.06);
   transition: background 0.14s, border-color 0.14s, box-shadow 0.14s;
-  min-height: 32px;
+  min-height: 44px;
 }
 .login-lang-trigger:hover {
   background: #fff;
@@ -231,18 +231,20 @@ html, body {
 }
 .login-brand-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0;
-  margin-bottom: 14px;
+  gap: 18px;
+  margin-bottom: 16px;
   position: relative; z-index: 1;
 }
 .login-brand-mark {
-  width: 54px; height: 54px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.16);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
+}
+.login-brand-mark img {
+  width: 72px; height: 72px;
+  object-fit: contain;
+  display: block;
 }
 .login-brand-mono {
   font-family: Georgia, 'Times New Roman', serif;
@@ -253,9 +255,8 @@ html, body {
   line-height: 1;
 }
 .login-brand-name {
-  flex: 1;
   text-align: center;
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 600;
   letter-spacing: -0.01em;
   margin: 0;
@@ -265,13 +266,14 @@ html, body {
 .login-brand-sub {
   font-size: 14px;
   line-height: 1.58;
-  color: #8fa6a1;
-  margin: 0 0 38px;
+  color: #b3c4bf;
+  margin: 0 0 32px;
+  text-align: center;
   position: relative; z-index: 1;
 }
 .login-brand-list {
   list-style: none;
-  padding: 0; margin: 0 0 auto;
+  padding: 0; margin: 0;
   display: flex; flex-direction: column; gap: 17px;
   position: relative; z-index: 1;
 }
@@ -292,14 +294,14 @@ html, body {
 }
 .login-brand-foot {
   position: relative; z-index: 1;
-  margin-top: 32px;
+  margin-top: auto;
   padding-top: 20px;
   border-top: 1px solid rgba(255,255,255,0.08);
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   font-size: 11.5px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #8fa6a1;
+  color: #b3c4bf;
   display: flex;
   justify-content: space-between;
 }
@@ -361,14 +363,6 @@ html, body {
   align-items: center;
   justify-content: center;
 }
-.login-form-sub {
-  font-size: 14px;
-  line-height: 1.58;
-  color: #9aa5a1;
-  margin: 0 0 38px;
-  text-align: center;
-}
-
 /* Banners */
 .login-banner {
   display: flex;
@@ -392,14 +386,6 @@ html, body {
   border-color: rgba(13,77,63,0.22);
 }
 
-.login-all-required {
-  font-size: 11.5px;
-  color: #344843;
-  margin: 0 0 16px;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  letter-spacing: 0.04em;
-}
-
 /* Fields */
 .login-field { margin-bottom: 16px; }
 .login-label {
@@ -410,7 +396,7 @@ html, body {
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #6b7c77;
+  color: #56655f;
   margin-bottom: 7px;
 }
 .login-input-wrap {
@@ -432,7 +418,7 @@ html, body {
   border: 1px solid #ece8da;
   border-radius: 8px;
   background: #f5f3ec;
-  font: 400 15px/1 'JetBrains Mono', 'Courier New', monospace;
+  font: 400 16px/1 'JetBrains Mono', 'Courier New', monospace;
   color: #0e1714;
   outline: none;
   transition: border-color 0.14s, box-shadow 0.14s, background-color 0.14s;
@@ -493,6 +479,7 @@ html, body {
   color: #344843;
   user-select: none;
   padding: 4px 0;
+  min-height: 44px;
   position: relative;
 }
 .login-checkbox-box {
@@ -560,6 +547,17 @@ html, body {
   background: #1a7558 !important;
   opacity: 1 !important;
 }
+/* Keyboard focus rings — inputs/checkbox use box-shadow; these controls
+   had only :hover, leaving keyboard users without a visible ring. */
+.login-btn-submit:focus-visible,
+.login-btn-eye:focus-visible,
+.login-forgot:focus-visible,
+.login-notice-link:focus-visible,
+.login-lang-trigger:focus-visible,
+.login-lang-option:focus-visible {
+  outline: 2px solid var(--gold, #c9a961);
+  outline-offset: 2px;
+}
 .login-btn-arrow {
   display: inline-flex;
   width: 16px; height: 16px;
@@ -573,18 +571,17 @@ html, body {
   margin: 22px 0 0;
   text-align: center;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #6b7c77;
+  color: #56655f;
   line-height: 1.6;
 }
 .login-notice-link {
   color: #08362b;
-  text-decoration: none;
+  font-weight: 600;
 }
-.login-notice-link:hover { text-decoration: underline; }
 
 /* Responsive */
 @media (max-width: 840px) {
@@ -604,7 +601,7 @@ html, body {
 @media (max-width: 480px) {
   .login-input { height: 48px; font-size: 16px; }
   .login-btn-submit { height: 50px; }
-  .login-lang-trigger { font-size: 13px; padding: 8px 12px; min-height: 36px; }
+  .login-lang-trigger { font-size: 13px; padding: 8px 12px; }
   .login-form-title { font-size: 22px; min-height: 38px; }
   .login-form-head { margin-bottom: 30px; }
 }
@@ -621,7 +618,9 @@ html, body {
     align-items: center;
     gap: 14px;
   }
-  .login-brand-mark { margin-bottom: 0; width: 38px; height: 38px; }
+  .login-brand-header { flex-direction: row; gap: 12px; margin-bottom: 0; }
+  .login-brand-mark { margin-bottom: 0; width: 38px; height: 38px; border-radius: 10px; }
+  .login-brand-mark img { width: 28px; height: 28px; }
   .login-brand-name { font-size: 20px; margin: 0; }
   .login-brand-sub { display: none; }
   .login-brand-list { display: none; }
@@ -631,6 +630,7 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .login-spinner { animation: none; }
+  .login-lang-menu { animation: none; }
   .login-input,
   .login-btn-submit,
   .login-btn-eye,

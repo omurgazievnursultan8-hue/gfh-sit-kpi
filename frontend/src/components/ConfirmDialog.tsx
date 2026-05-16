@@ -78,23 +78,23 @@ export function ConfirmDialog({
   const cancel = cancelLabel ?? (t('common.cancel', 'Отмена') as string)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/50" onClick={onCancel} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-5">
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onCancel} aria-hidden="true" />
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className="relative bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4"
+        className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-w-[420px] w-full"
       >
-        <h3 id={titleId} className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-        <p id={descId} className="text-sm text-gray-600 mb-6">{description}</p>
+        <h3 id={titleId} className="text-[17px] font-semibold tracking-tight text-slate-900 mb-2">{title}</h3>
+        <p id={descId} className="text-[13.5px] text-slate-600 leading-relaxed mb-6">{description}</p>
         <div className="flex gap-3 justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+            className="h-10 px-4 text-[13.5px] font-medium border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50"
           >
             {cancel}
           </button>
@@ -102,8 +102,8 @@ export function ConfirmDialog({
             ref={confirmRef}
             type="button"
             onClick={onConfirm}
-            className={`px-4 py-2 text-sm text-white rounded-md ${
-              variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:bg-blue-700'
+            className={`h-10 px-4 text-[13.5px] font-medium text-white rounded-lg ${
+              variant === 'danger' ? 'bg-[#b3261e] hover:bg-[#962019]' : 'bg-[#0a6b4e] hover:bg-[#095a42]'
             }`}
           >
             {confirm}

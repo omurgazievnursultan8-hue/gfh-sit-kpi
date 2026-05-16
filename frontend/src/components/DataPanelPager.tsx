@@ -15,10 +15,33 @@ interface DataPanelPagerProps {
   /** Total matched row count. */
   total: number
   onPage: (p: number) => void
+  /** Current rows-per-page. */
+  pageSize: number
+  /** Selectable rows-per-page values. */
+  pageSizeOptions: number[]
+  onPageSize: (n: number) => void
+}
+
+/**
+ * Page indices to render: first + last always, a 3-wide window around the
+ * current page, 'gap' markers where pages are elided. Shows every page when
+ * totalPages <= 7 (no elision needed).
+ */
+function pageWindow(page: number, totalPages: number): (number | 'gap')[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i)
+  const out: (number | 'gap')[] = [0]
+  const start = Math.max(1, page - 1)
+  const end = Math.min(totalPages - 2, page + 1)
+  if (start > 1) out.push('gap')
+  for (let i = start; i <= end; i++) out.push(i)
+  if (end < totalPages - 2) out.push('gap')
+  out.push(totalPages - 1)
+  return out
 }
 
 export function DataPanelPager({
   page, totalPages, rangeFrom, rangeTo, total, onPage,
+  pageSize, pageSizeOptions, onPageSize,
 }: DataPanelPagerProps) {
   return (
     <div
@@ -29,26 +52,60 @@ export function DataPanelPager({
         background: 'var(--surface-mute)',
       }}
     >
-      <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
-        Показано{' '}
-        <strong className="font-mono" style={{ color: 'var(--ink)' }}>
-          {rangeFrom}–{rangeTo}
-        </strong>{' '}
-        из{' '}
-        <strong className="font-mono" style={{ color: 'var(--ink)' }}>{total}</strong>
-      </span>
+      <div className="flex items-center gap-2.5 flex-wrap">
+        <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
+          Показано{' '}
+          <strong className="font-mono" style={{ color: 'var(--ink)' }}>
+            {rangeFrom}–{rangeTo}
+          </strong>{' '}
+          из{' '}
+          <strong className="font-mono" style={{ color: 'var(--ink)' }}>{total}</strong>
+        </span>
+
+        <label className="flex items-center gap-1.5" style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
+          На странице
+          <select
+            value={pageSize}
+            aria-label="Строк на странице"
+            onChange={e => onPageSize(Number(e.target.value))}
+            className="font-mono outline-none"
+            style={{
+              height: 26, padding: '0 22px 0 8px', borderRadius: 6,
+              fontSize: 11, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer',
+              color: 'var(--ink)', background: 'var(--surface)',
+              border: '1px solid var(--line)',
+            }}
+          >
+            {pageSizeOptions.map(n => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {totalPages > 1 && (
         <div className="flex items-center gap-1.5">
           <PagerButton disabled={page === 0} onClick={() => onPage(Math.max(0, page - 1))} ariaLabel="Предыдущая">
             ←
           </PagerButton>
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const selected = page === i
+          {pageWindow(page, totalPages).map((item, idx) => {
+            if (item === 'gap') {
+              return (
+                <span
+                  key={`gap-${idx}`}
+                  aria-hidden
+                  className="font-mono"
+                  style={{ minWidth: 18, textAlign: 'center', fontSize: 11, color: 'var(--ink-faint)' }}
+                >
+                  …
+                </span>
+              )
+            }
+            const selected = page === item
             return (
               <button
-                key={i}
-                onClick={() => onPage(i)}
+                key={item}
+                onClick={() => onPage(item)}
                 aria-current={selected ? 'page' : undefined}
                 className="font-mono transition-colors"
                 style={{
@@ -60,7 +117,7 @@ export function DataPanelPager({
                   cursor: 'pointer',
                 }}
               >
-                {String(i + 1).padStart(2, '0')}
+                {String(item + 1).padStart(2, '0')}
               </button>
             )
           })}

@@ -19,6 +19,7 @@ export interface PanelState {
   filters: Record<string, string>
   sort: { key: string; dir: SortDir } | null
   page: number
+  pageSize: number
 }
 
 export interface DataPanelProps<T> {
@@ -37,6 +38,10 @@ export interface DataPanelProps<T> {
   filters?: FilterDef[]
   clientFilter?: (r: T, values: Record<string, string>) => boolean
   filterSlot?: ReactNode
+  /** Controlled filter values — when set, the panel does not own filter state. */
+  filterValues?: Record<string, string>
+  /** Called with the full next filter-values record when a filter changes. */
+  onFilterValuesChange?: (values: Record<string, string>) => void
 
   comparator?: (key: string) => (a: T, b: T) => number
   defaultSort?: { key: string; dir: SortDir }
@@ -45,7 +50,10 @@ export interface DataPanelProps<T> {
   renderCard?: (r: T) => ReactNode
   viewStorageKey?: string
 
+  /** Initial rows-per-page (default 10). User can change it via the pager select. */
   pageSize?: number
+  /** Selectable rows-per-page values shown in the pager (default 10/25/50/100). */
+  pageSizeOptions?: number[]
   /** server mode — current 0-based page (controlled). */
   page?: number
   /** server mode — total matched row count. */
@@ -66,21 +74,44 @@ function loadView(key: string | undefined, views: ViewKind[]): ViewKind {
   return views[0]
 }
 
+function CardsPlaceholder({ children }: { children: ReactNode }) {
+  return (
+    <div
+      className="text-center"
+      style={{
+        padding: '56px 24px', fontSize: 13.5, color: 'var(--ink-faint)',
+        background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function DataPanel<T>({
   mode = 'client',
   columns, rows, rowKey, loading = false, caption, empty,
   searchable = false, searchText, searchPlaceholder,
   filters = [], clientFilter, filterSlot,
+  filterValues: filterValuesProp, onFilterValuesChange,
   comparator, defaultSort,
   views = ['table', 'cards'], renderCard, viewStorageKey,
-  pageSize = 25, page: pageProp, totalElements, onStateChange,
+  pageSize: pageSizeProp = 10, pageSizeOptions = [10, 25, 50, 100],
+  page: pageProp, totalElements, onStateChange,
   onRowClick, toolbarActions,
 }: DataPanelProps<T>) {
   const [search, setSearch] = useState('')
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
+  const [filterValuesState, setFilterValuesState] = useState<Record<string, string>>({})
+  const filterValues = filterValuesProp ?? filterValuesState
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(defaultSort ?? null)
   const [clientPage, setClientPage] = useState(0)
+  const [pageSize, setPageSize] = useState(pageSizeProp)
   const [view, setView] = useState<ViewKind>(() => loadView(viewStorageKey, views))
+
+  // Keep `view` valid if the `views` prop set shrinks after mount.
+  useEffect(() => {
+    if (!views.includes(view)) setView(views[0])
+  }, [views, view])
 
   const page = mode === 'server' ? (pageProp ?? 0) : clientPage
 
@@ -94,26 +125,25 @@ export function DataPanel<T>({
     if (viewStorageKey) localStorage.setItem(viewStorageKey, view)
   }, [view, viewStorageKey])
 
-  // server mode: report state changes to the parent.
-  useEffect(() => {
-    if (mode === 'server') onStateChangeRef.current?.({ search, filters: filterValues, sort, page })
-  }, [mode, search, filterValues, sort, page])
-
-  // Reset to the first page whenever a filter/search/sort changes.
+  // Single emitter: on mount and whenever search/filter/sort/pageSize changes,
+  // reset to the first page. Page changes are emitted directly by `setPage`, so
+  // there is no separate page-watching effect (which would double-fire).
   useEffect(() => {
     if (mode === 'client') setClientPage(0)
-    else onStateChangeRef.current?.({ search, filters: filterValues, sort, page: 0 })
+    else onStateChangeRef.current?.({ search, filters: filterValues, sort, page: 0, pageSize })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, filterValues, sort])
+  }, [mode, search, filterValues, sort, pageSize])
 
   const handleFilter = useCallback((key: string, value: string) => {
-    setFilterValues(prev => {
+    const apply = (prev: Record<string, string>) => {
       const next = { ...prev }
       if (value) next[key] = value
       else delete next[key]
       return next
-    })
-  }, [])
+    }
+    if (filterValuesProp !== undefined) onFilterValuesChange?.(apply(filterValuesProp))
+    else setFilterValuesState(apply)
+  }, [filterValuesProp, onFilterValuesChange])
 
   const handleSort = useCallback((key: string) => {
     setSort(prev => {
@@ -152,8 +182,8 @@ export function DataPanel<T>({
 
   const setPage = useCallback((p: number) => {
     if (mode === 'client') setClientPage(p)
-    else onStateChange?.({ search, filters: filterValues, sort, page: p })
-  }, [mode, onStateChange, search, filterValues, sort])
+    else onStateChangeRef.current?.({ search, filters: filterValues, sort, page: p, pageSize })
+  }, [mode, search, filterValues, sort, pageSize])
 
   return (
     <div>
@@ -174,25 +204,9 @@ export function DataPanel<T>({
 
       {view === 'cards' && renderCard ? (
         loading ? (
-          <div
-            className="text-center"
-            style={{
-              padding: '56px 24px', fontSize: 13.5, color: 'var(--ink-faint)',
-              background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12,
-            }}
-          >
-            Загрузка…
-          </div>
+          <CardsPlaceholder>Загрузка…</CardsPlaceholder>
         ) : visible.length === 0 ? (
-          <div
-            className="text-center"
-            style={{
-              padding: '56px 24px', fontSize: 13.5, color: 'var(--ink-faint)',
-              background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12,
-            }}
-          >
-            {empty ?? 'Нет данных'}
-          </div>
+          <CardsPlaceholder>{empty ?? 'Нет данных'}</CardsPlaceholder>
         ) : (
           <div
             className="grid gap-3.5"
@@ -232,6 +246,9 @@ export function DataPanel<T>({
           rangeTo={rangeTo}
           total={total}
           onPage={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={pageSizeOptions}
+          onPageSize={setPageSize}
         />
       )}
     </div>

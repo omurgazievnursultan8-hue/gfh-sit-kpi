@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Plus, X, Target, FileCheck, CheckSquare, ListTodo, Users, ClipboardList, Search } from 'lucide-react'
+import { Plus, X, Target, FileCheck, CheckSquare, Users, ClipboardList, Search } from 'lucide-react'
 import { Role } from './navConfig'
 
 interface FABAction {
@@ -20,22 +20,18 @@ const ACTIONS_BY_ROLE: Record<Role, FABAction[]> = {
   ],
   HEAD_OF_DEPARTMENT_UNIT: [
     { key: 'my-tasks', labelKey: 'nav.fabMyTasks', icon: CheckSquare, to: '/my-tasks' },
-    { key: 'manager-tasks', labelKey: 'nav.fabManagerTasks', icon: ListTodo, to: '/manager-tasks' },
     { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
   ],
   HEAD_OF_DEPARTMENT: [
     { key: 'my-tasks', labelKey: 'nav.fabMyTasks', icon: CheckSquare, to: '/my-tasks' },
-    { key: 'manager-tasks', labelKey: 'nav.fabManagerTasks', icon: ListTodo, to: '/manager-tasks' },
     { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
   ],
   DEPUTY_CHAIRMAN: [
     { key: 'my-tasks', labelKey: 'nav.fabMyTasks', icon: CheckSquare, to: '/my-tasks' },
-    { key: 'manager-tasks', labelKey: 'nav.fabManagerTasks', icon: ListTodo, to: '/manager-tasks' },
     { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
   ],
   CHAIRMAN: [
     { key: 'my-tasks', labelKey: 'nav.fabMyTasks', icon: CheckSquare, to: '/my-tasks' },
-    { key: 'manager-tasks', labelKey: 'nav.fabManagerTasks', icon: ListTodo, to: '/manager-tasks' },
     { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
   ],
   ADMIN: [
