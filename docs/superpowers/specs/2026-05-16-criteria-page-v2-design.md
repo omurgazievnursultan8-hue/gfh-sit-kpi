@@ -37,18 +37,28 @@ UsersPageV2 parity:
 
 - `criteriaApi` (`criteriaApi.ts`) — `list`, `create`, `update`,
   `deactivate`, `reactivate`.
-- `components/CriteriaFormModal.tsx` — create/edit form, as-is.
-- `components/WeightBar.tsx` — weight visualization.
+- `components/CriteriaFormModal.tsx` — create/edit form, as-is. Props:
+  `open`, `editing: Criteria | null`, `prefill` (unused here, pass `null`),
+  `orgUnits: OrgUnit[]`, `onSave`, `onClose`.
+- `org/orgApi.ts` — `getStructure()` returns the org tree; flatten it
+  locally for the modal's `orgUnits` prop.
 - `components/DataPanel.tsx`, `ConfirmDialog`, `Layout`.
 - `users/components/usersMeta` — import `StatusPill` (active/inactive).
+  Note: its labels read "Активен" / "Заблокирован" — accepted as-is for
+  parity; cosmetic mismatch for criteria is out of scope.
+
+`WeightBar` is NOT reused — it is a per-tab weight-budget bar, not a
+per-row widget. The weight column renders the numeric value as text.
 
 ## CriteriaPageV2 structure
 
 State: `criteria: Criteria[]`, `loading`, `activeTab: CriteriaType`,
 `editing: Criteria | null`, `showCreate`, `filterValues`, `confirmDialog`.
 
-Data load: `criteriaApi.list(0, 500)` on mount; reload after every mutation.
-Client mode — `DataPanel` filters/sorts the in-memory list.
+Data load on mount: `criteriaApi.list(0, 500)` for rows, plus
+`orgApi.getStructure()` flattened to a flat `OrgUnit[]` for the form
+modal. Reload criteria after every mutation. Client mode — `DataPanel`
+filters/sorts the in-memory list.
 
 ### Tab strip
 
@@ -63,7 +73,7 @@ matching `activeTab`. Switching tabs does not clear `filterValues`.
   - `name` — `nameRu`, sortable. Card/table primary text.
   - `scope` — "Глобальный" if `orgUnitId == null`, else "Локальный" with
     `orgUnitNameRu`. Sortable.
-  - `weight` — `WeightBar` + numeric value, sortable.
+  - `weight` — numeric value formatted as `${weight}%`, sortable.
   - `status` — `StatusPill active={c.active}` (imported from usersMeta).
     Sortable.
   - `actions` — `CriteriaRowMenu`, `align: 'right'`, `srOnlyHeader`.
