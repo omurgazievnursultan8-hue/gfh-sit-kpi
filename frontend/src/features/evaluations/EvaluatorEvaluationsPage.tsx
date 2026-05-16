@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { evaluationsApi, Evaluation, EvaluationStatus } from './evaluationsApi'
+import { periodsApi, Period } from '../periods/periodsApi'
 import { usePageTitle } from '../../context/PageContext'
 
 /* ────────────────────────────────────────────────────────────────────────────
- * "Мои оценки" — visual language mirrored from PersonalDashboardPage:
- *   deep-green gradient hero w/ blueprint grid + gold accents · cream paper bg
- *   · white surface cards w/ 3px stripe top · JetBrains Mono labels · ledger.
+ * "Оценки" — full evaluator history across all statuses.
+ * Visual: same paper/cream + deep-green hero + 3px stripe surfaces as
+ * MyEvaluationsPage / PersonalDashboardPage. Content: conducted-by-me list,
+ * shows evaluatee + period + status + finalScore.
  * ────────────────────────────────────────────────────────────────────────── */
 
 const STATUS_LABELS: Record<EvaluationStatus, string> = {
   DRAFT: 'Черновик',
-  SUBMITTED: 'Ожидает реакции',
+  SUBMITTED: 'Отправлено',
   ACKNOWLEDGED: 'Подтверждено',
   APPEALED: 'Апелляция',
   CLOSED: 'Завершено',
@@ -19,14 +21,15 @@ const STATUS_LABELS: Record<EvaluationStatus, string> = {
 
 interface StatusVisual { bg: string; fg: string; border: string; stripe: string }
 const STATUS_VISUALS: Record<EvaluationStatus, StatusVisual> = {
-  DRAFT:        { bg: 'rgba(120,120,120,0.12)', fg: '#6b6b6b',  border: 'rgba(120,120,120,0.32)', stripe: 'var(--line-strong)' },
-  SUBMITTED:    { bg: 'rgba(200,150,40,0.14)',  fg: '#9c7416',  border: 'rgba(200,150,40,0.32)',  stripe: 'var(--warn, #c89628)' },
+  DRAFT:        { bg: 'rgba(200,150,40,0.14)',  fg: '#9c7416',  border: 'rgba(200,150,40,0.32)',  stripe: 'var(--warn, #c89628)' },
+  SUBMITTED:    { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7',  border: 'rgba(120,150,200,0.32)', stripe: 'var(--info)' },
   ACKNOWLEDGED: { bg: 'rgba(26,117,88,0.14)',   fg: 'var(--accent-2)', border: 'rgba(26,117,88,0.32)',  stripe: 'var(--accent-2)' },
   APPEALED:     { bg: 'rgba(200,80,60,0.14)',   fg: '#b04d3a',  border: 'rgba(200,80,60,0.32)',   stripe: 'var(--danger)' },
-  CLOSED:       { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7',  border: 'rgba(120,150,200,0.32)', stripe: 'var(--info)' },
+  CLOSED:       { bg: 'rgba(120,120,120,0.12)', fg: '#6b6b6b',  border: 'rgba(120,120,120,0.32)', stripe: 'var(--line-strong)' },
 }
 
-const STATUS_ORDER: EvaluationStatus[] = ['SUBMITTED', 'APPEALED', 'DRAFT', 'ACKNOWLEDGED', 'CLOSED']
+const STATUS_ORDER: EvaluationStatus[] = ['DRAFT', 'SUBMITTED', 'APPEALED', 'ACKNOWLEDGED', 'CLOSED']
+const PAGE_SIZE = 12
 
 function timeGreeting(): string {
   const h = new Date().getHours()
@@ -54,12 +57,6 @@ function fmt(n: number | null | undefined, digits = 1): string {
   return Number(n).toFixed(digits)
 }
 
-function signedDelta(n: number | null) {
-  if (n === null || Number.isNaN(n)) return { txt: '—', tone: 'flat' as const }
-  if (Math.abs(n) < 0.05) return { txt: '±0.0', tone: 'flat' as const }
-  return { txt: `${n > 0 ? '▲' : '▼'} ${Math.abs(n).toFixed(1)}`, tone: (n > 0 ? 'up' : 'down') as 'up' | 'down' }
-}
-
 function plural(n: number, forms: [string, string, string]): string {
   const m10 = n % 10, m100 = n % 100
   if (m10 === 1 && m100 !== 11) return forms[0]
@@ -67,38 +64,54 @@ function plural(n: number, forms: [string, string, string]): string {
   return forms[2]
 }
 
-const PAGE_SIZE = 10
+function periodShortLabel(p: Period): string {
+  const start = new Date(p.startDate)
+  const year = start.getFullYear()
+  if (p.type === 'QUARTERLY') return `Q${Math.floor(start.getMonth() / 3) + 1} ${year}`
+  if (p.type === 'MONTHLY') return `${String(start.getMonth() + 1).padStart(2, '0')}.${year}`
+  return `${year}`
+}
 
 /* ────────────────────────────────────────────────────────────────────────── */
 
-export function MyEvaluationsPage() {
+export function EvaluatorEvaluationsPage() {
   const navigate = useNavigate()
-  usePageTitle('nav.myEvaluations')
+  usePageTitle('nav.evaluations')
 
   const [all, setAll] = useState<Evaluation[]>([])
+  const [periods, setPeriods] = useState<Period[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<EvaluationStatus | 'ALL'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<EvaluationStatus | 'ALL'>('ALL')
+  const [periodFilter, setPeriodFilter] = useState<number | 'ALL'>('ALL')
   const [page, setPage] = useState(0)
 
   useEffect(() => {
-    setLoading(true)
-    evaluationsApi.myHistory(0, 200)
-      .then(data => setAll(data.content))
-      .finally(() => setLoading(false))
+    Promise.allSettled([
+      evaluationsApi.asEvaluator(0, 500).then(r => setAll(r.content)),
+      periodsApi.list().then(setPeriods),
+    ]).finally(() => setLoading(false))
   }, [])
 
-  // newest-first as API delivers; ledger row deltas computed against next (older) entry.
-  const visible = useMemo(
-    () => filter === 'ALL' ? all : all.filter(e => e.status === filter),
-    [all, filter],
-  )
+  const periodById = useMemo(() => {
+    const m = new Map<number, Period>()
+    for (const p of periods) m.set(p.id, p)
+    return m
+  }, [periods])
 
-  useEffect(() => { setPage(0) }, [filter])
+  /* ── filter chain ──────────────────────────────────────────────────────── */
+  const filtered = useMemo(() => {
+    return all.filter(e =>
+      (statusFilter === 'ALL' || e.status === statusFilter) &&
+      (periodFilter === 'ALL' || e.periodId === periodFilter)
+    )
+  }, [all, statusFilter, periodFilter])
 
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
-  const pageRows = visible.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+  useEffect(() => { setPage(0) }, [statusFilter, periodFilter])
 
-  /* ── stats from full set ───────────────────────────────────────────────── */
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const pageRows = filtered.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+
+  /* ── stats ─────────────────────────────────────────────────────────────── */
   const counts: Record<EvaluationStatus, number> = useMemo(() => {
     const c: Record<EvaluationStatus, number> = {
       DRAFT: 0, SUBMITTED: 0, ACKNOWLEDGED: 0, APPEALED: 0, CLOSED: 0,
@@ -108,22 +121,24 @@ export function MyEvaluationsPage() {
   }, [all])
 
   const scored = useMemo(() => all.filter(e => e.finalScore !== null), [all])
-  const avgScore = scored.length
+  const avgGiven = scored.length
     ? scored.reduce((s, e) => s + (e.finalScore as number), 0) / scored.length
     : null
 
-  // newest-vs-prev delta on finalScore (only across scored evaluations)
-  const latestDelta = useMemo(() => {
-    if (scored.length < 2) return null
-    return (scored[0].finalScore as number) - (scored[1].finalScore as number)
-  }, [scored])
+  const uniqueEvaluatees = useMemo(
+    () => new Set(all.map(e => e.evaluateeId)).size,
+    [all],
+  )
 
-  const latestScored = scored[0] ?? null
-  const pendingReaction = counts.SUBMITTED
-  const appealedCount = counts.APPEALED
-  const closedCount = counts.CLOSED + counts.ACKNOWLEDGED
+  const periodsInData = useMemo(() => {
+    const ids = Array.from(new Set(all.map(e => e.periodId)))
+    return ids
+      .map(id => periodById.get(id))
+      .filter((p): p is Period => !!p)
+      .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())
+  }, [all, periodById])
 
-  /* ── loading / empty ───────────────────────────────────────────────────── */
+  /* ── loading ───────────────────────────────────────────────────────────── */
   if (loading) {
     return (
       <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
@@ -139,16 +154,16 @@ export function MyEvaluationsPage() {
   return (
     <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
       <style>{`
-        @keyframes ev-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-        .ev-rise { opacity: 0; animation: ev-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
-        @media (max-width: 640px) { .ev-hero-grid { grid-template-columns: 1fr !important; gap: 20px !important } }
-        @media (max-width: 880px) { .ev-stats-grid { grid-template-columns: 1fr 1fr !important } .ev-bottom-grid { grid-template-columns: 1fr !important } }
-        @media (max-width: 520px) { .ev-stats-grid { grid-template-columns: 1fr !important } }
+        @keyframes ee-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+        .ee-rise { opacity: 0; animation: ee-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
+        @media (max-width: 640px) { .ee-hero-grid { grid-template-columns: 1fr !important; gap: 20px !important } }
+        @media (max-width: 880px) { .ee-stats-grid { grid-template-columns: 1fr 1fr !important } .ee-bottom-grid { grid-template-columns: 1fr !important } }
+        @media (max-width: 520px) { .ee-stats-grid { grid-template-columns: 1fr !important } }
       `}</style>
 
       {/* ── HERO ───────────────────────────────────────────────────────────── */}
       <div
-        className="relative overflow-hidden rounded-2xl mb-6 ev-rise"
+        className="relative overflow-hidden rounded-2xl mb-6 ee-rise"
         style={{
           background: 'linear-gradient(135deg, #0e2724 0%, #0d4d3f 55%, #1a7558 100%)',
           color: '#ecf2f0',
@@ -168,9 +183,9 @@ export function MyEvaluationsPage() {
           background: 'radial-gradient(circle,rgba(168,133,43,.14),transparent 60%)',
         }} />
 
-        <div className="relative grid items-center gap-8 ev-hero-grid"
+        <div className="relative grid items-center gap-8 ee-hero-grid"
              style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* left — text */}
+          {/* left */}
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="inline-block rounded-full animate-pulse"
@@ -183,18 +198,19 @@ export function MyEvaluationsPage() {
 
             <h1 className="font-display mb-1.5"
                 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.01em', color: '#ecf2f0' }}>
-              Мои <span style={{ color: 'var(--gold)' }}>оценки</span>
+              <span style={{ color: 'var(--gold)' }}>Оценки</span>
               <span style={{ color: 'rgba(245,236,210,0.55)', fontSize: 18, fontWeight: 400, marginLeft: 10 }}>
-                · история и статусы
+                · проведённые мной
               </span>
             </h1>
 
             <HeroProse
               timeGreet={timeGreeting()}
               total={all.length}
-              pending={pendingReaction}
-              appealed={appealedCount}
-              avgScore={avgScore}
+              evaluatees={uniqueEvaluatees}
+              drafts={counts.DRAFT}
+              appealed={counts.APPEALED}
+              avgGiven={avgGiven}
             />
 
             <div className="flex items-center gap-2 font-mono flex-wrap"
@@ -206,34 +222,28 @@ export function MyEvaluationsPage() {
                       color: '#7fd4a3',
                       border: '1px solid rgba(120,200,150,0.32)',
                     }}>
-                Журнал
+                Журнал оценщика
               </span>
-              <span>{all.length} {plural(all.length, ['запись', 'записи', 'записей'])}</span>
-              {latestScored && (
-                <>
-                  <span>·</span>
-                  <span>последняя · {fmtDateShort(latestScored.submittedAt ?? latestScored.createdAt)}</span>
-                </>
-              )}
+              <span>{all.length} {plural(all.length, ['оценка', 'оценки', 'оценок'])}</span>
+              <span>·</span>
+              <span>{periodsInData.length} {plural(periodsInData.length, ['период', 'периода', 'периодов'])}</span>
+              <span>·</span>
+              <span>{uniqueEvaluatees} {plural(uniqueEvaluatees, ['сотрудник', 'сотрудника', 'сотрудников'])}</span>
             </div>
           </div>
 
-          {/* right — count badge stack */}
+          {/* right */}
           <div className="flex flex-col items-end gap-2">
-            <HeroBigBadge
-              big={String(all.length)}
-              cap="всего"
-              accent="#f5ecd2"
-            />
-            {pendingReaction > 0 && (
+            <HeroBigBadge big={String(all.length)} cap="всего" accent="#f5ecd2" />
+            {counts.DRAFT > 0 && (
               <HeroPill
-                label={`${pendingReaction} ${plural(pendingReaction, ['ждёт', 'ждут', 'ждут'])} реакции`}
+                label={`${counts.DRAFT} ${plural(counts.DRAFT, ['черновик', 'черновика', 'черновиков'])}`}
                 tone="warn"
               />
             )}
-            {appealedCount > 0 && (
+            {counts.APPEALED > 0 && (
               <HeroPill
-                label={`${appealedCount} ${plural(appealedCount, ['апелляция', 'апелляции', 'апелляций'])}`}
+                label={`${counts.APPEALED} ${plural(counts.APPEALED, ['апелляция', 'апелляции', 'апелляций'])}`}
                 tone="danger"
               />
             )}
@@ -241,72 +251,99 @@ export function MyEvaluationsPage() {
         </div>
       </div>
 
-      {/* ── STATS ROW ─────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 mb-5 ev-stats-grid ev-rise"
+      {/* ── STATS ──────────────────────────────────────────────────────────── */}
+      <div className="grid gap-3 mb-5 ee-stats-grid ee-rise"
            style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', animationDelay: '90ms' }}>
         <StatCard
-          label="Всего оценок"
+          label="Всего проведено"
           mainText={String(all.length)}
           mainColor="var(--ink)"
           stripe="var(--accent-2)"
-          delta={{ txt: closedCount > 0 ? `${closedCount} закр.` : '—', tone: 'flat' }}
-          footer={`за всю историю`}
+          delta={{ txt: `${periodsInData.length} пер.`, tone: 'flat' }}
+          footer="по всем периодам"
         />
         <StatCard
-          label="Средний итог"
-          mainText={fmt(avgScore)}
+          label="Сотрудников"
+          mainText={String(uniqueEvaluatees)}
           mainColor="var(--ink)"
           stripe="var(--info)"
-          delta={signedDelta(latestDelta)}
-          deltaSuffix={latestDelta !== null ? 'последний vs пред.' : undefined}
+          delta={{ txt: '—', tone: 'flat' }}
+          footer="уникальных оценено"
+        />
+        <StatCard
+          label="Средний балл"
+          mainText={fmt(avgGiven)}
+          mainColor="var(--ink)"
+          stripe="var(--gold)"
+          delta={{ txt: `${scored.length}`, tone: 'flat' }}
           footer={`по ${scored.length} ${plural(scored.length, ['оценке', 'оценкам', 'оценкам'])} с баллом`}
         />
         <StatCard
-          label="Ожидают реакции"
-          mainText={String(pendingReaction)}
-          mainColor={pendingReaction > 0 ? '#9c7416' : 'var(--ink-faint)'}
+          label="Открыто"
+          mainText={String(counts.DRAFT + counts.SUBMITTED)}
+          mainColor={(counts.DRAFT + counts.SUBMITTED) > 0 ? '#9c7416' : 'var(--ink-faint)'}
           stripe="var(--warn, #c89628)"
-          delta={{ txt: pendingReaction > 0 ? 'действуйте' : 'ок', tone: pendingReaction > 0 ? 'down' : 'up' }}
-          footer="статус SUBMITTED"
-        />
-        <StatCard
-          label="Апелляции"
-          mainText={String(appealedCount)}
-          mainColor={appealedCount > 0 ? 'var(--danger)' : 'var(--ink-faint)'}
-          stripe={appealedCount > 0 ? 'var(--danger)' : 'var(--line-strong)'}
-          delta={{ txt: appealedCount > 0 ? 'в работе' : '—', tone: 'flat' }}
-          footer="статус APPEALED"
+          delta={{ txt: `${counts.DRAFT} черн.`, tone: counts.DRAFT > 0 ? 'down' : 'flat' }}
+          footer="draft + submitted"
         />
       </div>
 
       {/* ── LEDGER + DISTRIBUTION ─────────────────────────────────────────── */}
-      <div className="grid gap-3 ev-bottom-grid ev-rise"
+      <div className="grid gap-3 ee-bottom-grid ee-rise"
            style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', animationDelay: '180ms' }}>
 
-        <Card title="Журнал оценок"
+        <Card title="Проведённые оценки"
               pill="История"
               pillSpec={{ bg: 'rgba(168,133,43,0.14)', fg: 'var(--gold)', border: 'rgba(168,133,43,0.32)' }}
               stripe="var(--gold)"
-              rightMetric={`${visible.length}/${all.length}`}>
-          <FilterChips
-            value={filter}
-            onChange={setFilter}
-            counts={counts}
-            totalAll={all.length}
-          />
+              rightMetric={`${filtered.length}/${all.length}`}>
+          <div className="space-y-2 mb-3">
+            <FilterRow
+              label="Статус"
+              items={[
+                { key: 'ALL', label: 'Все', count: all.length },
+                ...STATUS_ORDER
+                  .filter(s => counts[s] > 0)
+                  .map(s => ({ key: s, label: STATUS_LABELS[s], count: counts[s] })),
+              ]}
+              value={statusFilter}
+              onChange={v => setStatusFilter(v as EvaluationStatus | 'ALL')}
+              colorFor={k => k !== 'ALL' ? STATUS_VISUALS[k as EvaluationStatus] : null}
+            />
+            {periodsInData.length > 1 && (
+              <FilterRow
+                label="Период"
+                items={[
+                  { key: 'ALL', label: 'Все', count: all.length },
+                  ...periodsInData.map(p => ({
+                    key: p.id,
+                    label: periodShortLabel(p),
+                    count: all.filter(e => e.periodId === p.id).length,
+                  })),
+                ]}
+                value={periodFilter}
+                onChange={v => setPeriodFilter(v as number | 'ALL')}
+                colorFor={() => null}
+              />
+            )}
+          </div>
 
-          {visible.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="font-mono py-10 text-center"
                  style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.08em' }}>
-              Нет оценок в выбранном статусе
+              Нет оценок по выбранным фильтрам
             </div>
           ) : (
             <>
-              <EvaluationLedger
+              <EvaluatorLedger
                 rows={pageRows}
-                allOrdered={visible}
                 offset={page * PAGE_SIZE}
-                onOpen={id => navigate(`/my-evaluations/${id}`)}
+                periodById={periodById}
+                onOpen={(e) => {
+                  // DRAFT goes to the form; everything else to detail.
+                  if (e.status === 'DRAFT') navigate(`/evaluations/${e.id}`)
+                  else navigate(`/my-evaluations/${e.id}`)
+                }}
               />
               {totalPages > 1 && (
                 <Pagination page={page} totalPages={totalPages} onChange={setPage} />
@@ -331,40 +368,43 @@ export function MyEvaluationsPage() {
  * Hero subcomponents
  * ────────────────────────────────────────────────────────────────────────── */
 
-function HeroProse({ timeGreet, total, pending, appealed, avgScore }: {
+function HeroProse({ timeGreet, total, evaluatees, drafts, appealed, avgGiven }: {
   timeGreet: string
   total: number
-  pending: number
+  evaluatees: number
+  drafts: number
   appealed: number
-  avgScore: number | null
+  avgGiven: number | null
 }) {
   const emphasis = { color: '#f5ecd2', fontWeight: 600 } as const
 
   if (total === 0) {
     return (
       <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-        <p style={{ margin: 0 }}>{timeGreet}. Оценки появятся здесь после первого закрытого периода.</p>
+        <p style={{ margin: 0 }}>{timeGreet}. Вы ещё не проводили оценок.</p>
       </div>
     )
   }
 
-  const totalWord = plural(total, ['оценка', 'оценки', 'оценок'])
+  const totalWord = plural(total, ['оценку', 'оценки', 'оценок'])
+  const empWord = plural(evaluatees, ['сотрудника', 'сотрудников', 'сотрудников'])
 
   return (
     <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
       <p style={{ margin: 0 }}>
-        {timeGreet}. В журнале <strong style={emphasis}>{total} {totalWord}</strong>
-        {avgScore !== null && (
-          <> · средний итог{' '}
-            <strong style={emphasis}>{avgScore.toFixed(1)}</strong></>
+        {timeGreet}. Вы провели <strong style={emphasis}>{total} {totalWord}</strong>
+        {' '}для <strong style={emphasis}>{evaluatees} {empWord}</strong>
+        {avgGiven !== null && (
+          <> · средний выставленный балл{' '}
+            <strong style={emphasis}>{avgGiven.toFixed(1)}</strong></>
         )}
         .
       </p>
-      {(pending > 0 || appealed > 0) && (
+      {(drafts > 0 || appealed > 0) && (
         <p style={{ margin: 0, marginTop: 2 }}>
-          {pending > 0 && (
-            <>Требуют вашей реакции{' '}
-              <strong style={{ color: '#f0caa4', fontWeight: 600 }}>{pending}</strong>
+          {drafts > 0 && (
+            <>В работе{' '}
+              <strong style={{ color: '#f0caa4', fontWeight: 600 }}>{drafts}</strong>
               {appealed > 0 ? ', ' : '. '}
             </>
           )}
@@ -421,7 +461,7 @@ function HeroPill({ label, tone }: { label: string; tone: 'warn' | 'danger' }) {
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Card shell (matches PersonalDashboardPage)
+ * Card shell + StatCard (same contract as MyEvaluationsPage)
  * ────────────────────────────────────────────────────────────────────────── */
 
 interface PillSpec { bg: string; fg: string; border: string }
@@ -477,19 +517,14 @@ function Card({
   )
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Stat card (same contract as PersonalDashboardPage)
- * ────────────────────────────────────────────────────────────────────────── */
-
 function StatCard({
-  label, mainText, mainColor, stripe, delta, deltaSuffix, footer,
+  label, mainText, mainColor, stripe, delta, footer,
 }: {
   label: string
   mainText: string
   mainColor: string
   stripe: string
   delta: { txt: string; tone: 'up' | 'down' | 'flat' }
-  deltaSuffix?: string
   footer: string
 }) {
   const deltaColor =
@@ -520,12 +555,6 @@ function StatCard({
           {delta.txt}
         </span>
       </div>
-      {deltaSuffix && (
-        <div className="font-mono mt-0.5"
-             style={{ fontSize: 9.5, color: 'var(--ink-dim)', letterSpacing: '0.04em' }}>
-          {deltaSuffix}
-        </div>
-      )}
       <div className="font-mono mt-2"
            style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
         {footer}
@@ -535,98 +564,78 @@ function StatCard({
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Filter chips
+ * Filter row (label + chip group)
  * ────────────────────────────────────────────────────────────────────────── */
 
-function FilterChips({
-  value, onChange, counts, totalAll,
-}: {
-  value: EvaluationStatus | 'ALL'
-  onChange: (v: EvaluationStatus | 'ALL') => void
-  counts: Record<EvaluationStatus, number>
-  totalAll: number
-}) {
-  const items: Array<{ key: EvaluationStatus | 'ALL'; label: string; count: number }> = [
-    { key: 'ALL', label: 'Все', count: totalAll },
-    ...STATUS_ORDER
-      .filter(s => counts[s] > 0)
-      .map(s => ({ key: s, label: STATUS_LABELS[s], count: counts[s] })),
-  ]
+interface FilterItem { key: string | number; label: string; count: number }
 
+function FilterRow({
+  label, items, value, onChange, colorFor,
+}: {
+  label: string
+  items: FilterItem[]
+  value: string | number
+  onChange: (v: string | number) => void
+  colorFor: (key: string | number) => StatusVisual | null
+}) {
   return (
-    <div className="flex flex-wrap gap-1.5 mb-3">
-      {items.map(it => {
-        const active = value === it.key
-        const v = it.key !== 'ALL' ? STATUS_VISUALS[it.key as EvaluationStatus] : null
-        return (
-          <button
-            key={it.key}
-            type="button"
-            onClick={() => onChange(it.key)}
-            className="font-mono uppercase tracking-widest transition-all"
-            style={{
-              fontSize: 10,
-              padding: '4px 9px',
-              borderRadius: 4,
-              fontWeight: 600,
-              cursor: 'pointer',
-              background: active
-                ? (v ? v.bg : 'var(--ink)')
-                : 'transparent',
-              color: active
-                ? (v ? v.fg : 'var(--bg)')
-                : 'var(--ink-soft)',
-              border: `1px solid ${active ? (v ? v.border : 'var(--ink)') : 'var(--line)'}`,
-            }}
-          >
-            {it.label}
-            <span className="ml-1.5 tabular-nums" style={{ opacity: 0.7 }}>{it.count}</span>
-          </button>
-        )
-      })}
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="font-mono uppercase tracking-widest"
+            style={{ fontSize: 9.5, color: 'var(--ink-faint)', fontWeight: 600, minWidth: 56 }}>
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map(it => {
+          const active = value === it.key
+          const c = colorFor(it.key)
+          return (
+            <button
+              key={String(it.key)}
+              type="button"
+              onClick={() => onChange(it.key)}
+              className="font-mono uppercase tracking-widest transition-all"
+              style={{
+                fontSize: 10,
+                padding: '4px 9px',
+                borderRadius: 4,
+                fontWeight: 600,
+                cursor: 'pointer',
+                background: active ? (c ? c.bg : 'var(--ink)') : 'transparent',
+                color: active ? (c ? c.fg : 'var(--bg)') : 'var(--ink-soft)',
+                border: `1px solid ${active ? (c ? c.border : 'var(--ink)') : 'var(--line)'}`,
+              }}
+            >
+              {it.label}
+              <span className="ml-1.5 tabular-nums" style={{ opacity: 0.7 }}>{it.count}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Ledger
+ * Ledger — conducted evaluations
  * ────────────────────────────────────────────────────────────────────────── */
 
-function EvaluationLedger({
-  rows, allOrdered, offset, onOpen,
-}: {
+function EvaluatorLedger({ rows, offset, periodById, onOpen }: {
   rows: Evaluation[]
-  allOrdered: Evaluation[]
   offset: number
-  onOpen: (id: number) => void
+  periodById: Map<number, Period>
+  onOpen: (e: Evaluation) => void
 }) {
-  // For delta computation, find each row's index in the *scored* subset of allOrdered
-  // so we can compare against the previous (older) scored entry.
-  const scored = allOrdered.filter(e => e.finalScore !== null)
-  const scoredIdxById = new Map(scored.map((e, i) => [e.id, i] as const))
-
   return (
     <div className="divide-y" style={{ borderColor: 'var(--line-soft)' }}>
       {rows.map((e, i) => {
         const v = STATUS_VISUALS[e.status]
-        const sIdx = scoredIdxById.get(e.id)
-        const prev = sIdx !== undefined && sIdx + 1 < scored.length
-          ? scored[sIdx + 1]
-          : null
-        const delta = (e.finalScore !== null && prev?.finalScore !== null && prev !== null)
-          ? Number(e.finalScore) - Number(prev.finalScore)
-          : null
-        const d = signedDelta(delta)
-        const deltaColor =
-          d.tone === 'up' ? 'var(--accent-2)' :
-          d.tone === 'down' ? 'var(--danger)' :
-          'var(--ink-faint)'
+        const p = periodById.get(e.periodId)
 
         return (
           <div
             key={e.id}
-            onClick={() => onOpen(e.id)}
-            onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onOpen(e.id) } }}
+            onClick={() => onOpen(e)}
+            onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onOpen(e) } }}
             role="button"
             tabIndex={0}
             className="grid grid-cols-12 items-center gap-2 py-2.5 cursor-pointer transition-colors hover:bg-black/[0.02] focus:bg-black/[0.04] focus:outline-none"
@@ -640,7 +649,7 @@ function EvaluationLedger({
             <div className="col-span-3 min-w-0">
               <div className="font-display truncate"
                    style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                Период #{e.periodId}
+                {e.evaluateeName}
               </div>
               <div className="font-mono"
                    style={{ fontSize: 10, color: 'var(--ink-dim)' }}>
@@ -651,11 +660,11 @@ function EvaluationLedger({
             <div className="col-span-3 min-w-0">
               <div className="font-mono uppercase tracking-wider"
                    style={{ fontSize: 9.5, color: 'var(--ink-faint)', fontWeight: 600 }}>
-                Оценщик
+                Период
               </div>
               <div className="truncate"
                    style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                {e.evaluatorName}
+                {p ? periodShortLabel(p) : `#${e.periodId}`}
               </div>
             </div>
 
@@ -675,9 +684,9 @@ function EvaluationLedger({
               {e.finalScore !== null ? Number(e.finalScore).toFixed(1) : '—'}
             </div>
 
-            <div className="col-span-1 font-mono tabular-nums text-right"
-                 style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-              {d.txt}
+            <div className="col-span-1 font-mono text-right"
+                 style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 600 }}>
+              →
             </div>
           </div>
         )
@@ -695,27 +704,46 @@ function Pagination({ page, totalPages, onChange }: {
   totalPages: number
   onChange: (p: number) => void
 }) {
+  // compact: show up to 7 buttons w/ ellipsis if many pages
+  const items: Array<number | 'gap'> = []
+  if (totalPages <= 7) {
+    for (let i = 0; i < totalPages; i++) items.push(i)
+  } else {
+    items.push(0)
+    if (page > 2) items.push('gap')
+    for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++) items.push(i)
+    if (page < totalPages - 3) items.push('gap')
+    items.push(totalPages - 1)
+  }
+
   return (
     <div className="flex justify-center gap-1 mt-4">
-      {Array.from({ length: totalPages }, (_, i) => (
-        <button
-          key={i}
-          type="button"
-          onClick={() => onChange(i)}
-          className="font-mono tabular-nums transition-all"
-          style={{
-            width: 30, height: 28,
-            borderRadius: 4,
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-            background: i === page ? 'var(--ink)' : 'transparent',
-            color: i === page ? 'var(--bg)' : 'var(--ink-soft)',
-            border: `1px solid ${i === page ? 'var(--ink)' : 'var(--line)'}`,
-          }}>
-          {i + 1}
-        </button>
-      ))}
+      {items.map((it, idx) =>
+        it === 'gap' ? (
+          <span key={`g${idx}`} className="font-mono"
+                style={{ fontSize: 11, color: 'var(--ink-faint)', width: 18, textAlign: 'center', lineHeight: '28px' }}>
+            …
+          </span>
+        ) : (
+          <button
+            key={it}
+            type="button"
+            onClick={() => onChange(it)}
+            className="font-mono tabular-nums transition-all"
+            style={{
+              width: 30, height: 28,
+              borderRadius: 4,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: it === page ? 'var(--ink)' : 'transparent',
+              color: it === page ? 'var(--bg)' : 'var(--ink-soft)',
+              border: `1px solid ${it === page ? 'var(--ink)' : 'var(--line)'}`,
+            }}>
+            {it + 1}
+          </button>
+        ),
+      )}
     </div>
   )
 }
@@ -737,7 +765,6 @@ function StatusDistribution({ counts, total }: {
     )
   }
 
-  // dominant-first by count, but keep status order as tiebreaker
   const rows = STATUS_ORDER
     .map(s => ({ status: s, count: counts[s] }))
     .filter(r => r.count > 0)

@@ -36,6 +36,8 @@ export const evaluationsApi = {
     api.get<PageResponse<Evaluation>>('/evaluations/my-tasks', { params: { page, size } }).then(r => r.data),
   myHistory: (page = 0, size = 20) =>
     api.get<PageResponse<Evaluation>>('/evaluations/my-history', { params: { page, size } }).then(r => r.data),
+  asEvaluator: (page = 0, size = 20) =>
+    api.get<PageResponse<Evaluation>>('/evaluations/as-evaluator', { params: { page, size } }).then(r => r.data),
   get: (id: number) =>
     api.get<Evaluation>(`/evaluations/${id}`).then(r => r.data),
   saveScores: (id: number, scores: EvaluationScore[]) =>
