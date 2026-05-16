@@ -72,7 +72,11 @@ function periodShortBadge(p: Period): string {
 
 export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pendingAppeals }: DashboardHeroProps) {
   const score = analytics?.currentScore ?? null
-  const firstName = analytics?.fullName?.split(' ').pop() ?? analytics?.fullName ?? ''
+  // Russian ФИО is "Surname Name Patronymic"; greet by Name + Patronymic.
+  const nameParts = analytics?.fullName?.trim().split(/\s+/) ?? []
+  const greetingName = nameParts.length >= 3
+    ? `${nameParts[1]} ${nameParts[2]}`
+    : nameParts.slice(1).join(' ') || nameParts[0] || ''
 
   const deadlineDays = activePeriod ? daysUntil(activePeriod.submissionDeadline) : null
   const periodLine = activePeriod
@@ -174,7 +178,7 @@ export function DashboardHero({ analytics, activePeriod, pendingEvaluations, pen
             style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.01em', color: '#ecf2f0' }}
           >
             {timeGreeting()},{' '}
-            <span style={{ color: 'var(--gold)' }}>{firstName}.</span>
+            <span style={{ color: 'var(--gold)' }}>{greetingName}.</span>
           </h1>
 
           {sentences.length > 0 && (

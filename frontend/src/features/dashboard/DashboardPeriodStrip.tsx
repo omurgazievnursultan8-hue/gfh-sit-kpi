@@ -1,9 +1,8 @@
-import type { Period } from '../periods/periodsApi'
-import type { PendingSummary } from '../analytics/analyticsApi'
+import type { Period, PeriodProgress } from '../periods/periodsApi'
 
 interface DashboardPeriodStripProps {
   activePeriods: Period[]
-  pendingSummary: PendingSummary | null
+  progressByPeriod: Record<number, PeriodProgress>
 }
 
 function daysBetween(from: Date, to: Date): number {
@@ -102,7 +101,7 @@ function StatusPill({ kind }: { kind: 'active' | 'upcoming' | 'idle' }) {
   )
 }
 
-function ActivePeriodCard({ period, pendingSummary }: { period: Period; pendingSummary: PendingSummary | null }) {
+function ActivePeriodCard({ period, progress }: { period: Period; progress: PeriodProgress | undefined }) {
   const now = new Date()
   const start = new Date(period.startDate)
   const end = new Date(period.endDate)
@@ -116,8 +115,9 @@ function ActivePeriodCard({ period, pendingSummary }: { period: Period; pendingS
   const urgency = urgencyFromDays(daysLeft)
   const timeColor = urgencyColor(urgency)
 
-  const total = pendingSummary?.totalEvaluations ?? 0
-  const completed = pendingSummary?.completedEvaluations ?? 0
+  // Three states: loading (progress undefined), empty (total=0), filled.
+  const total = progress?.total ?? 0
+  const completed = progress?.completed ?? 0
   const subPct = total > 0 ? (completed / total) * 100 : 0
   const subColor = subPct >= 80
     ? 'var(--accent-2, #2f9e6d)'
@@ -161,11 +161,25 @@ function ActivePeriodCard({ period, pendingSummary }: { period: Period; pendingS
         caption={`${Math.round(timePct)}%`}
         color={timeColor}
       />
-      {pendingSummary && (
+      {progress === undefined ? (
+        <div
+          className="font-mono mb-2.5"
+          style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}
+        >
+          Загрузка прогресса…
+        </div>
+      ) : total === 0 ? (
+        <div
+          className="font-mono mb-2.5"
+          style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}
+        >
+          Нет назначенных оценок в этом периоде.
+        </div>
+      ) : (
         <ProgressBar
           label="Заполнено"
           percent={subPct}
-          caption={total > 0 ? `${completed} / ${total}` : '—'}
+          caption={`${completed} / ${total}`}
           color={subColor}
         />
       )}
@@ -205,11 +219,10 @@ function IdleCard() {
   )
 }
 
-export function DashboardPeriodStrip({ activePeriods, pendingSummary }: DashboardPeriodStripProps) {
-  // Pending summary is global, not per-period — show only on the first card to avoid duplication.
+export function DashboardPeriodStrip({ activePeriods, progressByPeriod }: DashboardPeriodStripProps) {
   const cols = Math.min(2, Math.max(1, activePeriods.length))
   return (
-    <div className="mb-5">
+    <div className="mb-5" style={{ maxWidth: 760 }}>
       <div className="flex items-baseline justify-between mb-3">
         <span
           className="font-mono uppercase font-semibold tracking-widest"
@@ -234,11 +247,11 @@ export function DashboardPeriodStrip({ activePeriods, pendingSummary }: Dashboar
           className="grid gap-3 period-strip-grid"
           style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
         >
-          {activePeriods.map((p, i) => (
+          {activePeriods.map(p => (
             <ActivePeriodCard
               key={p.id}
               period={p}
-              pendingSummary={i === 0 ? pendingSummary : null}
+              progress={progressByPeriod[p.id]}
             />
           ))}
         </div>
