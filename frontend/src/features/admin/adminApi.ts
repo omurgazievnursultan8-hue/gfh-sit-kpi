@@ -38,6 +38,10 @@ export interface AdminStats {
   totalEvaluations: number
   openAppeals: number
   auditLogsLast24h: number
+  criteriaActive: number
+  delegationsActive: number
+  delegationsExpiringSoon: number
+  orgUnitsCount: number
 }
 
 export interface QuartzJobInfo {
