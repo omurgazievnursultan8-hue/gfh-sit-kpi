@@ -19,6 +19,8 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
 
     Page<Evaluation> findByEvaluatorIdAndStatus(Long evaluatorId, EvaluationStatus status, Pageable pageable);
 
+    Page<Evaluation> findByEvaluatorId(Long evaluatorId, Pageable pageable);
+
     Page<Evaluation> findByEvaluateeId(Long evaluateeId, Pageable pageable);
 
     @Query("SELECT e FROM Evaluation e WHERE e.period.id = :periodId AND e.evaluator.id = :evaluatorId")

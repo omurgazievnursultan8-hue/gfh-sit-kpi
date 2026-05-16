@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!--
+      Seed recent audit_log entries so the admin dashboard "recent activity"
+      panel and 24h counter have realistic content on first boot. Timestamps
+      use NOW() - INTERVAL so events stay relative to seed time.
+    -->
+    <changeSet id="035-seed-audit-log" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO audit_log
+              (timestamp, user_id, user_name, action, entity_type, entity_id, new_value, ip_address, user_agent) VALUES
+              (NOW() - INTERVAL '3 minutes',   1,  'admin@gfh.kg',                 'LOGIN',          NULL,         NULL, NULL, '10.0.0.1',  'Mozilla/5.0'),
+              (NOW() - INTERVAL '12 minutes',  1,  'admin@gfh.kg',                 'UPDATE_USER',    'User',       7,    '{"isActive":true}'::jsonb, '10.0.0.1',  'Mozilla/5.0'),
+              (NOW() - INTERVAL '28 minutes',  6,  'zhanara.bakirova@gfh.kg',      'LOGIN',          NULL,         NULL, NULL, '10.0.0.42', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '47 minutes',  6,  'zhanara.bakirova@gfh.kg',      'SUBMIT_EVAL',    'Evaluation', 41,   '{"status":"SUBMITTED"}'::jsonb, '10.0.0.42', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '1 hour 5 minutes',   1, 'admin@gfh.kg',          'CREATE_PERIOD',  'EvaluationPeriod', 5, '{"type":"MONTHLY"}'::jsonb, '10.0.0.1',  'Mozilla/5.0'),
+              (NOW() - INTERVAL '1 hour 32 minutes',  9, 'nurgul.kasymova@gfh.kg', 'LOGIN',         NULL, NULL, NULL, '10.0.0.18', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '2 hours 10 minutes', 9, 'nurgul.kasymova@gfh.kg', 'SUBMIT_EVAL',   'Evaluation', 48, '{"status":"SUBMITTED"}'::jsonb, '10.0.0.18', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '2 hours 48 minutes', 1, 'admin@gfh.kg',          'UPDATE_CRITERIA','Criteria', 3, '{"weight":0.25}'::jsonb, '10.0.0.1', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '3 hours 20 minutes', 11, 'timur.aliev@gfh.kg',   'LOGIN',         NULL, NULL, NULL, '10.0.0.27', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '4 hours 5 minutes',  11, 'timur.aliev@gfh.kg',   'RESPOND_APPEAL','Appeal', 2, '{"status":"UPHELD"}'::jsonb, '10.0.0.27', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '5 hours 15 minutes', 1,  'admin@gfh.kg',         'CREATE_USER',   'User', 30, '{"role":"EMPLOYEE"}'::jsonb, '10.0.0.1', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '6 hours 40 minutes', 14, 'svetlana.ivanova@gfh.kg','LOGIN',       NULL, NULL, NULL, '10.0.0.33', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '8 hours 12 minutes', 1,  'admin@gfh.kg',         'DELETE_DELEGATION','EvaluatorDelegation', 4, NULL, '10.0.0.1', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '10 hours',           5,  'elmira.tursunova@gfh.kg','SUBMIT_APPEAL','Appeal', 3, '{"status":"PENDING"}'::jsonb, '10.0.0.51', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '13 hours',           1,  'admin@gfh.kg',         'UPDATE_SETTINGS','SystemSetting', 2, '{"key":"DEADLINE_DAYS"}'::jsonb, '10.0.0.1', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '17 hours',           3,  'bakyt.zhunusov@gfh.kg','LOGIN',        NULL, NULL, NULL, '10.0.0.9',  'Mozilla/5.0'),
+              (NOW() - INTERVAL '20 hours',           1,  'admin@gfh.kg',         'CREATE_CRITERIA','Criteria', 8, '{"name":"Качество"}'::jsonb, '10.0.0.1', 'Mozilla/5.0'),
+              (NOW() - INTERVAL '23 hours',           1,  'admin@gfh.kg',         'LOGIN',        NULL, NULL, NULL, '10.0.0.1', 'Mozilla/5.0');
+        </sql>
+    </changeSet>
+</databaseChangeLog>

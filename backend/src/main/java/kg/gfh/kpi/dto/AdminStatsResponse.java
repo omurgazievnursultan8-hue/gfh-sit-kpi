@@ -7,5 +7,9 @@ public record AdminStatsResponse(
     long pendingEvaluations,
     long totalEvaluations,
     long openAppeals,
-    long auditLogsLast24h
+    long auditLogsLast24h,
+    long criteriaActive,
+    long delegationsActive,
+    long delegationsExpiringSoon,
+    long orgUnitsCount
 ) {}

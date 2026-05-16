@@ -42,7 +42,9 @@ public class AuditController {
             @PageableDefault(size = 20, sort = "timestamp",
                 direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return auditLogRepository.search(actorId, action, entityType, from, to, pageable)
+        LocalDateTime fromBound = from != null ? from : LocalDateTime.of(1970, 1, 1, 0, 0);
+        LocalDateTime toBound   = to   != null ? to   : LocalDateTime.of(9999, 1, 1, 0, 0);
+        return auditLogRepository.search(actorId, action, entityType, fromBound, toBound, pageable)
                 .map(this::toResponse);
     }
 
@@ -56,8 +58,10 @@ public class AuditController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to
     ) throws IOException {
+        LocalDateTime fromBound = from != null ? from : LocalDateTime.of(1970, 1, 1, 0, 0);
+        LocalDateTime toBound   = to   != null ? to   : LocalDateTime.of(9999, 1, 1, 0, 0);
         List<AuditLog> rows = auditLogRepository
-                .search(actorId, action, entityType, from, to, Pageable.ofSize(10_000))
+                .search(actorId, action, entityType, fromBound, toBound, Pageable.ofSize(10_000))
                 .getContent();
 
         try (XSSFWorkbook wb = new XSSFWorkbook()) {

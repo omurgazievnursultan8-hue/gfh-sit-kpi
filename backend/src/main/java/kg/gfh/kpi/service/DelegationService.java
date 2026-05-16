@@ -13,6 +13,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
 @Service
 @RequiredArgsConstructor
 public class DelegationService {
@@ -46,7 +53,9 @@ public class DelegationService {
         d.setReason(req.reason());
         d.setCreatedBy(createdBy);
         d.setActive(true);
-        return DelegationResponse.from(delegationRepository.save(d));
+        EvaluatorDelegation saved = delegationRepository.save(d);
+        return DelegationResponse.from(saved, nameResolverFor(Set.of(
+                saved.getEvaluateeId(), saved.getOriginalEvaluatorId(), saved.getDelegatedToId())));
     }
 
     @Transactional
@@ -59,6 +68,21 @@ public class DelegationService {
     }
 
     public Page<DelegationResponse> list(Pageable pageable) {
-        return delegationRepository.findAll(pageable).map(DelegationResponse::from);
+        Page<EvaluatorDelegation> page = delegationRepository.findAll(pageable);
+        Set<Long> ids = new HashSet<>();
+        page.forEach(d -> {
+            ids.add(d.getEvaluateeId());
+            ids.add(d.getOriginalEvaluatorId());
+            ids.add(d.getDelegatedToId());
+        });
+        Function<Long, String> nameOf = nameResolverFor(ids);
+        return page.map(d -> DelegationResponse.from(d, nameOf));
+    }
+
+    private Function<Long, String> nameResolverFor(Set<Long> ids) {
+        Map<Long, String> names = StreamSupport
+                .stream(userRepository.findAllById(ids).spliterator(), false)
+                .collect(Collectors.toMap(User::getId, User::getFullName));
+        return id -> id == null ? null : names.get(id);
     }
 }

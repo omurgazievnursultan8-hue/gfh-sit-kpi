@@ -5,6 +5,8 @@ import kg.gfh.kpi.dto.EvaluationPeriodRequest;
 import kg.gfh.kpi.dto.EvaluationResponse;
 import kg.gfh.kpi.dto.ScoreRequest;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
+import kg.gfh.kpi.enums.Role;
+import kg.gfh.kpi.repository.EvaluationRepository;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.EvaluationService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class EvaluationController {
 
     private final EvaluationService evaluationService;
     private final UserRepository userRepository;
+    private final EvaluationRepository evaluationRepository;
 
     @GetMapping("/periods/current")
     public Object getCurrentPeriod() {
@@ -100,6 +103,24 @@ public class EvaluationController {
         return evaluationService.closePeriod(id);
     }
 
+    public record PeriodProgress(long total, long completed) {}
+
+    @GetMapping("/periods/{id}/progress")
+    public PeriodProgress periodProgress(@PathVariable Long id, Authentication auth) {
+        Long userId = resolveUserId(auth);
+        Role role = userRepository.findById(userId).map(u -> u.getRole()).orElse(Role.EMPLOYEE);
+        long total;
+        long completed;
+        if (role == Role.ADMIN) {
+            total = evaluationRepository.countByPeriodId(id);
+            completed = evaluationRepository.countByPeriodIdAndStatusNot(id, EvaluationStatus.DRAFT);
+        } else {
+            total = evaluationRepository.countByPeriodIdAndEvaluatorId(id, userId);
+            completed = evaluationRepository.countByPeriodIdAndEvaluatorIdAndStatusNot(id, userId, EvaluationStatus.DRAFT);
+        }
+        return new PeriodProgress(total, completed);
+    }
+
     @GetMapping("/evaluations/my-tasks")
     public Page<EvaluationResponse> myPendingEvaluations(
             Authentication auth,
@@ -114,6 +135,14 @@ public class EvaluationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return evaluationService.listForEmployee(resolveUserId(auth), PageRequest.of(page, size));
+    }
+
+    @GetMapping("/evaluations/as-evaluator")
+    public Page<EvaluationResponse> asEvaluator(
+            Authentication auth,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return evaluationService.listAllForEvaluator(resolveUserId(auth), PageRequest.of(page, size));
     }
 
     @PutMapping("/evaluations/{id}/scores")

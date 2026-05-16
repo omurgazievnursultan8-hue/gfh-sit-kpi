@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Kyrgyz Republic public holidays for 2026 (fixed + movable Islamic dates) -->
+    <changeSet id="038-seed-calendar-days" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO calendar_day (day, day_type, description_ru, description_kg, created_by, updated_at) VALUES
+              ('2026-01-01', 'HOLIDAY', 'Новый год',                       'Жаңы жыл',                                      1, NOW()),
+              ('2026-01-07', 'HOLIDAY', 'Рождество Христово',              'Рождество',                                     1, NOW()),
+              ('2026-02-23', 'HOLIDAY', 'День защитника Отечества',        'Ата Мекенди коргоочулардын күнү',               1, NOW()),
+              ('2026-03-08', 'HOLIDAY', 'Международный женский день',      'Эл аралык аялдар күнү',                         1, NOW()),
+              ('2026-03-20', 'HOLIDAY', 'Орозо айт',                       'Орозо айт',                                     1, NOW()),
+              ('2026-03-21', 'HOLIDAY', 'Нооруз',                          'Нооруз майрамы',                                1, NOW()),
+              ('2026-05-01', 'HOLIDAY', 'Праздник весны и труда',          'Жаз жана эмгек майрамы',                        1, NOW()),
+              ('2026-05-05', 'HOLIDAY', 'День Конституции',                'Конституция күнү',                              1, NOW()),
+              ('2026-05-09', 'HOLIDAY', 'День Победы',                     'Жеңиш күнү',                                    1, NOW()),
+              ('2026-05-27', 'HOLIDAY', 'Курман айт',                      'Курман айт',                                    1, NOW()),
+              ('2026-08-31', 'HOLIDAY', 'День независимости',              'Эгемендүүлүк күнү',                             1, NOW()),
+              ('2026-11-07', 'HOLIDAY', 'День истории и памяти предков',   'Тарых жана ата-бабаларды эскерүү күнү',         1, NOW());
+        </sql>
+        <rollback>
+            <sql>DELETE FROM calendar_day WHERE day BETWEEN '2026-01-01' AND '2026-12-31';</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -28,11 +29,15 @@ public class AdminService {
     private final EvaluationRepository evaluationRepository;
     private final AppealRepository appealRepository;
     private final AuditLogRepository auditLogRepository;
+    private final CriteriaRepository criteriaRepository;
+    private final EvaluatorDelegationRepository delegationRepository;
+    private final OrgUnitRepository orgUnitRepository;
 
     @Value("${app.log.error-file:/app/logs/error.log}")
     private String errorLogFile;
 
     public AdminStatsResponse getStats() {
+        LocalDate today = LocalDate.now();
         return new AdminStatsResponse(
             userRepository.count(),
             userRepository.countByIsActiveTrue(),
@@ -40,7 +45,11 @@ public class AdminService {
             evaluationRepository.countByStatus(EvaluationStatus.DRAFT),
             evaluationRepository.count(),
             appealRepository.countByStatus(AppealStatus.PENDING),
-            auditLogRepository.countByTimestampAfter(LocalDateTime.now().minusHours(24))
+            auditLogRepository.countByTimestampAfter(LocalDateTime.now().minusHours(24)),
+            criteriaRepository.countByActiveTrue(),
+            delegationRepository.countActive(today),
+            delegationRepository.countExpiringBy(today, today.plusDays(7)),
+            orgUnitRepository.count()
         );
     }
 

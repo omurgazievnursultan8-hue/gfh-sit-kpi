@@ -17,4 +17,12 @@ public interface EvaluatorDelegationRepository extends JpaRepository<EvaluatorDe
     @Query("SELECT d FROM EvaluatorDelegation d WHERE d.delegatedToId = :userId " +
            "AND d.isActive = true AND d.validFrom <= :date AND d.validTo >= :date")
     List<EvaluatorDelegation> findDelegationsAssignedTo(Long userId, LocalDate date);
+
+    @Query("SELECT COUNT(d) FROM EvaluatorDelegation d WHERE d.isActive = true " +
+           "AND d.validFrom <= :date AND d.validTo >= :date")
+    long countActive(LocalDate date);
+
+    @Query("SELECT COUNT(d) FROM EvaluatorDelegation d WHERE d.isActive = true " +
+           "AND d.validTo >= :today AND d.validTo <= :horizon")
+    long countExpiringBy(LocalDate today, LocalDate horizon);
 }

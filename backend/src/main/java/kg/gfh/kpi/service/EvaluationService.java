@@ -246,11 +246,19 @@ public class EvaluationService {
 
     // ── Queries ──────────────────────────────────────────────────────────────
 
+    @Transactional(readOnly = true)
     public Page<EvaluationResponse> listForEvaluator(Long evaluatorId, EvaluationStatus status, Pageable pageable) {
         return evaluationRepository.findByEvaluatorIdAndStatus(evaluatorId, status, pageable)
             .map(EvaluationResponse::from);
     }
 
+    @Transactional(readOnly = true)
+    public Page<EvaluationResponse> listAllForEvaluator(Long evaluatorId, Pageable pageable) {
+        return evaluationRepository.findByEvaluatorId(evaluatorId, pageable)
+            .map(EvaluationResponse::from);
+    }
+
+    @Transactional(readOnly = true)
     public Page<EvaluationResponse> listForEmployee(Long employeeId, Pageable pageable) {
         return evaluationRepository.findByEvaluateeId(employeeId, pageable)
             .map(EvaluationResponse::from);

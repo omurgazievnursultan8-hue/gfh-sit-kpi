@@ -44,4 +44,8 @@
     <include file="db/changelog/m6/032-seed-appeals.xml"/>
     <include file="db/changelog/m6/033-seed-reactions-files.xml"/>
     <include file="db/changelog/m6/034-bump-sequences.xml"/>
+    <include file="db/changelog/m6/035-seed-audit-log.xml"/>
+    <include file="db/changelog/m6/036-seed-more-delegations.xml"/>
+    <include file="db/changelog/m6/037-create-calendar-day.xml"/>
+    <include file="db/changelog/m6/038-seed-calendar-days.xml"/>
 </databaseChangeLog>

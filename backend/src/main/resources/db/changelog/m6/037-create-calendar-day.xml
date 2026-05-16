@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="037-create-calendar-day" author="gfh">
+        <createTable tableName="calendar_day">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- A day that deviates from the weekday rule: holiday or transfer -->
+            <column name="day" type="DATE">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_calendar_day_date"/>
+            </column>
+            <!-- HOLIDAY | WORKING | DAY_OFF -->
+            <column name="day_type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description_ru" type="VARCHAR(255)"/>
+            <column name="description_kg" type="VARCHAR(255)"/>
+            <column name="created_by" type="BIGINT"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>ALTER TABLE calendar_day ADD CONSTRAINT chk_calendar_day_type
+             CHECK (day_type IN ('HOLIDAY', 'WORKING', 'DAY_OFF'));</sql>
+
+        <createIndex tableName="calendar_day" indexName="idx_calendar_day_date">
+            <column name="day"/>
+        </createIndex>
+
+        <rollback>
+            <dropTable tableName="calendar_day"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

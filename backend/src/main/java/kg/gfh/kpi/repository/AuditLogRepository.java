@@ -11,15 +11,26 @@ import java.time.LocalDateTime;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    @Query("""
-        SELECT a FROM AuditLog a
-        WHERE (:userId IS NULL OR a.userId = :userId)
-          AND (:action IS NULL OR a.action = :action)
-          AND (:entityType IS NULL OR a.entityType = :entityType)
-          AND (:from IS NULL OR a.timestamp >= :from)
-          AND (:to IS NULL OR a.timestamp <= :to)
-        ORDER BY a.timestamp DESC
-        """)
+    // Native query with explicit CASTs — Postgres needs typed parameters when
+    // every filter may be null. JPQL `:p IS NULL OR ...` produces untyped binds
+    // and breaks with "could not determine data type of parameter".
+    @Query(value = """
+        SELECT * FROM audit_log
+        WHERE (CAST(:userId AS bigint)        IS NULL OR user_id     = CAST(:userId AS bigint))
+          AND (CAST(:action AS varchar)       IS NULL OR action      = CAST(:action AS varchar))
+          AND (CAST(:entityType AS varchar)   IS NULL OR entity_type = CAST(:entityType AS varchar))
+          AND (CAST(:from AS timestamp)       IS NULL OR timestamp  >= CAST(:from AS timestamp))
+          AND (CAST(:to   AS timestamp)       IS NULL OR timestamp  <= CAST(:to   AS timestamp))
+        """,
+        countQuery = """
+        SELECT COUNT(*) FROM audit_log
+        WHERE (CAST(:userId AS bigint)      IS NULL OR user_id     = CAST(:userId AS bigint))
+          AND (CAST(:action AS varchar)     IS NULL OR action      = CAST(:action AS varchar))
+          AND (CAST(:entityType AS varchar) IS NULL OR entity_type = CAST(:entityType AS varchar))
+          AND (CAST(:from AS timestamp)     IS NULL OR timestamp  >= CAST(:from AS timestamp))
+          AND (CAST(:to   AS timestamp)     IS NULL OR timestamp  <= CAST(:to   AS timestamp))
+        """,
+        nativeQuery = true)
     Page<AuditLog> search(
         @Param("userId") Long userId,
         @Param("action") String action,

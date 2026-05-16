@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="036-seed-more-delegations" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO evaluator_delegations
+              (id, evaluatee_id, original_evaluator_id, delegated_to_id, valid_from, valid_to, reason, created_by, created_at, is_active) VALUES
+              (3, 13, 5,  6, '2026-05-10', '2026-05-30', 'Учебный отпуск руководителя',          1, '2026-05-06 09:30:00', true),
+              (4, 14, 5,  6, '2026-05-12', '2026-06-12', 'Больничный руководителя',              1, '2026-05-11 14:00:00', true),
+              (5, 16, 6,  5, '2026-06-01', '2026-06-20', 'Плановая командировка',                1, '2026-05-14 11:00:00', true),
+              (6, 20, 10, 11, '2026-05-14', '2026-05-22', 'Краткосрочная замена',                1, '2026-05-13 16:00:00', true),
+              (7, 25, 8,  9, '2026-03-01', '2026-03-20', 'Отпуск руководителя (завершено)',      1, '2026-02-25 10:00:00', true),
+              (8, 28, 9,  8, '2026-04-01', '2026-04-30', 'Делегирование отменено',               1, '2026-03-28 10:00:00', false);
+
+            SELECT setval(pg_get_serial_sequence('evaluator_delegations', 'id'),
+                          (SELECT COALESCE(MAX(id), 1) FROM evaluator_delegations));
+        </sql>
+    </changeSet>
+</databaseChangeLog>

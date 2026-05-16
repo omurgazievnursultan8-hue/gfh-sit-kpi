@@ -35,4 +35,6 @@ public interface CriteriaRepository extends JpaRepository<Criteria, Long> {
     );
 
     boolean existsByIdAndFrozenTrue(Long id);
+
+    long countByActiveTrue();
 }
