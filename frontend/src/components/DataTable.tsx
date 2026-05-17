@@ -24,6 +24,9 @@ export interface Column<T> {
   width?: string
   /** Hide the header text visually, keep it for screen readers. */
   srOnlyHeader?: boolean
+  /** When false, the column cannot be hidden via the columns config menu
+   *  and is omitted from that menu's checklist. Default true. */
+  hideable?: boolean
 }
 
 export interface DataTableProps<T> {
