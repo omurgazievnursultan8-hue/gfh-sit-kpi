@@ -31,8 +31,6 @@ interface DataPanelToolbarProps {
   filterValues: Record<string, string>
   onFilter: (key: string, value: string) => void
   filterSlot?: ReactNode
-  /** Saved-views dropdown — rendered at the leading edge, before search. */
-  viewsMenu?: ReactNode
   /** Columns config dropdown — rendered next to the view switch. */
   columnsMenu?: ReactNode
 
@@ -46,7 +44,7 @@ interface DataPanelToolbarProps {
 
 export function DataPanelToolbar({
   searchable, search, onSearch, searchPlaceholder,
-  filters, filterValues, onFilter, filterSlot, viewsMenu, columnsMenu,
+  filters, filterValues, onFilter, filterSlot, columnsMenu,
   views, view, onView, toolbarActions,
 }: DataPanelToolbarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -68,7 +66,6 @@ export function DataPanelToolbar({
 
   return (
     <div className="flex flex-wrap items-center gap-2.5 mb-3.5">
-      {viewsMenu}
       {searchable && (
         <div className="relative" style={{ flex: 1, minWidth: 220, maxWidth: 380 }}>
           <svg

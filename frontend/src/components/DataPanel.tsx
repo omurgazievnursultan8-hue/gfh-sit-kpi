@@ -4,7 +4,7 @@ import { DataPanelToolbar, type FilterDef, type ViewKind } from './DataPanelTool
 import { DataPanelPager } from './DataPanelPager'
 import { ActiveFilterChips } from './ActiveFilterChips'
 import { ColumnsMenu } from './ColumnsMenu'
-import { SavedViewsMenu } from './SavedViewsMenu'
+import { SavedViewsTabs } from './SavedViewsTabs'
 import {
   type SavedView, type PanelViewState, DEFAULT_VIEW_ID,
   loadPanelState, savePanelState, loadSavedViews, saveSavedViews, panelStateEquals,
@@ -257,6 +257,24 @@ export function DataPanel<T>({
     [columns, hiddenColumns],
   )
 
+  // Row count matching a view's search + filters, for the tab badges. Mirrors
+  // the search/filter steps of `processed`. Null in server mode (only the
+  // current page is in `rows`, so a total would be wrong).
+  const countForView = useCallback((viewId: string): number | null => {
+    if (mode === 'server') return null
+    const st = viewId === DEFAULT_VIEW_ID
+      ? defaultViewState
+      : savedViews.find(v => v.id === viewId)?.state
+    if (!st) return null
+    let out = rows
+    const q = st.search.trim().toLowerCase()
+    if (q && searchText) out = out.filter(r => searchText(r).toLowerCase().includes(q))
+    if (clientFilter && Object.keys(st.filters).length > 0) {
+      out = out.filter(r => clientFilter(r, st.filters))
+    }
+    return out.length
+  }, [mode, rows, searchText, clientFilter, defaultViewState, savedViews])
+
   // ---- client mode: search -> filter -> sort -> slice ----
   const processed = useMemo(() => {
     if (mode === 'server') return rows
@@ -292,6 +310,18 @@ export function DataPanel<T>({
 
   return (
     <div>
+      {panelStorageKey && (
+        <SavedViewsTabs
+          views={savedViews}
+          activeViewId={activeViewId}
+          modified={viewModified}
+          count={countForView}
+          onApply={handleApplyView}
+          onSave={handleSaveView}
+          onDelete={handleDeleteView}
+        />
+      )}
+
       <DataPanelToolbar
         searchable={searchable}
         search={search}
@@ -305,16 +335,6 @@ export function DataPanel<T>({
         view={view}
         onView={setView}
         toolbarActions={toolbarActions}
-        viewsMenu={panelStorageKey ? (
-          <SavedViewsMenu
-            views={savedViews}
-            activeViewId={activeViewId}
-            modified={viewModified}
-            onApply={handleApplyView}
-            onSave={handleSaveView}
-            onDelete={handleDeleteView}
-          />
-        ) : undefined}
         columnsMenu={columnConfig ? (
           <ColumnsMenu
             columns={columns}
