@@ -11,15 +11,11 @@ import { ChangePasswordPage } from './features/auth/ChangePasswordPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { PdpaConsentPage } from './features/auth/PdpaConsentPage'
-import { DashboardPage } from './features/dashboard/DashboardPage'
-import { DashboardV2Page } from './features/dashboard/DashboardV2Page'
 import { DashboardV3Page } from './features/dashboard/DashboardV3Page'
-import { UsersPage } from './features/users/UsersPage'
 import { UsersPageV2 } from './features/users/UsersPageV2'
 import { CriteriaPageV2 } from './features/criteria/CriteriaPageV2'
 import { OrgPage } from './features/org/OrgPage'
 import { DelegationsPage } from './features/org/DelegationsPage'
-import { CriteriaPage } from './features/criteria/CriteriaPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { EvaluationFormPage } from './features/evaluations/EvaluationFormPage'
@@ -51,17 +47,15 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/pdpa-consent" element={<ProtectedRoute><PdpaConsentPage /></ProtectedRoute>} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/dashboard-v2" element={<ProtectedRoute><DashboardV2Page /></ProtectedRoute>} />
-      <Route path="/dashboard-v3" element={<ProtectedRoute><DashboardV3Page /></ProtectedRoute>} />
-      <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
-      <Route path="/users-v2" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPageV2 /></ProtectedRoute>} />
-      <Route path="/criteria-v2" element={<ProtectedRoute allowedRoles={['ADMIN']}><CriteriaPageV2 /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardV3Page /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPageV2 /></ProtectedRoute>} />
+      <Route path="/users-v2" element={<Navigate to="/users" replace />} />
+      <Route path="/criteria-v2" element={<Navigate to="/criteria" replace />} />
       <Route path="/org" element={<ProtectedRoute allowedRoles={['ADMIN']}><OrgPage /></ProtectedRoute>} />
       <Route path="/org/delegations" element={<ProtectedRoute allowedRoles={['ADMIN']}><DelegationsPage /></ProtectedRoute>} />
       <Route path="/criteria" element={
         <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT']}>
-          <CriteriaPage />
+          <CriteriaPageV2 />
         </ProtectedRoute>
       } />
       <Route path="/my-tasks" element={
@@ -104,10 +98,10 @@ export default function App() {
       <Route path="/calendar" element={<ProtectedRoute allowedRoles={['ADMIN']}><CalendarPage /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboardPage />} />
-        <Route path="users" element={<UsersPage />} />
+        <Route path="users" element={<UsersPageV2 />} />
         <Route path="org" element={<OrgPage />} />
         <Route path="delegations" element={<DelegationsPage />} />
-        <Route path="criteria" element={<CriteriaPage />} />
+        <Route path="criteria" element={<CriteriaPageV2 />} />
         <Route path="periods" element={<PeriodsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
