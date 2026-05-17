@@ -3,7 +3,7 @@ import {
   Home, BarChart2, Shield,
   LayoutDashboard, Target, FileCheck, ClipboardCheck, CheckSquare,
   ListChecks, TrendingUp, Building2, BarChart3,
-  Users, UserCog, GitBranch, Settings, CalendarDays, ClipboardList, Activity, Calendar,
+  Users, GitBranch, Settings, CalendarDays, ClipboardList, Activity, Calendar,
 } from 'lucide-react'
 
 export type Role =
@@ -111,10 +111,8 @@ export const NAV_SECTIONS: NavSection[] = [
         items: [
           { to: '/admin', labelKey: 'admin.stats', icon: BarChart3, end: true, roles: ADMIN_ONLY },
           { to: '/admin/users', labelKey: 'admin.users', icon: Users, roles: ADMIN_ONLY, chord: 'u' },
-          { to: '/users-v2', labelKey: 'admin.usersV2', icon: UserCog, roles: ADMIN_ONLY },
           { to: '/admin/org', labelKey: 'admin.orgStructure', icon: Building2, roles: ADMIN_ONLY },
           { to: '/admin/criteria', labelKey: 'admin.criteria', icon: ListChecks, roles: ADMIN_ONLY },
-          { to: '/criteria-v2', labelKey: 'admin.criteriaV2', icon: ListChecks, roles: ADMIN_ONLY },
           { to: '/admin/periods', labelKey: 'admin.periods', icon: Calendar, roles: ADMIN_ONLY },
           { to: '/admin/delegations', labelKey: 'admin.delegations', icon: GitBranch, roles: ADMIN_ONLY },
         ],
