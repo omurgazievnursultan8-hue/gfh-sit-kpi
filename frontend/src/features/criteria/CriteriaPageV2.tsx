@@ -8,7 +8,7 @@ import { CriteriaRowMenu, type CriteriaActions } from './components/CriteriaRowM
 import { Criteria, CriteriaType, criteriaApi } from './criteriaApi'
 import { OrgUnit, orgApi } from '../org/orgApi'
 
-const VIEW_KEY = 'gfh_criteria_v2_view'
+const PANEL_KEY = 'gfh_criteria_v2'
 
 const TABS: { value: CriteriaType; label: string }[] = [
   { value: 'POSITIVE',   label: 'Положительные' },
@@ -64,7 +64,6 @@ export function CriteriaPageV2() {
   const [activeTab, setActiveTab] = useState<CriteriaType>('POSITIVE')
   const [editing, setEditing] = useState<Criteria | null>(null)
   const [showCreate, setShowCreate] = useState(false)
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean; title: string; description: string; onConfirm: () => void
   }>({ open: false, title: '', description: '', onConfirm: () => {} })
@@ -103,7 +102,7 @@ export function CriteriaPageV2() {
 
   const columns: Column<Criteria>[] = [
     {
-      key: 'name', header: 'Критерий', sortable: true,
+      key: 'name', header: 'Критерий', sortable: true, hideable: false,
       render: (c) => (
         <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{c.nameRu}</span>
       ),
@@ -125,7 +124,7 @@ export function CriteriaPageV2() {
       render: (c) => <StatusPill active={c.active} />,
     },
     {
-      key: 'actions', header: 'Действия', align: 'right', srOnlyHeader: true,
+      key: 'actions', header: 'Действия', align: 'right', srOnlyHeader: true, hideable: false,
       render: (c) => (
         <div onClick={e => e.stopPropagation()}>
           <CriteriaRowMenu criterion={c} actions={actions} />
@@ -264,14 +263,13 @@ export function CriteriaPageV2() {
           searchText={searchText}
           searchPlaceholder="Поиск по названию…"
           filters={FILTERS}
-          filterValues={filterValues}
-          onFilterValuesChange={setFilterValues}
           clientFilter={clientFilter}
           comparator={comparator}
           defaultSort={{ key: 'weight', dir: 'desc' }}
           views={['table', 'cards']}
           renderCard={renderCard}
-          viewStorageKey={VIEW_KEY}
+          panelStorageKey={PANEL_KEY}
+          columnConfig
           onRowClick={(c) => { if (!c.frozen) setEditing(c) }}
           toolbarActions={addButton}
         />
