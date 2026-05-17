@@ -3,14 +3,12 @@ import { Layout } from '../../components/Layout'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { UserFormModal } from './components/UserFormModal'
-import { UsersSavedViews } from './components/UsersSavedViews'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
 import { UserRowMenu, type UserActions } from './components/UserRowMenu'
 import { Avatar, RoleBadge, StatusPill, ROLE_RANK } from './components/usersMeta'
-import type { StatusFilter } from './components/UsersFilters'
 import { User, usersApi } from './usersApi'
 
-const VIEW_KEY = 'gfh_users_v2_view'
+const PANEL_KEY = 'gfh_users_v2'
 
 const ROLE_OPTIONS = [
   { value: '',                        label: 'Все роли' },
@@ -43,9 +41,6 @@ export function UsersPageV2() {
 
   const [drawerId, setDrawerId] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  // Single source of truth for table filters — shared by the saved-view tabs
-  // and the DataPanel filter dropdowns.
-  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
@@ -101,7 +96,7 @@ export function UsersPageV2() {
 
   const columns: Column<User>[] = [
     {
-      key: 'name', header: 'Пользователь', sortable: true,
+      key: 'name', header: 'Пользователь', sortable: true, hideable: false,
       render: (u) => (
         <div className="flex items-center gap-3">
           <Avatar name={u.fullName} role={u.role} active={u.isActive} size={34} />
@@ -130,7 +125,7 @@ export function UsersPageV2() {
       render: (u) => <StatusPill active={u.isActive} />,
     },
     {
-      key: 'actions', header: 'Действия', align: 'right', srOnlyHeader: true,
+      key: 'actions', header: 'Действия', align: 'right', srOnlyHeader: true, hideable: false,
       render: (u) => (
         <div onClick={e => e.stopPropagation()}>
           <UserRowMenu user={u} actions={actions} />
@@ -233,18 +228,6 @@ export function UsersPageV2() {
           </p>
         </div>
 
-        <UsersSavedViews
-          users={users}
-          role={filterValues.role ?? ''}
-          status={(filterValues.status || 'all') as StatusFilter}
-          onApply={(r, s) => {
-            const next: Record<string, string> = {}
-            if (r) next.role = r
-            if (s !== 'all') next.status = s
-            setFilterValues(next)
-          }}
-        />
-
         <DataPanel<User>
           mode="client"
           columns={columns}
@@ -257,14 +240,13 @@ export function UsersPageV2() {
           searchText={searchText}
           searchPlaceholder="Поиск по ФИО или email…"
           filters={FILTERS}
-          filterValues={filterValues}
-          onFilterValuesChange={setFilterValues}
           clientFilter={clientFilter}
           comparator={comparator}
           defaultSort={{ key: 'name', dir: 'asc' }}
           views={['table', 'cards']}
           renderCard={renderCard}
-          viewStorageKey={VIEW_KEY}
+          panelStorageKey={PANEL_KEY}
+          columnConfig
           onRowClick={openDrawer}
           toolbarActions={addButton}
         />
