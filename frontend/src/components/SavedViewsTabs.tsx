@@ -10,13 +10,15 @@ interface SavedViewsTabsProps {
   count: (viewId: string) => number | null
   onApply: (id: string) => void
   onSave: (name: string) => void
+  /** Overwrite a custom view's state with the current working state. */
+  onUpdate: (id: string) => void
   onDelete: (id: string) => void
 }
 
 /** Saved views as an underline tab row (matches the users-v1 quick-filter
  *  pattern). The built-in "Все" view is always first; custom views show a ×
  *  on hover; a trailing "+ Сохранить" tab captures the current state. */
-export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, onSave, onDelete }: SavedViewsTabsProps) {
+export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, onSave, onUpdate, onDelete }: SavedViewsTabsProps) {
   const handleSave = () => {
     const name = window.prompt('Название представления:')?.trim()
     if (name) onSave(name)
@@ -25,6 +27,7 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
   const tab = (id: string, label: string, deletable: boolean) => {
     const selected = id === activeViewId
     const n = count(id)
+    const canUpdate = deletable && selected && modified
     return (
       <div key={id} className="svt-tab inline-flex items-center" style={{ marginBottom: -1 }}>
         <button
@@ -42,7 +45,7 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
             cursor: 'pointer',
           }}
         >
-          {label}{selected && modified ? ' •' : ''}
+          {label}{selected && modified && !deletable ? ' •' : ''}
           {n != null && (
             <span
               style={{
@@ -57,6 +60,26 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
             </span>
           )}
         </button>
+        {canUpdate && (
+          <button
+            type="button"
+            className="svt-update inline-flex items-center justify-center transition-colors"
+            onClick={() => onUpdate(id)}
+            aria-label={`Обновить представление: ${label}`}
+            title="Сохранить текущие фильтры в это представление"
+            style={{
+              height: 22, padding: '0 8px', marginRight: 2, borderRadius: 6,
+              fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
+              background: 'var(--accent-mute)', color: 'var(--accent)',
+              border: '1px solid var(--accent-soft)', cursor: 'pointer',
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden style={{ width: 11, height: 11, marginRight: 3, stroke: 'currentColor', strokeWidth: 2.4, fill: 'none' }}>
+              <path d="M5 12l5 5L20 7" />
+            </svg>
+            Обновить
+          </button>
+        )}
         {deletable && (
           <button
             type="button"

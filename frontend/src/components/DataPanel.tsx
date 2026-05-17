@@ -232,6 +232,14 @@ export function DataPanel<T>({
     setActiveViewId(v.id)
   }, [currentState, panelStorageKey])
 
+  const handleUpdateView = useCallback((id: string) => {
+    setSavedViews(prev => {
+      const next = prev.map(v => (v.id === id ? { ...v, state: currentState } : v))
+      if (panelStorageKey) saveSavedViews(panelStorageKey, next)
+      return next
+    })
+  }, [currentState, panelStorageKey])
+
   const handleDeleteView = useCallback((id: string) => {
     setSavedViews(prev => {
       const next = prev.filter(v => v.id !== id)
@@ -318,6 +326,7 @@ export function DataPanel<T>({
           count={countForView}
           onApply={handleApplyView}
           onSave={handleSaveView}
+          onUpdate={handleUpdateView}
           onDelete={handleDeleteView}
         />
       )}
