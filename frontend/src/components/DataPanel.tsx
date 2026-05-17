@@ -2,6 +2,13 @@ import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } fro
 import { DataTable, type Column, type SortDir } from './DataTable'
 import { DataPanelToolbar, type FilterDef, type ViewKind } from './DataPanelToolbar'
 import { DataPanelPager } from './DataPanelPager'
+import { ActiveFilterChips } from './ActiveFilterChips'
+import { ColumnsMenu } from './ColumnsMenu'
+import { SavedViewsMenu } from './SavedViewsMenu'
+import {
+  type SavedView, type PanelViewState, DEFAULT_VIEW_ID,
+  loadPanelState, savePanelState, loadSavedViews, saveSavedViews, panelStateEquals,
+} from './panelStorage'
 
 /**
  * Unified table panel — table/cards view, search, declarative filters and
@@ -13,6 +20,7 @@ import { DataPanelPager } from './DataPanelPager'
 
 export type { FilterDef, ViewKind } from './DataPanelToolbar'
 export type { Column, SortDir } from './DataTable'
+export type { SavedView } from './panelStorage'
 
 export interface PanelState {
   search: string
@@ -49,6 +57,14 @@ export interface DataPanelProps<T> {
   views?: ViewKind[]
   renderCard?: (r: T) => ReactNode
   viewStorageKey?: string
+  /** Enables saved views + working-state persistence. Two localStorage keys
+   *  are derived: `${key}:state` and `${key}:views`. Supersedes viewStorageKey. */
+  panelStorageKey?: string
+  /** Show the columns show/hide dropdown in the toolbar. */
+  columnConfig?: boolean
+  /** Show the active-filter chip row below the toolbar. Default true when
+   *  `filters` is non-empty. */
+  showFilterChips?: boolean
 
   /** Initial rows-per-page (default 10). User can change it via the pager select. */
   pageSize?: number
@@ -96,17 +112,34 @@ export function DataPanel<T>({
   filterValues: filterValuesProp, onFilterValuesChange,
   comparator, defaultSort,
   views = ['table', 'cards'], renderCard, viewStorageKey,
+  panelStorageKey, columnConfig = false, showFilterChips,
   pageSize: pageSizeProp = 10, pageSizeOptions = [10, 25, 50, 100],
   page: pageProp, totalElements, onStateChange,
   onRowClick, toolbarActions,
 }: DataPanelProps<T>) {
-  const [search, setSearch] = useState('')
-  const [filterValuesState, setFilterValuesState] = useState<Record<string, string>>({})
+  const persisted = useMemo<PanelViewState | null>(
+    () => (panelStorageKey ? loadPanelState(panelStorageKey) : null),
+    [panelStorageKey],
+  )
+
+  const [search, setSearch] = useState(persisted?.search ?? '')
+  const [filterValuesState, setFilterValuesState] = useState<Record<string, string>>(
+    persisted?.filters ?? {},
+  )
   const filterValues = filterValuesProp ?? filterValuesState
-  const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(defaultSort ?? null)
+  const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(
+    persisted?.sort ?? defaultSort ?? null,
+  )
   const [clientPage, setClientPage] = useState(0)
   const [pageSize, setPageSize] = useState(pageSizeProp)
-  const [view, setView] = useState<ViewKind>(() => loadView(viewStorageKey, views))
+  const [view, setView] = useState<ViewKind>(
+    () => persisted?.view ?? loadView(viewStorageKey, views),
+  )
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>(persisted?.hiddenColumns ?? [])
+  const [savedViews, setSavedViews] = useState<SavedView[]>(
+    () => (panelStorageKey ? loadSavedViews(panelStorageKey) : []),
+  )
+  const [activeViewId, setActiveViewId] = useState(DEFAULT_VIEW_ID)
 
   // Keep `view` valid if the `views` prop set shrinks after mount.
   useEffect(() => {
@@ -124,6 +157,13 @@ export function DataPanel<T>({
   useEffect(() => {
     if (viewStorageKey) localStorage.setItem(viewStorageKey, view)
   }, [view, viewStorageKey])
+
+  // Persist the full working state under panelStorageKey so a reload restores
+  // filters/sort/columns/mode. Filters only round-trip when uncontrolled.
+  useEffect(() => {
+    if (!panelStorageKey) return
+    savePanelState(panelStorageKey, { search, filters: filterValues, sort, hiddenColumns, view })
+  }, [panelStorageKey, search, filterValues, sort, hiddenColumns, view])
 
   // Single emitter: on mount and whenever search/filter/sort/pageSize changes,
   // reset to the first page. Page changes are emitted directly by `setPage`, so
@@ -151,6 +191,71 @@ export function DataPanel<T>({
       return { key, dir: 'asc' }
     })
   }, [])
+
+  const setFilters = useCallback((next: Record<string, string>) => {
+    if (filterValuesProp !== undefined) onFilterValuesChange?.(next)
+    else setFilterValuesState(next)
+  }, [filterValuesProp, onFilterValuesChange])
+
+  const currentState = useMemo<PanelViewState>(
+    () => ({ search, filters: filterValues, sort, hiddenColumns, view }),
+    [search, filterValues, sort, hiddenColumns, view],
+  )
+
+  const defaultViewState = useMemo<PanelViewState>(
+    () => ({ search: '', filters: {}, sort: defaultSort ?? null, hiddenColumns: [], view: views[0] }),
+    [defaultSort, views],
+  )
+
+  const applyState = useCallback((s: PanelViewState) => {
+    setSearch(s.search)
+    setFilters(s.filters)
+    setSort(s.sort)
+    setHiddenColumns(s.hiddenColumns)
+    if (views.includes(s.view)) setView(s.view)
+  }, [setFilters, views])
+
+  const handleApplyView = useCallback((id: string) => {
+    setActiveViewId(id)
+    if (id === DEFAULT_VIEW_ID) { applyState(defaultViewState); return }
+    const v = savedViews.find(x => x.id === id)
+    if (v) applyState(v.state)
+  }, [applyState, defaultViewState, savedViews])
+
+  const handleSaveView = useCallback((name: string) => {
+    const v: SavedView = { id: crypto.randomUUID(), name, state: currentState }
+    setSavedViews(prev => {
+      const next = [...prev, v]
+      if (panelStorageKey) saveSavedViews(panelStorageKey, next)
+      return next
+    })
+    setActiveViewId(v.id)
+  }, [currentState, panelStorageKey])
+
+  const handleDeleteView = useCallback((id: string) => {
+    setSavedViews(prev => {
+      const next = prev.filter(v => v.id !== id)
+      if (panelStorageKey) saveSavedViews(panelStorageKey, next)
+      return next
+    })
+    setActiveViewId(curr => (curr === id ? DEFAULT_VIEW_ID : curr))
+  }, [panelStorageKey])
+
+  const handleToggleColumn = useCallback((key: string) => {
+    setHiddenColumns(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key],
+    )
+  }, [])
+
+  const activeViewState = activeViewId === DEFAULT_VIEW_ID
+    ? defaultViewState
+    : (savedViews.find(v => v.id === activeViewId)?.state ?? defaultViewState)
+  const viewModified = !panelStateEquals(currentState, activeViewState)
+
+  const visibleColumns = useMemo(
+    () => columns.filter(c => !hiddenColumns.includes(c.key)),
+    [columns, hiddenColumns],
+  )
 
   // ---- client mode: search -> filter -> sort -> slice ----
   const processed = useMemo(() => {
@@ -200,7 +305,33 @@ export function DataPanel<T>({
         view={view}
         onView={setView}
         toolbarActions={toolbarActions}
+        viewsMenu={panelStorageKey ? (
+          <SavedViewsMenu
+            views={savedViews}
+            activeViewId={activeViewId}
+            modified={viewModified}
+            onApply={handleApplyView}
+            onSave={handleSaveView}
+            onDelete={handleDeleteView}
+          />
+        ) : undefined}
+        columnsMenu={columnConfig ? (
+          <ColumnsMenu
+            columns={columns}
+            hiddenColumns={hiddenColumns}
+            onToggle={handleToggleColumn}
+          />
+        ) : undefined}
       />
+
+      {(showFilterChips ?? filters.length > 0) && (
+        <ActiveFilterChips
+          filters={filters}
+          values={filterValues}
+          onClear={(key) => handleFilter(key, '')}
+          onClearAll={() => setFilters({})}
+        />
+      )}
 
       {view === 'cards' && renderCard ? (
         loading ? (
@@ -225,7 +356,7 @@ export function DataPanel<T>({
           }}
         >
           <DataTable
-            columns={columns}
+            columns={visibleColumns}
             rows={visible}
             rowKey={rowKey}
             caption={caption}
