@@ -13,38 +13,7 @@ import type { AppealPending } from '../periods/periodsApi'
 import { delegationsApi } from '../org/delegationsApi'
 import type { Delegation } from '../org/delegationsApi'
 import { DASHBOARD_CSS } from './dashboardStyles'
-
-// ── helpers ─────────────────────────────────────────────────────────────────
-function asciiBar(pct: number, width = 22): { fill: string; empty: string } {
-  const clamped = Math.max(0, Math.min(1, pct))
-  const filled = Math.round(clamped * width)
-  return { fill: '█'.repeat(filled), empty: '░'.repeat(width - filled) }
-}
-
-// Maps a 0–100 score to a colour zone. null → neutral.
-function scoreZone(score: number | null): {
-  numClass: string; tagClass: string; labelKey: string | null
-} {
-  if (score === null) return { numClass: '', tagClass: '', labelKey: null }
-  if (score >= 80) return { numClass: 'zone-up', tagClass: 'up', labelKey: 'dashboard.zoneUp' }
-  if (score >= 50) return { numClass: 'zone-warn', tagClass: 'warn', labelKey: 'dashboard.zoneNorm' }
-  return { numClass: 'zone-down', tagClass: 'down', labelKey: 'dashboard.zoneDown' }
-}
-
-// ── card shell ──────────────────────────────────────────────────────────────
-function Card({ col, title, id, children }: {
-  col: number; title: string; id: string; children: React.ReactNode
-}) {
-  return (
-    <section className={`dv3-card dv3-col-${col}`}>
-      <div className="dv3-card-head">
-        <span><strong>{title}</strong></span>
-        <span className="dv3-card-id">[ {id} ]</span>
-      </div>
-      <div className="dv3-card-body">{children}</div>
-    </section>
-  )
-}
+import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
 
 // ── page ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
@@ -113,7 +82,6 @@ export function DashboardPage() {
   const currentScore = analytics?.currentScore ?? null
   const scoreWhole = currentScore !== null ? Math.round(currentScore) : null
   const scorePct = currentScore !== null ? currentScore / 100 : 0
-  const scoreBar = asciiBar(scorePct, 22)
 
   const zone = scoreZone(scoreWhole)
 
@@ -122,25 +90,21 @@ export function DashboardPage() {
   const cycleDone = summary?.completedEvaluations ?? 0
   const cycleTotal = summary?.totalEvaluations ?? 0
   const cyclePct = cycleTotal > 0 ? cycleDone / cycleTotal : 0
-  const cycleBar = asciiBar(cyclePct, 22)
 
   // APPEALS — share of open tasks (appeals vs appeals + pending evaluations).
   const appealsPending = summary?.pendingAppeals ?? appeals.length
   const pendingEvals = summary?.pendingEvaluations ?? 0
   const openTasks = appealsPending + pendingEvals
   const appealsPct = openTasks > 0 ? appealsPending / openTasks : 0
-  const appealsBar = asciiBar(appealsPct, 22)
 
   // NOTIFICATIONS — inbox-fill capacity bar (20 unread = full).
   const NOTIF_CAP = 20
   const notifPct = unreadCount / NOTIF_CAP
-  const notifBar = asciiBar(notifPct, 22)
 
   // DELEGATIONS — active share of all delegations.
   const delegTotal = delegations.length
   const delegActive = activeDelegations.length
   const delegPct = delegTotal > 0 ? delegActive / delegTotal : 0
-  const delegBar = asciiBar(delegPct, 22)
 
   // Neutral placeholder while loading; genuine zeros still render as 0.
   const PLACEHOLDER = '··'
@@ -155,6 +119,7 @@ export function DashboardPage() {
   return (
     <div className="dv3-root">
       <style>{DASHBOARD_CSS}</style>
+      <style>{STAT_CARD_CSS}</style>
 
       <div className="dv3-terminal">
         {/* a11y partial-failure announcer */}
@@ -206,165 +171,79 @@ export function DashboardPage() {
         <div className="dv3-grid">
 
           {/* SELF.RATING */}
-          <Card col={4} title="SELF.RATING" id="R01">
-            <div className="dv3-kpi">
-              <div>
-                <div
-                  className={`dv3-kpi-num${loading ? ' dv3-loading' : ''}${
-                    !loading && zone.numClass ? ` dv3-kpi-num--${zone.numClass}` : ''
-                  }`}
-                >
-                  {loading ? PLACEHOLDER : (scoreWhole !== null ? scoreWhole : '—')}
-                  <span className="dv3-kpi-unit">/ 100</span>
-                </div>
-                {!loading && zone.labelKey && (
-                  <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
-                    {t(zone.labelKey)}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="dv3-gauge">
-              <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-                <span className="dv3-fill">{scoreBar.fill}</span>
-                <span className="dv3-dim">{scoreBar.empty}</span>
-              </div>
-              <div className="dv3-gauge-meta dv3-gauge-meta--mark">
-                <span>0</span>
-                <span
-                  className="dv3-gauge-cur"
-                  style={{ left: `${Math.min(100, Math.round(scorePct * 100))}%` }}
-                >
-                  <strong>{scoreWhole !== null ? scoreWhole : '—'}</strong>
-                </span>
-                <span>100</span>
-              </div>
-            </div>
-          </Card>
+          <div className="dv3-col-4">
+            <StatCard
+              title="SELF.RATING" id="R01" loading={loading}
+              value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
+              gauge={{
+                pct: scorePct, variant: 'marker',
+                left: '0', right: '100',
+                current: scoreWhole !== null ? scoreWhole : '—',
+              }}
+            />
+          </div>
 
           {/* EVAL.CYCLE.PROGRESS */}
-          <Card col={4} title="EVAL.CYCLE.PROGRESS" id="P01">
-            <div className="dv3-kpi">
-              <div className={`dv3-kpi-num${loading ? ' dv3-loading' : ''}`}>
-                {loading ? PLACEHOLDER : cycleDone}
-                <span className="dv3-kpi-unit">/ {loading ? PLACEHOLDER : cycleTotal}</span>
-                <span className="dv3-kpi-label">{t('dashboard.evaluationsComplete')}</span>
-              </div>
-            </div>
-            <div className="dv3-gauge">
-              <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-                <span className="dv3-fill">{cycleBar.fill}</span>
-                <span className="dv3-dim">{cycleBar.empty}</span>
-              </div>
-              <div className="dv3-gauge-meta">
-                <span>0%</span>
-                <span><strong>{Math.round(cyclePct * 100)}%</strong></span>
-                <span>100%</span>
-              </div>
-            </div>
-          </Card>
+          <div className="dv3-col-4">
+            <StatCard
+              title="EVAL.CYCLE.PROGRESS" id="P01" loading={loading}
+              value={cycleDone}
+              unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
+              label={t('dashboard.evaluationsComplete')}
+              gauge={{
+                pct: cyclePct, variant: 'meta',
+                left: '0%',
+                center: <strong>{Math.round(cyclePct * 100)}%</strong>,
+                right: '100%',
+              }}
+            />
+          </div>
 
           {/* APPEALS */}
-          <div
-            className="dv3-card dv3-col-4 dv3-card-btn"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/my-tasks')}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                if (e.key === ' ') e.preventDefault()
-                navigate('/my-tasks')
-              }
-            }}
-          >
-            <div className="dv3-card-head">
-              <span><strong>APPEALS</strong></span>
-              <span className="dv3-card-id">[ A01 ]</span>
-            </div>
-            <div className="dv3-card-body">
-              <div className="dv3-kpi">
-                <div className={`dv3-kpi-num${loading ? ' dv3-loading' : ''}`}>
-                  {loading ? PLACEHOLDER : appealsPending}
-                  <span className="dv3-kpi-label">{t('dashboard.pendingAppeals')}</span>
-                </div>
-              </div>
-              <div className="dv3-gauge">
-                <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-                  <span className="dv3-fill">{appealsBar.fill}</span>
-                  <span className="dv3-dim">{appealsBar.empty}</span>
-                </div>
-                <div className="dv3-gauge-meta">
-                  <span>0%</span>
-                  <span><strong>{Math.round(appealsPct * 100)}%</strong> {t('dashboard.ofOpenTasks')}</span>
-                  <span>100%</span>
-                </div>
-              </div>
-            </div>
+          <div className="dv3-col-4">
+            <StatCard
+              title="APPEALS" id="A01" loading={loading}
+              value={appealsPending}
+              label={t('dashboard.pendingAppeals')}
+              onClick={() => navigate('/my-tasks')}
+              gauge={{
+                pct: appealsPct, variant: 'meta',
+                left: '0%',
+                center: <><strong>{Math.round(appealsPct * 100)}%</strong> {t('dashboard.ofOpenTasks')}</>,
+                right: '100%',
+              }}
+            />
           </div>
 
           {/* NOTIFICATIONS */}
-          <div
-            className="dv3-card dv3-col-4 dv3-card-btn"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/notifications')}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                if (e.key === ' ') e.preventDefault()
-                navigate('/notifications')
-              }
-            }}
-          >
-            <div className="dv3-card-head">
-              <span><strong>NOTIFICATIONS</strong></span>
-              <span className="dv3-card-id">[ N01 ]</span>
-            </div>
-            <div className="dv3-card-body">
-              <div className="dv3-kpi">
-                <div className="dv3-kpi-num">
-                  {unreadCount}
-                  <span className="dv3-kpi-label">{t('dashboard.unread')}</span>
-                </div>
-              </div>
-              <div className="dv3-gauge">
-                <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-                  <span className="dv3-fill">{notifBar.fill}</span>
-                  <span className="dv3-dim">{notifBar.empty}</span>
-                </div>
-                <div className="dv3-gauge-meta">
-                  <span>0</span>
-                  <span><strong>{unreadCount}</strong> / {NOTIF_CAP} {t('dashboard.inbox')}</span>
-                  <span>{NOTIF_CAP}</span>
-                </div>
-              </div>
-            </div>
+          <div className="dv3-col-4">
+            <StatCard
+              title="NOTIFICATIONS" id="N01"
+              value={unreadCount}
+              label={t('dashboard.unread')}
+              onClick={() => navigate('/notifications')}
+              gauge={{
+                pct: notifPct, variant: 'meta',
+                left: '0',
+                center: <><strong>{unreadCount}</strong> / {NOTIF_CAP} {t('dashboard.inbox')}</>,
+                right: NOTIF_CAP,
+              }}
+            />
           </div>
 
           {/* DELEGATIONS */}
-          <div className="dv3-card dv3-col-4">
-            <div className="dv3-card-head">
-              <span><strong>DELEGATIONS</strong></span>
-              <span className="dv3-card-id">[ D01 ]</span>
-            </div>
-            <div className="dv3-card-body">
-              <div className="dv3-kpi">
-                <div className={`dv3-kpi-num${loading ? ' dv3-loading' : ''}`}>
-                  {loading ? PLACEHOLDER : delegActive}
-                  <span className="dv3-kpi-label">{t('dashboard.activeDelegations')}</span>
-                </div>
-              </div>
-              <div className="dv3-gauge">
-                <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-                  <span className="dv3-fill">{delegBar.fill}</span>
-                  <span className="dv3-dim">{delegBar.empty}</span>
-                </div>
-                <div className="dv3-gauge-meta">
-                  <span>0</span>
-                  <span><strong>{delegActive}</strong> / {delegTotal} {t('dashboard.total')}</span>
-                  <span>{delegTotal}</span>
-                </div>
-              </div>
-            </div>
+          <div className="dv3-col-4">
+            <StatCard
+              title="DELEGATIONS" id="D01" loading={loading}
+              value={delegActive}
+              label={t('dashboard.activeDelegations')}
+              gauge={{
+                pct: delegPct, variant: 'meta',
+                left: '0',
+                center: <><strong>{delegActive}</strong> / {delegTotal} {t('dashboard.total')}</>,
+                right: delegTotal,
+              }}
+            />
           </div>
 
         </div>
