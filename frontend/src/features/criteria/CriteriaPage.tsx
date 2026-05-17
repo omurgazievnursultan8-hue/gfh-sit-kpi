@@ -8,7 +8,7 @@ import { CriteriaRowMenu, type CriteriaActions } from './components/CriteriaRowM
 import { Criteria, CriteriaType, criteriaApi } from './criteriaApi'
 import { OrgUnit, orgApi } from '../org/orgApi'
 
-const PANEL_KEY = 'gfh_criteria_v2'
+const PANEL_KEY = 'gfh_criteria'
 
 const TABS: { value: CriteriaType; label: string }[] = [
   { value: 'POSITIVE',   label: 'Положительные' },
@@ -57,7 +57,7 @@ function ScopePill({ c }: { c: Criteria }) {
   )
 }
 
-export function CriteriaPageV2() {
+export function CriteriaPage() {
   const [criteria, setCriteria] = useState<Criteria[]>([])
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
   const [loading, setLoading] = useState(true)
