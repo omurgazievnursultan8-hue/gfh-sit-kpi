@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { Criteria, CriteriaRequest, CriteriaType } from '../criteriaApi'
 import { OrgUnit } from '../../org/orgApi'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, onClose }: Props) {
+  const { t } = useTranslation()
   const [nameRu, setNameRu] = useState('')
   const [nameKg, setNameKg] = useState('')
   const [type, setType] = useState<CriteriaType>('POSITIVE')
@@ -49,7 +51,7 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
     e.preventDefault()
     const weightNum = parseFloat(weight)
     if (isNaN(weightNum) || weightNum <= 0 || weightNum > 100) {
-      setError('Вес должен быть от 0.01 до 100')
+      setError(t('v2.criteria.formWeightError'))
       return
     }
     setLoading(true); setError('')
@@ -62,7 +64,7 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
       })
       onClose()
     } catch (err: any) {
-      setError(err.response?.data?.message_ru || 'Ошибка при сохранении')
+      setError(err.response?.data?.message_ru || t('v2.criteria.formSaveError'))
     } finally {
       setLoading(false)
     }
@@ -75,36 +77,36 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[520px] p-6 border border-slate-200">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">
-            {editing ? 'Редактировать критерий' : (prefill ? 'Дублировать критерий' : 'Новый критерий')}
+            {editing ? t('v2.criteria.formEditTitle') : (prefill ? t('v2.criteria.formDuplicateTitle') : t('v2.criteria.formCreateTitle'))}
           </h2>
           <button onClick={onClose} className="w-8 h-8 rounded-md inline-flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100"><X size={18} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Название (RU)</label>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formNameRu')}</label>
             <input value={nameRu} onChange={e => setNameRu(e.target.value)} required
               className="w-full h-10 px-3 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15" />
           </div>
           <div>
-            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Название (KG)</label>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formNameKg')}</label>
             <input value={nameKg} onChange={e => setNameKg(e.target.value)} required
               className="w-full h-10 px-3 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15" />
           </div>
           <div>
-            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Тип</label>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formType')}</label>
             <select value={type} onChange={e => setType(e.target.value as CriteriaType)}
               disabled={!!editing}
               className="w-full h-10 px-3 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15 disabled:bg-slate-50 disabled:text-slate-500">
-              <option value="POSITIVE">Положительный</option>
-              <option value="ANTI_BONUS">Антибонус</option>
+              <option value="POSITIVE">{t('v2.criteria.formTypePositive')}</option>
+              <option value="ANTI_BONUS">{t('v2.criteria.formTypeAntiBonus')}</option>
             </select>
-            {editing && <p className="text-[11.5px] text-slate-400 mt-1">Тип нельзя изменить после создания</p>}
+            {editing && <p className="text-[11.5px] text-slate-400 mt-1">{t('v2.criteria.formTypeLocked')}</p>}
           </div>
           <div>
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">
-              Вес (%)
-              {editing?.frozen && <span className="ml-2 text-[11px] font-medium px-1.5 py-0.5 rounded bg-[#fbf2dd] text-[#b27b14] border border-[#b27b14]/25">заморожен</span>}
+              {t('v2.criteria.formWeight')}
+              {editing?.frozen && <span className="ml-2 text-[11px] font-medium px-1.5 py-0.5 rounded bg-[#fbf2dd] text-[#b27b14] border border-[#b27b14]/25">{t('v2.criteria.formFrozen')}</span>}
             </label>
             <input type="number" step="0.01" min="0.01" max="100"
               value={weight} onChange={e => setWeight(e.target.value)} required
@@ -112,10 +114,10 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
               className="w-full h-10 px-3 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15 disabled:bg-slate-50 disabled:text-slate-500 tabular-nums" />
           </div>
           <div>
-            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">Область применения</label>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formScope')}</label>
             <select value={orgUnitId} onChange={e => setOrgUnitId(e.target.value)}
               className="w-full h-10 px-3 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15">
-              <option value="">Глобальный (все подразделения)</option>
+              <option value="">{t('v2.criteria.formScopeGlobal')}</option>
               {orgUnits.map(u => (
                 <option key={u.id} value={u.id}>{u.nameRu}</option>
               ))}
@@ -125,18 +127,18 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
             <label className="flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer">
               <input type="checkbox" checked={autoCalculated}
                 onChange={e => setAutoCalculated(e.target.checked)} className="rounded accent-[var(--crit-accent,#0a6b4e)]" />
-              Рассчитывается автоматически (из производственного календаря)
+              {t('v2.criteria.formAuto')}
             </label>
           )}
           {error && <p className="text-[13px] text-[#b3261e] bg-[#fbeae8] border border-[#b3261e]/25 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="flex-1 h-10 border border-slate-300 rounded-lg text-[13.5px] font-medium text-slate-700 hover:bg-slate-50">
-              Отмена
+              {t('v2.criteria.formCancel')}
             </button>
             <button type="submit" disabled={loading}
               className="flex-1 h-10 bg-[var(--crit-accent,#0a6b4e)] text-white rounded-lg text-[13.5px] font-medium hover:bg-[var(--crit-accent-700,#095a42)] disabled:opacity-50">
-              {loading ? 'Сохранение...' : 'Сохранить'}
+              {loading ? t('v2.criteria.formSaving') : t('v2.criteria.formSave')}
             </button>
           </div>
         </form>

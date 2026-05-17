@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { User } from '../usersApi'
 
 export interface UserActions {
@@ -10,6 +11,7 @@ export interface UserActions {
 
 // Compact `⋯` overflow menu — quick actions without opening the detail drawer.
 export function UserRowMenu({ user, actions }: { user: User; actions: UserActions }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -33,7 +35,7 @@ export function UserRowMenu({ user, actions }: { user: User; actions: UserAction
     <div ref={wrapRef} className="relative inline-block">
       <button
         type="button"
-        aria-label="Действия"
+        aria-label={t('v2.menuActions')}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
@@ -61,19 +63,19 @@ export function UserRowMenu({ user, actions }: { user: User; actions: UserAction
           }}
         >
           <MenuItem tone="ink" onClick={() => run(() => actions.onEdit(user))}>
-            Изменить
+            {t('v2.menuEdit')}
           </MenuItem>
           {user.isActive ? (
             <MenuItem tone="danger" onClick={() => run(() => actions.onDeactivate(user))}>
-              Деактивировать
+              {t('v2.menuDeactivate')}
             </MenuItem>
           ) : (
             <MenuItem tone="ok" onClick={() => run(() => actions.onReactivate(user))}>
-              Активировать
+              {t('v2.menuActivate')}
             </MenuItem>
           )}
           <MenuItem tone="warn" onClick={() => run(() => actions.onResetPassword(user))}>
-            Сбросить пароль
+            {t('v2.menuResetPw')}
           </MenuItem>
         </div>
       )}

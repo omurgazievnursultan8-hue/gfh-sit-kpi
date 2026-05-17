@@ -1,4 +1,5 @@
 import React, { Fragment } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDensity } from '../hooks/useDensity'
 
 /**
@@ -79,6 +80,7 @@ export function DataTable<T>({
   empty, skeletonRows = 8, renderExpanded, expandedKeys, totalCount,
   rowClassName,
 }: DataTableProps<T>) {
+  const { t } = useTranslation()
   const { density: contextDensity } = useDensity()
   const density = densityProp ?? contextDensity
   const d = DENSITY[density]
@@ -91,13 +93,13 @@ export function DataTable<T>({
         role="status"
         style={{ padding: '56px 24px', fontSize: 13.5, color: 'var(--ink-faint)' }}
       >
-        {empty ?? 'Нет данных'}
+        {empty ?? t('dataPanel.noData')}
       </div>
     )
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className={['overflow-x-auto', clickable ? 'dt-clickable' : undefined].filter(Boolean).join(' ')}>
       <table
         className="w-full"
         style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: d.fontSize }}
@@ -160,16 +162,19 @@ export function DataTable<T>({
                   ))}
                 </tr>
               ))
-            : rows.map(row => {
+            : rows.map((row, rowIndex) => {
                 const key = rowKey(row)
                 const expanded = !!renderExpanded && !!expandedKeys?.has(key)
                 return (
                   <Fragment key={key}>
                     <tr
-                      className={['dt-row', rowClassName?.(row)].filter(Boolean).join(' ')}
+                      className={[
+                        'dt-row',
+                        rowIndex % 2 === 1 ? 'dt-row-even' : undefined,
+                        rowClassName?.(row),
+                      ].filter(Boolean).join(' ')}
                       onClick={clickable ? () => onRowClick!(row) : undefined}
                       tabIndex={clickable ? 0 : undefined}
-                      role={clickable ? 'button' : undefined}
                       onKeyDown={clickable ? e => {
                         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick!(row) }
                       } : undefined}
@@ -208,32 +213,9 @@ export function DataTable<T>({
             borderTop: '1px solid var(--line-soft)', textAlign: 'right',
           }}
         >
-          Всего: {totalCount}
+          {t('dataPanel.total')}: {totalCount}
         </div>
       )}
-
-      <style>{`
-        .dt-row td { border-bottom: 1px solid var(--line-soft); }
-        .dt-row:last-child td { border-bottom: none; }
-        .dt-row:nth-child(even) td { background: var(--surface-mute); }
-        .dt-expanded-row td { background: var(--surface-mute); border-bottom: 1px solid var(--line); }
-        ${clickable ? `
-        .dt-row { cursor: pointer; transition: background 100ms ease; outline: none; }
-        .dt-row:hover td { background: var(--accent-mute); }
-        .dt-row:focus-visible td { box-shadow: inset 0 0 0 2px var(--accent); }
-        ` : ''}
-        .dt-sort-btn:hover { color: var(--ink); }
-        .dt-skeleton {
-          height: 14px; border-radius: 4px;
-          background: linear-gradient(90deg, var(--line-soft) 25%, var(--line) 37%, var(--line-soft) 63%);
-          background-size: 400% 100%;
-          animation: dt-shimmer 1.4s ease infinite;
-        }
-        @keyframes dt-shimmer {
-          0% { background-position: 100% 0; }
-          100% { background-position: 0 0; }
-        }
-      `}</style>
     </div>
   )
 }

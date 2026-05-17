@@ -18,6 +18,7 @@ export function WeightBar({ used }: Props) {
                         '#3a8f6c'
 
   const remaining = 100 - value
+  // TODO i18n: no v2.criteria key for weight-bar overflow/free labels
   const remLabel =
     tone === 'danger' ? `превышение ${Math.abs(remaining).toFixed(1)}%` :
     `свободно ${Math.max(0, remaining).toFixed(1)}%`
@@ -41,6 +42,7 @@ export function WeightBar({ used }: Props) {
             {value.toFixed(1)}%
           </span>
           <span style={{ fontSize: 12, color: 'rgba(14,39,36,0.5)' }}>
+            {/* TODO i18n: no v2.criteria key for "из 100% распределено" */}
             из 100% распределено
           </span>
         </div>

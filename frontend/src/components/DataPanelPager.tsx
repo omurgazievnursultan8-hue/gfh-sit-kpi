@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 /**
  * Pagination footer for DataPanel — range label + numbered page buttons.
  * Extracted from the original UsersPage pager block; same cream-theme styling.
@@ -43,6 +45,7 @@ export function DataPanelPager({
   page, totalPages, rangeFrom, rangeTo, total, onPage,
   pageSize, pageSizeOptions, onPageSize,
 }: DataPanelPagerProps) {
+  const { t } = useTranslation()
   return (
     <div
       className="flex items-center justify-between gap-3 mt-3 flex-wrap"
@@ -54,19 +57,19 @@ export function DataPanelPager({
     >
       <div className="flex items-center gap-2.5 flex-wrap">
         <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
-          Показано{' '}
+          {t('dataPanel.shown')}{' '}
           <strong className="font-mono" style={{ color: 'var(--ink)' }}>
             {rangeFrom}–{rangeTo}
           </strong>{' '}
-          из{' '}
+          {t('dataPanel.of')}{' '}
           <strong className="font-mono" style={{ color: 'var(--ink)' }}>{total}</strong>
         </span>
 
         <label className="flex items-center gap-1.5" style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
-          На странице
+          {t('dataPanel.perPage')}
           <select
             value={pageSize}
-            aria-label="Строк на странице"
+            aria-label={t('dataPanel.rowsPerPage')}
             onChange={e => onPageSize(Number(e.target.value))}
             className="font-mono outline-none"
             style={{
@@ -85,7 +88,7 @@ export function DataPanelPager({
 
       {totalPages > 1 && (
         <div className="flex items-center gap-1.5">
-          <PagerButton disabled={page === 0} onClick={() => onPage(Math.max(0, page - 1))} ariaLabel="Предыдущая">
+          <PagerButton disabled={page === 0} onClick={() => onPage(Math.max(0, page - 1))} ariaLabel={t('dataPanel.prevPage')}>
             ←
           </PagerButton>
           {pageWindow(page, totalPages).map((item, idx) => {
@@ -107,7 +110,7 @@ export function DataPanelPager({
                 key={item}
                 onClick={() => onPage(item)}
                 aria-current={selected ? 'page' : undefined}
-                className="font-mono transition-colors"
+                className="dp-pager-btn font-mono transition-colors"
                 style={{
                   minWidth: 28, height: 28, padding: '0 8px', borderRadius: 4,
                   fontSize: 11, fontWeight: 600,
@@ -124,7 +127,7 @@ export function DataPanelPager({
           <PagerButton
             disabled={page >= totalPages - 1}
             onClick={() => onPage(Math.min(totalPages - 1, page + 1))}
-            ariaLabel="Следующая"
+            ariaLabel={t('dataPanel.nextPage')}
           >
             →
           </PagerButton>
@@ -144,7 +147,7 @@ function PagerButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      className="font-mono transition-colors"
+      className="dp-pager-btn font-mono transition-colors"
       style={{
         width: 28, height: 28, borderRadius: 4, fontSize: 12, fontWeight: 700,
         background: 'var(--surface)',

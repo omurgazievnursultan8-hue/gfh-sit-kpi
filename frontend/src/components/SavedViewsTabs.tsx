@@ -1,3 +1,5 @@
+import { useRef, useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { type SavedView, DEFAULT_VIEW_ID } from './panelStorage'
 
 interface SavedViewsTabsProps {
@@ -19,9 +21,36 @@ interface SavedViewsTabsProps {
  *  pattern). The built-in "Все" view is always first; custom views show a ×
  *  on hover; a trailing "+ Сохранить" tab captures the current state. */
 export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, onSave, onUpdate, onDelete }: SavedViewsTabsProps) {
-  const handleSave = () => {
-    const name = window.prompt('Название представления:')?.trim()
+  const { t } = useTranslation()
+  const [naming, setNaming] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const tablistRef = useRef<HTMLDivElement>(null)
+
+  // Ordered tab ids for roving-tabindex arrow navigation.
+  const tabIds = [DEFAULT_VIEW_ID, ...views.map(v => v.id)]
+
+  const confirmSave = () => {
+    const name = draftName.trim()
     if (name) onSave(name)
+    setNaming(false)
+    setDraftName('')
+  }
+  const cancelSave = () => {
+    setNaming(false)
+    setDraftName('')
+  }
+
+  // ArrowLeft/ArrowRight move focus between the role="tab" buttons.
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, id: string) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    e.preventDefault()
+    const idx = tabIds.indexOf(id)
+    if (idx < 0) return
+    const nextIdx = e.key === 'ArrowRight'
+      ? (idx + 1) % tabIds.length
+      : (idx - 1 + tabIds.length) % tabIds.length
+    const btns = tablistRef.current?.querySelectorAll<HTMLButtonElement>('button[role="tab"]')
+    btns?.[nextIdx]?.focus()
   }
 
   const tab = (id: string, label: string, deletable: boolean) => {
@@ -34,7 +63,9 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
           type="button"
           role="tab"
           aria-selected={selected}
+          tabIndex={selected ? 0 : -1}
           onClick={() => onApply(id)}
+          onKeyDown={e => onTabKeyDown(e, id)}
           className="inline-flex items-center gap-2 transition-colors"
           style={{
             height: 33, padding: deletable ? '0 4px 0 11px' : '0 11px',
@@ -65,8 +96,8 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
             type="button"
             className="svt-update inline-flex items-center justify-center transition-colors"
             onClick={() => onUpdate(id)}
-            aria-label={`Обновить представление: ${label}`}
-            title="Сохранить текущие фильтры в это представление"
+            aria-label={t('dataPanel.updateViewAria', { name: label })}
+            title={t('dataPanel.updateViewTitle')}
             style={{
               height: 22, padding: '0 8px', marginRight: 2, borderRadius: 6,
               fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
@@ -77,7 +108,7 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
             <svg viewBox="0 0 24 24" aria-hidden style={{ width: 11, height: 11, marginRight: 3, stroke: 'currentColor', strokeWidth: 2.4, fill: 'none' }}>
               <path d="M5 12l5 5L20 7" />
             </svg>
-            Обновить
+            {t('dataPanel.updateView')}
           </button>
         )}
         {deletable && (
@@ -85,7 +116,7 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
             type="button"
             className="svt-x inline-flex items-center justify-center transition-opacity"
             onClick={() => onDelete(id)}
-            aria-label={`Удалить представление: ${label}`}
+            aria-label={t('dataPanel.deleteViewAria', { name: label })}
             style={{
               width: 18, height: 18, marginRight: 4, borderRadius: 999,
               background: 'transparent', border: 'none', cursor: 'pointer',
@@ -104,36 +135,78 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
 
   return (
     <div
+      ref={tablistRef}
       role="tablist"
-      aria-label="Сохранённые представления"
+      aria-label={t('dataPanel.savedViews')}
       className="flex flex-wrap items-center gap-1 mb-3.5"
       style={{ borderBottom: '1px solid var(--line)' }}
     >
-      {tab(DEFAULT_VIEW_ID, 'Все', false)}
+      {tab(DEFAULT_VIEW_ID, t('dataPanel.viewAll'), false)}
       {views.map(v => tab(v.id, v.name, true))}
 
-      <button
-        type="button"
-        onClick={handleSave}
-        className="inline-flex items-center gap-1.5 transition-colors"
-        style={{
-          height: 33, padding: '0 11px', marginBottom: -1,
-          fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
-          color: 'var(--ink-faint)', background: 'transparent',
-          border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer',
-        }}
-      >
-        <svg viewBox="0 0 24 24" aria-hidden style={{ width: 13, height: 13, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
-          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        Сохранить
-      </button>
-
-      <style>{`
-        .svt-x { opacity: 0; }
-        .svt-tab:hover .svt-x, .svt-x:focus-visible { opacity: 1; }
-        .svt-x:hover { color: var(--ink); }
-      `}</style>
+      {naming ? (
+        <div className="inline-flex items-center gap-1" style={{ marginBottom: -1, padding: '0 4px' }}>
+          <input
+            autoFocus
+            value={draftName}
+            onChange={e => setDraftName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') { e.preventDefault(); confirmSave() }
+              else if (e.key === 'Escape') { e.preventDefault(); cancelSave() }
+            }}
+            placeholder={t('dataPanel.viewNamePlaceholder')}
+            className="svt-name-input outline-none"
+            style={{
+              height: 26, padding: '0 8px', borderRadius: 6,
+              fontSize: 12.5, fontFamily: 'inherit',
+              color: 'var(--ink)', background: 'var(--surface)',
+              border: '1px solid var(--line)',
+            }}
+          />
+          <button
+            type="button"
+            onClick={confirmSave}
+            style={{
+              height: 26, padding: '0 9px', borderRadius: 6,
+              fontSize: 12, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+              background: 'var(--accent)', color: 'var(--surface)',
+              border: '1px solid var(--accent)',
+            }}
+          >
+            {t('dataPanel.viewNameSave')}
+          </button>
+          <button
+            type="button"
+            onClick={cancelSave}
+            style={{
+              height: 26, padding: '0 9px', borderRadius: 6,
+              fontSize: 12, fontWeight: 500, fontFamily: 'inherit', cursor: 'pointer',
+              background: 'transparent', color: 'var(--ink-soft)',
+              border: '1px solid var(--line)',
+            }}
+          >
+            {t('dataPanel.viewNameCancel')}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setNaming(true)}
+          title={t('dataPanel.saveViewHint')}
+          className="inline-flex items-center gap-1.5 transition-colors"
+          style={{
+            height: 33, padding: '0 11px', marginBottom: -1,
+            fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+            color: 'var(--ink-faint)', background: 'transparent',
+            border: 'none', borderBottom: '2px solid transparent', cursor: 'pointer',
+          }}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden style={{ width: 13, height: 13, fill: 'none', stroke: 'currentColor', strokeWidth: 2 }}>
+            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          {t('dataPanel.saveView')}
+        </button>
+      )}
     </div>
   )
 }

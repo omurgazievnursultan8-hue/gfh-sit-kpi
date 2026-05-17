@@ -1,4 +1,5 @@
 import { useRef, useEffect, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 /**
  * DataPanel toolbar — search input, declarative filters, custom filter slot,
@@ -47,6 +48,7 @@ export function DataPanelToolbar({
   filters, filterValues, onFilter, filterSlot, columnsMenu,
   views, view, onView, toolbarActions,
 }: DataPanelToolbarProps) {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
 
   // `/` focuses the search box (⌘K is the global command palette).
@@ -82,8 +84,8 @@ export function DataPanelToolbar({
             ref={inputRef}
             value={search}
             onChange={e => onSearch(e.target.value)}
-            placeholder={searchPlaceholder ?? 'Поиск…'}
-            aria-label="Поиск"
+            placeholder={searchPlaceholder ?? t('dataPanel.search')}
+            aria-label={t('dataPanel.searchAria')}
             className="dp-search-input w-full outline-none"
             style={{
               height: 34, padding: '0 34px 0 33px',
@@ -162,7 +164,7 @@ export function DataPanelToolbar({
       {views.length > 1 && (
         <div
           role="group"
-          aria-label="Режим отображения"
+          aria-label={t('dataPanel.viewMode')}
           className="inline-flex items-center"
           style={{
             background: 'var(--surface-mute)', border: '1px solid var(--line)',
@@ -171,17 +173,18 @@ export function DataPanelToolbar({
         >
           {views.map(v => {
             const selected = view === v
+            const label = v === 'table' ? t('dataPanel.viewTable') : t('dataPanel.viewCards')
             return (
               <button
                 key={v}
                 type="button"
                 onClick={() => onView(v)}
                 aria-pressed={selected}
-                aria-label={v === 'table' ? 'Таблица' : 'Карточки'}
-                title={v === 'table' ? 'Таблица' : 'Карточки'}
+                aria-label={label}
+                title={label}
                 className="inline-flex items-center justify-center transition-colors"
                 style={{
-                  width: 30, height: 26, borderRadius: 6,
+                  width: 30, height: 26, borderRadius: 6, margin: -5, padding: 5, boxSizing: 'content-box',
                   background: selected ? 'var(--surface)' : 'transparent',
                   color: selected ? 'var(--accent)' : 'var(--ink-faint)',
                   border: `1px solid ${selected ? 'var(--line)' : 'transparent'}`,
@@ -195,13 +198,6 @@ export function DataPanelToolbar({
           })}
         </div>
       )}
-
-      <style>{`
-        .dp-search-input:focus, .dp-filter-select:focus {
-          border-color: var(--accent);
-          box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
-        }
-      `}</style>
     </div>
   )
 }

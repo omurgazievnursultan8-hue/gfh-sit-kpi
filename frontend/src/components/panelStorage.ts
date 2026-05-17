@@ -21,6 +21,7 @@ export const DEFAULT_VIEW_ID = '__default__'
 
 const stateKey = (k: string) => `${k}:state`
 const viewsKey = (k: string) => `${k}:views`
+const activeKey = (k: string) => `${k}:active`
 
 function readJson<T>(key: string): T | null {
   try {
@@ -51,6 +52,21 @@ export function loadSavedViews(key: string): SavedView[] {
 export function saveSavedViews(key: string, views: SavedView[]): void {
   try {
     localStorage.setItem(viewsKey(key), JSON.stringify(views))
+  } catch {
+    /* ignore — best-effort */
+  }
+}
+
+/** The id of the saved view last applied. Backward compatible — a missing
+ *  key resolves to DEFAULT_VIEW_ID at the call site. */
+export function loadActiveViewId(key: string): string {
+  const v = readJson<string>(activeKey(key))
+  return typeof v === 'string' ? v : DEFAULT_VIEW_ID
+}
+
+export function saveActiveViewId(key: string, id: string): void {
+  try {
+    localStorage.setItem(activeKey(key), JSON.stringify(id))
   } catch {
     /* ignore — best-effort */
   }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { FilterDef } from './DataPanelToolbar'
 
 interface ActiveFilterChipsProps {
@@ -10,6 +11,7 @@ interface ActiveFilterChipsProps {
 /** Row of removable chips, one per active filter value. Renders nothing when
  *  no filter is active. The filter's option label is resolved from FilterDef. */
 export function ActiveFilterChips({ filters, values, onClear, onClearAll }: ActiveFilterChipsProps) {
+  const { t } = useTranslation()
   const active = filters.filter(f => values[f.key])
   if (active.length === 0) return null
 
@@ -35,8 +37,8 @@ export function ActiveFilterChips({ filters, values, onClear, onClearAll }: Acti
           <button
             type="button"
             onClick={() => onClear(f.key)}
-            aria-label={`Убрать фильтр: ${f.label}`}
-            className="inline-flex items-center justify-center"
+            aria-label={t('dataPanel.removeFilter', { label: f.label })}
+            className="afc-x inline-flex items-center justify-center"
             style={{
               width: 16, height: 16, borderRadius: 999, border: 'none', cursor: 'pointer',
               background: 'transparent', color: 'inherit', padding: 0,
@@ -58,7 +60,7 @@ export function ActiveFilterChips({ filters, values, onClear, onClearAll }: Acti
           border: 'none', cursor: 'pointer', textDecoration: 'underline',
         }}
       >
-        Очистить все
+        {t('dataPanel.clearAll')}
       </button>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { User } from '../usersApi'
 import { Avatar, RoleBadge, StatusPill } from './usersMeta'
 import type { UserActions } from './UserRowMenu'
@@ -18,6 +19,7 @@ function formatDate(iso: string): string {
 
 // Right-side detail drawer — full profile + every management action in one place.
 export function UserDetailDrawer({ user, open, onClose, actions }: Props) {
+  const { t } = useTranslation()
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function UserDetailDrawer({ user, open, onClose, actions }: Props) {
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Профиль пользователя"
+        aria-label={t('v2.users.drawerProfile')}
         tabIndex={-1}
         className="users-drawer"
         style={{
@@ -68,12 +70,12 @@ export function UserDetailDrawer({ user, open, onClose, actions }: Props) {
               style={{ padding: '14px 18px', borderBottom: '1px solid var(--line-soft)' }}
             >
               <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                Профиль пользователя
+                {t('v2.users.drawerProfile')}
               </span>
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Закрыть"
+                aria-label={t('v2.users.drawerClose')}
                 className="inline-flex items-center justify-center transition-colors"
                 style={{
                   width: 32, height: 32, borderRadius: 8,
@@ -101,11 +103,12 @@ export function UserDetailDrawer({ user, open, onClose, actions }: Props) {
               </div>
 
               <dl style={{ marginTop: 22, display: 'grid', gap: 0 }}>
-                <Field label="Email">{user.email}</Field>
-                <Field label="Должность">{user.position ?? '—'}</Field>
-                <Field label="Подразделение">{user.unitId != null ? `№${user.unitId}` : '—'}</Field>
-                <Field label="Руководитель">{user.managerId != null ? `#${user.managerId}` : '—'}</Field>
-                <Field label="В системе с">{formatDate(user.createdAt)}</Field>
+                <Field label={t('v2.users.colEmail')}>{user.email}</Field>
+                <Field label={t('v2.users.fieldPosition')}>{user.position ?? '—'}</Field>
+                <Field label={t('v2.users.fieldOrgUnit')}>{user.unitId != null ? `№${user.unitId}` : '—'}</Field>
+                <Field label={t('v2.users.fieldManager')}>{user.managerId != null ? `#${user.managerId}` : '—'}</Field>
+                <Field label={t('v2.users.fieldSince')}>{formatDate(user.createdAt)}</Field>
+                {/* TODO i18n: "ID" — label kept as-is (no key, technical identifier) */}
                 <Field label="ID">{`#${String(user.id).padStart(3, '0')}`}</Field>
               </dl>
             </div>
@@ -129,20 +132,20 @@ export function UserDetailDrawer({ user, open, onClose, actions }: Props) {
                   border: '1px solid var(--accent-ink)', cursor: 'pointer',
                 }}
               >
-                Изменить данные
+                {t('v2.users.drawerEdit')}
               </button>
               <div className="flex gap-2">
                 {user.isActive ? (
                   <DrawerAction tone="danger" onClick={() => actions.onDeactivate(user)}>
-                    Деактивировать
+                    {t('v2.menuDeactivate')}
                   </DrawerAction>
                 ) : (
                   <DrawerAction tone="ok" onClick={() => actions.onReactivate(user)}>
-                    Активировать
+                    {t('v2.menuActivate')}
                   </DrawerAction>
                 )}
                 <DrawerAction tone="warn" onClick={() => actions.onResetPassword(user)}>
-                  Сбросить пароль
+                  {t('v2.menuResetPw')}
                 </DrawerAction>
               </div>
             </div>

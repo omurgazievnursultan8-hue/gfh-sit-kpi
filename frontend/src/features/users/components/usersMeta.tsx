@@ -2,14 +2,7 @@
 // avatar, status pill, role badge. Single source so table, card grid and
 // detail drawer stay visually consistent.
 
-export const ROLE_LABELS: Record<string, string> = {
-  ADMIN: 'Администратор',
-  CHAIRMAN: 'Председатель',
-  DEPUTY_CHAIRMAN: 'Зам. председателя',
-  HEAD_OF_DEPARTMENT: 'Нач. департамента',
-  HEAD_OF_DEPARTMENT_UNIT: 'Нач. отдела',
-  EMPLOYEE: 'Сотрудник',
-}
+import { useTranslation } from 'react-i18next'
 
 // Lower rank = higher in hierarchy. Drives role-column sorting.
 export const ROLE_RANK: Record<string, number> = {
@@ -63,6 +56,7 @@ export function Avatar({ name, role, active, size = 34 }: {
 }
 
 export function RoleBadge({ role }: { role: string }) {
+  const { t } = useTranslation()
   const a = roleAccent(role)
   return (
     <span
@@ -73,15 +67,16 @@ export function RoleBadge({ role }: { role: string }) {
         whiteSpace: 'nowrap',
       }}
     >
-      {ROLE_LABELS[role] ?? role}
+      {ROLE_RANK[role] != null ? t(`v2.rolesShort.${role}`) : role}
     </span>
   )
 }
 
 export function StatusPill({ active }: { active: boolean }) {
+  const { t } = useTranslation()
   const s = active
-    ? { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d', border: 'rgba(120,200,150,0.32)', text: 'Активен', dot: '#2f9e6d' }
-    : { bg: 'var(--danger-soft)', fg: 'var(--danger)', border: 'color-mix(in srgb,var(--danger) 30%,transparent)', text: 'Заблокирован', dot: 'var(--danger)' }
+    ? { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d', border: 'rgba(120,200,150,0.32)', text: t('v2.statusActive'), dot: '#2f9e6d' }
+    : { bg: 'var(--danger-soft)', fg: 'var(--danger)', border: 'color-mix(in srgb,var(--danger) 30%,transparent)', text: t('v2.statusBlocked'), dot: 'var(--danger)' }
   return (
     <span
       className="inline-flex items-center gap-1.5"

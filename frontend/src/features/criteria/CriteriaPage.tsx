@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Layout } from '../../components/Layout'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
@@ -10,34 +12,15 @@ import { OrgUnit, orgApi } from '../org/orgApi'
 
 const PANEL_KEY = 'gfh_criteria'
 
-const TABS: { value: CriteriaType; label: string }[] = [
-  { value: 'POSITIVE',   label: 'Положительные' },
-  { value: 'ANTI_BONUS', label: 'Антибонус' },
-]
-
-const SCOPE_OPTIONS = [
-  { value: '',       label: 'Все области' },
-  { value: 'global', label: 'Глобальные' },
-  { value: 'local',  label: 'Локальные' },
-]
-const STATUS_OPTIONS = [
-  { value: '',         label: 'Любой статус' },
-  { value: 'active',   label: 'Активные' },
-  { value: 'inactive', label: 'Неактивные' },
-]
-
-const FILTERS: FilterDef[] = [
-  { key: 'scope',  label: 'Область', type: 'select', options: SCOPE_OPTIONS },
-  { key: 'status', label: 'Статус',  type: 'select', options: STATUS_OPTIONS },
-]
-
 function flattenOrgTree(units: OrgUnit[]): OrgUnit[] {
   return units.flatMap(u => [u, ...flattenOrgTree(u.children || [])])
 }
 
-const scopeLabel = (c: Criteria) => (c.orgUnitId == null ? 'Глобальный' : (c.orgUnitNameRu ?? 'Локальный'))
+const scopeLabel = (c: Criteria, t: TFunction) =>
+  (c.orgUnitId == null ? t('v2.criteria.scopeGlobal') : (c.orgUnitNameRu ?? t('v2.criteria.scopeLocal')))
 
 function ScopePill({ c }: { c: Criteria }) {
+  const { t } = useTranslation()
   const global = c.orgUnitId == null
   const s = global
     ? { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7', border: 'rgba(120,150,200,0.32)' }
@@ -52,12 +35,13 @@ function ScopePill({ c }: { c: Criteria }) {
       }}
     >
       <span style={{ width: 6, height: 6, borderRadius: 999, background: s.fg, flexShrink: 0 }} />
-      {scopeLabel(c)}
+      {scopeLabel(c, t)}
     </span>
   )
 }
 
 export function CriteriaPage() {
+  const { t } = useTranslation()
   const [criteria, setCriteria] = useState<Criteria[]>([])
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
   const [loading, setLoading] = useState(true)
@@ -84,12 +68,30 @@ export function CriteriaPage() {
 
   const closeConfirm = () => setConfirmDialog(d => ({ ...d, open: false }))
 
+  const TABS: { value: CriteriaType; label: string }[] = useMemo(() => [
+    { value: 'POSITIVE',   label: t('v2.criteria.tabPositive') },
+    { value: 'ANTI_BONUS', label: t('v2.criteria.tabAntiBonus') },
+  ], [t])
+
+  const FILTERS: FilterDef[] = useMemo(() => [
+    { key: 'scope', label: t('v2.criteria.filterScope'), type: 'select', options: [
+      { value: '',       label: t('v2.criteria.allScopes') },
+      { value: 'global', label: t('v2.criteria.scopeGlobalFilter') },
+      { value: 'local',  label: t('v2.criteria.scopeLocalFilter') },
+    ] },
+    { key: 'status', label: t('v2.criteria.filterStatus'), type: 'select', options: [
+      { value: '',         label: t('v2.criteria.anyStatus') },
+      { value: 'active',   label: t('v2.criteria.statusActive') },
+      { value: 'inactive', label: t('v2.criteria.statusInactive') },
+    ] },
+  ], [t])
+
   const actions: CriteriaActions = {
     onEdit: (c) => setEditing(c),
     onDeactivate: (c) => setConfirmDialog({
       open: true,
-      title: 'Деактивировать критерий?',
-      description: `«${c.nameRu}» больше не будет применяться к новым оценкам.`,
+      title: t('v2.criteria.deactivateTitle'),
+      description: t('v2.criteria.deactivateMsg', { name: c.nameRu }),
       onConfirm: async () => {
         try { await criteriaApi.deactivate(c.id); loadCriteria() }
         finally { closeConfirm() }
@@ -102,17 +104,17 @@ export function CriteriaPage() {
 
   const columns: Column<Criteria>[] = [
     {
-      key: 'name', header: 'Критерий', sortable: true, hideable: false,
+      key: 'name', header: t('v2.criteria.colName'), sortable: true, hideable: false,
       render: (c) => (
         <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{c.nameRu}</span>
       ),
     },
     {
-      key: 'scope', header: 'Область', sortable: true,
+      key: 'scope', header: t('v2.criteria.colScope'), sortable: true,
       render: (c) => <ScopePill c={c} />,
     },
     {
-      key: 'weight', header: 'Вес', sortable: true, align: 'right',
+      key: 'weight', header: t('v2.criteria.colWeight'), sortable: true, align: 'right',
       render: (c) => (
         <span style={{ fontSize: 13, color: 'var(--ink-soft)' }} className="tabular-nums">
           {c.weight}%
@@ -120,11 +122,11 @@ export function CriteriaPage() {
       ),
     },
     {
-      key: 'status', header: 'Статус', sortable: true,
+      key: 'status', header: t('v2.criteria.colStatus'), sortable: true,
       render: (c) => <StatusPill active={c.active} />,
     },
     {
-      key: 'actions', header: 'Действия', align: 'right', srOnlyHeader: true, hideable: false,
+      key: 'actions', header: t('v2.menuActions'), align: 'right', srOnlyHeader: true, hideable: false,
       render: (c) => (
         <div onClick={e => e.stopPropagation()}>
           <CriteriaRowMenu criterion={c} actions={actions} />
@@ -145,7 +147,7 @@ export function CriteriaPage() {
 
   const comparator = (key: string) => (a: Criteria, b: Criteria): number => {
     switch (key) {
-      case 'scope':  return scopeLabel(a).localeCompare(scopeLabel(b), 'ru')
+      case 'scope':  return scopeLabel(a, t).localeCompare(scopeLabel(b, t), 'ru')
       case 'weight': return a.weight - b.weight
       case 'status': return Number(b.active) - Number(a.active)
       default:       return a.nameRu.localeCompare(b.nameRu, 'ru')
@@ -158,7 +160,7 @@ export function CriteriaPage() {
       onClick={() => { if (!c.frozen) setEditing(c) }}
       tabIndex={c.frozen ? undefined : 0}
       role={c.frozen ? undefined : 'button'}
-      aria-label={c.frozen ? undefined : `Редактировать критерий: ${c.nameRu}`}
+      aria-label={c.frozen ? undefined : t('v2.criteria.editAria', { name: c.nameRu })}
       onKeyDown={e => {
         if (!c.frozen && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditing(c) }
       }}
@@ -184,9 +186,9 @@ export function CriteriaPage() {
         </div>
       </div>
       <div className="flex flex-col gap-2.5" style={{ paddingTop: 12, borderTop: '1px dashed var(--line)' }}>
-        <CardMetaRow k="Область"><ScopePill c={c} /></CardMetaRow>
-        <CardMetaRow k="Вес"><span className="tabular-nums">{c.weight}%</span></CardMetaRow>
-        <CardMetaRow k="Статус"><StatusPill active={c.active} /></CardMetaRow>
+        <CardMetaRow k={t('v2.criteria.colScope')}><ScopePill c={c} /></CardMetaRow>
+        <CardMetaRow k={t('v2.criteria.colWeight')}><span className="tabular-nums">{c.weight}%</span></CardMetaRow>
+        <CardMetaRow k={t('v2.criteria.colStatus')}><StatusPill active={c.active} /></CardMetaRow>
       </div>
       <style>{`
         .criteria-card { transition: border-color 120ms ease, box-shadow 120ms ease; }
@@ -210,7 +212,7 @@ export function CriteriaPage() {
         <line x1="12" y1="5" x2="12" y2="19" />
         <line x1="5" y1="12" x2="19" y2="12" />
       </svg>
-      Добавить
+      {t('v2.criteria.add')}
     </button>
   )
 
@@ -221,10 +223,10 @@ export function CriteriaPage() {
       <div style={{ padding: '8px 0 32px' }}>
         <div className="mb-5">
           <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--ink)', margin: 0, letterSpacing: '-0.01em' }}>
-            Критерии оценки
+            {t('v2.criteria.title')}
           </h1>
           <p style={{ marginTop: 5, fontSize: 14, color: 'var(--ink-soft)', maxWidth: 600, lineHeight: 1.5 }}>
-            Управление критериями KPI: положительными показателями и антибонусами.
+            {t('v2.criteria.subtitle')}
           </p>
         </div>
 
@@ -257,11 +259,11 @@ export function CriteriaPage() {
           rows={visibleRows}
           rowKey={(c) => c.id}
           loading={loading}
-          caption="Список критериев"
-          empty="Совпадений не найдено"
+          caption={t('v2.criteria.caption')}
+          empty={t('v2.noMatches')}
           searchable
           searchText={searchText}
-          searchPlaceholder="Поиск по названию…"
+          searchPlaceholder={t('v2.criteria.searchPlaceholder')}
           filters={FILTERS}
           clientFilter={clientFilter}
           comparator={comparator}

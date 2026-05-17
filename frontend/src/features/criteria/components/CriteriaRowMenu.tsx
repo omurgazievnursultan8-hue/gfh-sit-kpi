@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Criteria } from '../criteriaApi'
 
 export interface CriteriaActions {
@@ -9,6 +10,7 @@ export interface CriteriaActions {
 
 // Compact `⋯` overflow menu — quick row actions.
 export function CriteriaRowMenu({ criterion, actions }: { criterion: Criteria; actions: CriteriaActions }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -32,7 +34,7 @@ export function CriteriaRowMenu({ criterion, actions }: { criterion: Criteria; a
     <div ref={wrapRef} className="relative inline-block">
       <button
         type="button"
-        aria-label="Действия"
+        aria-label={t('v2.menuActions')}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
@@ -64,15 +66,15 @@ export function CriteriaRowMenu({ criterion, actions }: { criterion: Criteria; a
             disabled={criterion.frozen}
             onClick={() => run(() => actions.onEdit(criterion))}
           >
-            Изменить
+            {t('v2.menuEdit')}
           </MenuItem>
           {criterion.active ? (
             <MenuItem tone="danger" onClick={() => run(() => actions.onDeactivate(criterion))}>
-              Деактивировать
+              {t('v2.menuDeactivate')}
             </MenuItem>
           ) : (
             <MenuItem tone="ok" onClick={() => run(() => actions.onReactivate(criterion))}>
-              Активировать
+              {t('v2.menuActivate')}
             </MenuItem>
           )}
         </div>

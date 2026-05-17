@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortDir } from './DataTable'
 import { DataPanelToolbar, type FilterDef, type ViewKind } from './DataPanelToolbar'
 import { DataPanelPager } from './DataPanelPager'
@@ -8,6 +9,7 @@ import { SavedViewsTabs } from './SavedViewsTabs'
 import {
   type SavedView, type PanelViewState, DEFAULT_VIEW_ID,
   loadPanelState, savePanelState, loadSavedViews, saveSavedViews, panelStateEquals,
+  loadActiveViewId, saveActiveViewId,
 } from './panelStorage'
 
 /**
@@ -117,6 +119,7 @@ export function DataPanel<T>({
   page: pageProp, totalElements, onStateChange,
   onRowClick, toolbarActions,
 }: DataPanelProps<T>) {
+  const { t } = useTranslation()
   const persisted = useMemo<PanelViewState | null>(
     () => (panelStorageKey ? loadPanelState(panelStorageKey) : null),
     [panelStorageKey],
@@ -139,14 +142,21 @@ export function DataPanel<T>({
   const [savedViews, setSavedViews] = useState<SavedView[]>(
     () => (panelStorageKey ? loadSavedViews(panelStorageKey) : []),
   )
-  const [activeViewId, setActiveViewId] = useState(DEFAULT_VIEW_ID)
+  const [activeViewId, setActiveViewId] = useState(
+    () => (panelStorageKey ? loadActiveViewId(panelStorageKey) : DEFAULT_VIEW_ID),
+  )
+
+  // Persist the active view id so a reload restores the selected tab.
+  useEffect(() => {
+    if (panelStorageKey) saveActiveViewId(panelStorageKey, activeViewId)
+  }, [panelStorageKey, activeViewId])
 
   // Keep `view` valid if the `views` prop set shrinks after mount.
   useEffect(() => {
     if (!views.includes(view)) setView(views[0])
   }, [views, view])
 
-  const page = mode === 'server' ? (pageProp ?? 0) : clientPage
+  const rawPage = mode === 'server' ? (pageProp ?? 0) : clientPage
 
   // Latest onStateChange kept in a ref so the state-reporting effects below can
   // call the current callback without listing it as a dependency (which would
@@ -265,23 +275,32 @@ export function DataPanel<T>({
     [columns, hiddenColumns],
   )
 
-  // Row count matching a view's search + filters, for the tab badges. Mirrors
-  // the search/filter steps of `processed`. Null in server mode (only the
-  // current page is in `rows`, so a total would be wrong).
-  const countForView = useCallback((viewId: string): number | null => {
-    if (mode === 'server') return null
-    const st = viewId === DEFAULT_VIEW_ID
-      ? defaultViewState
-      : savedViews.find(v => v.id === viewId)?.state
-    if (!st) return null
-    let out = rows
-    const q = st.search.trim().toLowerCase()
-    if (q && searchText) out = out.filter(r => searchText(r).toLowerCase().includes(q))
-    if (clientFilter && Object.keys(st.filters).length > 0) {
-      out = out.filter(r => clientFilter(r, st.filters))
+  // Row count matching each view's search + filters, for the tab badges.
+  // Mirrors the search/filter steps of `processed`. Computed once per render
+  // into a Map (instead of a per-tab callback) so SavedViewsTabs' repeated
+  // count() lookups are O(1). Empty map in server mode (only the current page
+  // is in `rows`, so a total would be wrong).
+  const countByViewId = useMemo<Map<string, number>>(() => {
+    const map = new Map<string, number>()
+    if (mode === 'server') return map
+    const compute = (st: PanelViewState): number => {
+      let out = rows
+      const q = st.search.trim().toLowerCase()
+      if (q && searchText) out = out.filter(r => searchText(r).toLowerCase().includes(q))
+      if (clientFilter && Object.keys(st.filters).length > 0) {
+        out = out.filter(r => clientFilter(r, st.filters))
+      }
+      return out.length
     }
-    return out.length
+    map.set(DEFAULT_VIEW_ID, compute(defaultViewState))
+    for (const v of savedViews) map.set(v.id, compute(v.state))
+    return map
   }, [mode, rows, searchText, clientFilter, defaultViewState, savedViews])
+
+  const countForView = useCallback(
+    (viewId: string): number | null => countByViewId.get(viewId) ?? null,
+    [countByViewId],
+  )
 
   // ---- client mode: search -> filter -> sort -> slice ----
   const processed = useMemo(() => {
@@ -302,6 +321,9 @@ export function DataPanel<T>({
 
   const total = mode === 'server' ? (totalElements ?? rows.length) : processed.length
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  // Clamp the effective page so a shrunk dataset cannot strand the view on an
+  // out-of-range empty page.
+  const page = Math.min(Math.max(0, rawPage), totalPages - 1)
   const visible = mode === 'server'
     ? rows
     : processed.slice(page * pageSize, page * pageSize + pageSize)
@@ -364,9 +386,9 @@ export function DataPanel<T>({
 
       {view === 'cards' && renderCard ? (
         loading ? (
-          <CardsPlaceholder>Загрузка…</CardsPlaceholder>
+          <CardsPlaceholder>{t('dataPanel.loading')}</CardsPlaceholder>
         ) : visible.length === 0 ? (
-          <CardsPlaceholder>{empty ?? 'Нет данных'}</CardsPlaceholder>
+          <CardsPlaceholder>{empty ?? t('dataPanel.noData')}</CardsPlaceholder>
         ) : (
           <div
             className="grid gap-3.5"
