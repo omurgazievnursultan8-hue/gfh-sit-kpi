@@ -42,13 +42,14 @@ export interface StatCardProps {
   zoneScore?: number | null      // present → number colour + zone tag
   gauge: StatCardGauge
   onClick?: () => void           // present → clickable div + keydown handler
+  className?: string             // appended to the root element's class
 }
 
 // ── component ───────────────────────────────────────────────────────────────
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, zoneScore, gauge, onClick,
+  unit, label, zoneScore, gauge, onClick, className,
 }: StatCardProps) {
   const { t } = useTranslation()
   const zone = scoreZone(zoneScore)
@@ -114,7 +115,7 @@ export function StatCard({
   if (onClick) {
     return (
       <div
-        className="dv3-card dv3-card-btn"
+        className={`dv3-card dv3-card-btn${className ? ` ${className}` : ''}`}
         role="button"
         tabIndex={0}
         onClick={onClick}
@@ -129,7 +130,7 @@ export function StatCard({
       </div>
     )
   }
-  return <section className="dv3-card">{body}</section>
+  return <section className={`dv3-card${className ? ` ${className}` : ''}`}>{body}</section>
 }
 
 // ── styles ──────────────────────────────────────────────────────────────────

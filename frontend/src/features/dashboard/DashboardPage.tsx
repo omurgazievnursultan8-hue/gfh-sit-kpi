@@ -171,80 +171,75 @@ export function DashboardPage() {
         <div className="dv3-grid">
 
           {/* SELF.RATING */}
-          <div className="dv3-col-4">
-            <StatCard
-              title="SELF.RATING" id="R01" loading={loading}
-              value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
-              gauge={{
-                pct: scorePct, variant: 'marker',
-                left: '0', right: '100',
-                current: scoreWhole !== null ? scoreWhole : '—',
-              }}
-            />
-          </div>
+          <StatCard
+            className="dv3-col-4"
+            title="SELF.RATING" id="R01" loading={loading}
+            value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
+            gauge={{
+              pct: scorePct, variant: 'marker',
+              left: '0', right: '100',
+              current: scoreWhole !== null ? scoreWhole : '—',
+            }}
+          />
 
           {/* EVAL.CYCLE.PROGRESS */}
-          <div className="dv3-col-4">
-            <StatCard
-              title="EVAL.CYCLE.PROGRESS" id="P01" loading={loading}
-              value={cycleDone}
-              unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
-              label={t('dashboard.evaluationsComplete')}
-              gauge={{
-                pct: cyclePct, variant: 'meta',
-                left: '0%',
-                center: <strong>{Math.round(cyclePct * 100)}%</strong>,
-                right: '100%',
-              }}
-            />
-          </div>
+          <StatCard
+            className="dv3-col-4"
+            title="EVAL.CYCLE.PROGRESS" id="P01" loading={loading}
+            value={cycleDone}
+            unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
+            label={t('dashboard.evaluationsComplete')}
+            gauge={{
+              pct: cyclePct, variant: 'meta',
+              left: '0%',
+              center: <strong>{Math.round(cyclePct * 100)}%</strong>,
+              right: '100%',
+            }}
+          />
 
           {/* APPEALS */}
-          <div className="dv3-col-4">
-            <StatCard
-              title="APPEALS" id="A01" loading={loading}
-              value={appealsPending}
-              label={t('dashboard.pendingAppeals')}
-              onClick={() => navigate('/my-tasks')}
-              gauge={{
-                pct: appealsPct, variant: 'meta',
-                left: '0%',
-                center: <><strong>{Math.round(appealsPct * 100)}%</strong> {t('dashboard.ofOpenTasks')}</>,
-                right: '100%',
-              }}
-            />
-          </div>
+          <StatCard
+            className="dv3-col-4"
+            title="APPEALS" id="A01" loading={loading}
+            value={appealsPending}
+            label={t('dashboard.pendingAppeals')}
+            onClick={() => navigate('/my-tasks')}
+            gauge={{
+              pct: appealsPct, variant: 'meta',
+              left: '0%',
+              center: <><strong>{Math.round(appealsPct * 100)}%</strong> {t('dashboard.ofOpenTasks')}</>,
+              right: '100%',
+            }}
+          />
 
           {/* NOTIFICATIONS */}
-          <div className="dv3-col-4">
-            <StatCard
-              title="NOTIFICATIONS" id="N01"
-              value={unreadCount}
-              label={t('dashboard.unread')}
-              onClick={() => navigate('/notifications')}
-              gauge={{
-                pct: notifPct, variant: 'meta',
-                left: '0',
-                center: <><strong>{unreadCount}</strong> / {NOTIF_CAP} {t('dashboard.inbox')}</>,
-                right: NOTIF_CAP,
-              }}
-            />
-          </div>
+          <StatCard
+            className="dv3-col-4"
+            title="NOTIFICATIONS" id="N01"
+            value={unreadCount}
+            label={t('dashboard.unread')}
+            onClick={() => navigate('/notifications')}
+            gauge={{
+              pct: notifPct, variant: 'meta',
+              left: '0',
+              center: <><strong>{unreadCount}</strong> / {NOTIF_CAP} {t('dashboard.inbox')}</>,
+              right: NOTIF_CAP,
+            }}
+          />
 
           {/* DELEGATIONS */}
-          <div className="dv3-col-4">
-            <StatCard
-              title="DELEGATIONS" id="D01" loading={loading}
-              value={delegActive}
-              label={t('dashboard.activeDelegations')}
-              gauge={{
-                pct: delegPct, variant: 'meta',
-                left: '0',
-                center: <><strong>{delegActive}</strong> / {delegTotal} {t('dashboard.total')}</>,
-                right: delegTotal,
-              }}
-            />
-          </div>
+          <StatCard
+            className="dv3-col-4"
+            title="DELEGATIONS" id="D01" loading={loading}
+            value={delegActive}
+            label={t('dashboard.activeDelegations')}
+            gauge={{
+              pct: delegPct, variant: 'meta',
+              left: '0',
+              center: <><strong>{delegActive}</strong> / {delegTotal} {t('dashboard.total')}</>,
+              right: delegTotal,
+            }}
+          />
 
         </div>
       </div>
