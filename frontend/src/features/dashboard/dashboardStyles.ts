@@ -1,7 +1,7 @@
-// Terminal / Swiss-grid aesthetic for DashboardV3Page.
+// Terminal / Swiss-grid aesthetic for DashboardPage.
 // Scoped under .dv3-root; follows the global app theme set on <html data-theme>.
 // Dark is the base/default; [data-theme="light"] overrides it.
-export const DASHBOARD_V3_CSS = `
+export const DASHBOARD_CSS = `
 .dv3-root {
   --dv3-green: #a3c585;
 

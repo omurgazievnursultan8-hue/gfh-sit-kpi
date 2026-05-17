@@ -8,7 +8,7 @@ import { UserRowMenu, type UserActions } from './components/UserRowMenu'
 import { Avatar, RoleBadge, StatusPill, ROLE_RANK } from './components/usersMeta'
 import { User, usersApi } from './usersApi'
 
-const PANEL_KEY = 'gfh_users_v2'
+const PANEL_KEY = 'gfh_users'
 
 const ROLE_OPTIONS = [
   { value: '',                        label: 'Все роли' },
@@ -30,7 +30,7 @@ const FILTERS: FilterDef[] = [
   { key: 'status', label: 'Статус', type: 'select', options: STATUS_OPTIONS },
 ]
 
-export function UsersPageV2() {
+export function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [editingUser, setEditingUser] = useState<User | null>(null)

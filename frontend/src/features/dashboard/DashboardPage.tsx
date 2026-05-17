@@ -11,7 +11,7 @@ import { periodsApi } from '../periods/periodsApi'
 import type { AppealPending } from '../periods/periodsApi'
 import { delegationsApi } from '../org/delegationsApi'
 import type { Delegation } from '../org/delegationsApi'
-import { DASHBOARD_V3_CSS } from './dashboardV3Styles'
+import { DASHBOARD_CSS } from './dashboardStyles'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function timeGreeting(): string {
@@ -53,7 +53,7 @@ function Card({ col, title, id, children }: {
 }
 
 // ── page ────────────────────────────────────────────────────────────────────
-export function DashboardV3Page() {
+export function DashboardPage() {
   usePageTitle('nav.dashboard')
   const navigate = useNavigate()
   const unreadCount = useSelector((s: RootState) => s.notifications.unreadCount)
@@ -117,7 +117,7 @@ export function DashboardV3Page() {
 
   return (
     <div className="dv3-root">
-      <style>{DASHBOARD_V3_CSS}</style>
+      <style>{DASHBOARD_CSS}</style>
 
       <div className="dv3-terminal">
         {/* a11y partial-failure announcer */}
