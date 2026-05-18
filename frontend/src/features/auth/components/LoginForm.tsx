@@ -74,6 +74,7 @@ export function LoginForm() {
           label={`01 — ${t('login.email')}`}
           icon={<UserIcon />}
           type="email"
+          placeholder={t('login.emailPh')}
           value={email}
           // Clear on blur (not every keystroke) — avoids role=alert banner
           // remount thrashing on each character + matching aria-live spam.

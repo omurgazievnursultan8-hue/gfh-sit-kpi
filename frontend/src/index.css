@@ -356,7 +356,6 @@ html, body {
   color: #0e1714;
   line-height: 1.2;
   font-family: Georgia, 'Times New Roman', serif;
-  text-transform: uppercase;
   text-align: center;
   min-height: 54px;
   display: flex;
@@ -552,7 +551,6 @@ html, body {
 .login-btn-submit:focus-visible,
 .login-btn-eye:focus-visible,
 .login-forgot:focus-visible,
-.login-notice-link:focus-visible,
 .login-lang-trigger:focus-visible,
 .login-lang-option:focus-visible {
   outline: 2px solid var(--gold, #c9a961);
