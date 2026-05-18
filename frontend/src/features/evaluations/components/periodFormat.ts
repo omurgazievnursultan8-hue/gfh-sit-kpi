@@ -10,7 +10,9 @@ interface YearMonth { y: number; m: number }
 function parseYearMonth(iso: string): YearMonth | null {
   const match = /^(\d{4})-(\d{2})/.exec(iso)
   if (!match) return null
-  return { y: Number(match[1]), m: Number(match[2]) - 1 }
+  const m = Number(match[2]) - 1
+  if (m < 0 || m > 11) return null
+  return { y: Number(match[1]), m }
 }
 
 /**
