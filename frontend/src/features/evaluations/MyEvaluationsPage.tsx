@@ -9,6 +9,9 @@ import {
   STATUS_LABELS, STATUS_ORDER, EvaluationStatusBadge,
 } from './components/evaluationStatus'
 import { StatusDistribution } from './components/StatusDistribution'
+import { ScoreTrend, SCORE_TREND_CSS } from './components/ScoreTrend'
+import { formatPeriodRange } from './components/periodFormat'
+import { periodsApi, type Period } from '../periods/periodsApi'
 
 /* ──────────────────────────────────────────────────────────────────────────
  * "Мои оценки" — rebuilt on shared components:
@@ -45,6 +48,7 @@ export function MyEvaluationsPage() {
   usePageTitle('nav.myEvaluations')
 
   const [all, setAll] = useState<Evaluation[]>([])
+  const [periodById, setPeriodById] = useState<Map<number, Period>>(new Map())
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
@@ -52,10 +56,18 @@ export function MyEvaluationsPage() {
 
   useEffect(() => {
     setLoading(true)
-    evaluationsApi.myHistory(0, 200)
-      .then(data => setAll(data.content))
-      .catch(() => setFailed(true))
-      .finally(() => { setLoading(false); setLoadedAt(new Date()) })
+    Promise.allSettled([
+      evaluationsApi.myHistory(0, 200),
+      periodsApi.list(),
+    ]).then(([history, periods]) => {
+      if (history.status === 'fulfilled') setAll(history.value.content)
+      else setFailed(true)
+      if (periods.status === 'fulfilled') {
+        setPeriodById(new Map(periods.value.map(p => [p.id, p])))
+      } else {
+        setFailed(true)
+      }
+    }).finally(() => { setLoading(false); setLoadedAt(new Date()) })
   }, [])
 
   // Live tick — refresh clock + relative time each minute.
@@ -118,7 +130,7 @@ export function MyEvaluationsPage() {
       render: (e) => (
         <div>
           <div className="font-display" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-            Период #{e.periodId}
+            {formatPeriodRange(periodById.get(e.periodId), e.periodId)}
           </div>
           <div className="font-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>
             {fmtDateShort(rowDate(e))}
@@ -166,7 +178,8 @@ export function MyEvaluationsPage() {
     },
   ]
 
-  const searchText = (e: Evaluation) => `Период #${e.periodId} ${e.evaluatorName}`
+  const searchText = (e: Evaluation) =>
+    `Период #${e.periodId} ${formatPeriodRange(periodById.get(e.periodId), e.periodId)} ${e.evaluatorName}`
 
   const clientFilter = (e: Evaluation, v: Record<string, string>) =>
     !v.status || e.status === v.status
@@ -176,8 +189,13 @@ export function MyEvaluationsPage() {
       case 'evaluator':  return a.evaluatorName.localeCompare(b.evaluatorName, 'ru')
       case 'status':     return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)
       case 'finalScore': return (a.finalScore ?? -1) - (b.finalScore ?? -1)
+      case 'period': {
+        const pa = periodById.get(a.periodId)
+        const pb = periodById.get(b.periodId)
+        if (pa && pb) return pa.startDate.localeCompare(pb.startDate)
+        return a.periodId - b.periodId
+      }
       case 'date':
-      case 'period':
       default:           return (rowDate(a) ?? '').localeCompare(rowDate(b) ?? '')
     }
   }
@@ -200,7 +218,7 @@ export function MyEvaluationsPage() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="font-display truncate" style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
-              Период #{e.periodId}
+              {formatPeriodRange(periodById.get(e.periodId), e.periodId)}
             </div>
             <div className="font-mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>
               {fmtDateShort(rowDate(e))}
@@ -227,6 +245,7 @@ export function MyEvaluationsPage() {
       <div className="dv3-root">
         <style>{DASHBOARD_CSS}</style>
         <style>{STAT_CARD_CSS}</style>
+        <style>{SCORE_TREND_CSS}</style>
 
         <div className="dv3-terminal">
           {/* HERO */}
@@ -310,6 +329,12 @@ export function MyEvaluationsPage() {
                 center: <><strong>{total > 0 ? Math.round((appealed / total) * 100) : 0}%</strong> всех</>,
                 right: total,
               }}
+            />
+            <ScoreTrend
+              className="dv3-col-12"
+              evaluations={all}
+              periodById={periodById}
+              loading={loading}
             />
           </div>
         </div>
