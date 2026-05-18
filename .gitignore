@@ -14,3 +14,4 @@ backups/
 # Local tooling / scratch
 .*/
 /*.png
+.superpowers/
