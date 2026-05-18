@@ -1,64 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { evaluationsApi, Evaluation, EvaluationStatus } from './evaluationsApi'
+import { evaluationsApi, type Evaluation, type EvaluationStatus } from './evaluationsApi'
 import { usePageTitle } from '../../context/PageContext'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import {
+  STATUS_LABELS, STATUS_ORDER, EvaluationStatusBadge,
+} from './components/evaluationStatus'
+import { StatusDistribution } from './components/StatusDistribution'
 
-/* ────────────────────────────────────────────────────────────────────────────
- * "Мои оценки" — visual language mirrored from PersonalDashboardPage:
- *   deep-green gradient hero w/ blueprint grid + gold accents · cream paper bg
- *   · white surface cards w/ 3px stripe top · JetBrains Mono labels · ledger.
+/* ──────────────────────────────────────────────────────────────────────────
+ * "Мои оценки" — rebuilt on shared components:
+ *   dashboard hero (.dv3-hero) + 4 gauge StatCards + users-page DataPanel.
  * ────────────────────────────────────────────────────────────────────────── */
 
-const STATUS_LABELS: Record<EvaluationStatus, string> = {
-  DRAFT: 'Черновик',
-  SUBMITTED: 'Ожидает реакции',
-  ACKNOWLEDGED: 'Подтверждено',
-  APPEALED: 'Апелляция',
-  CLOSED: 'Завершено',
-}
-
-interface StatusVisual { bg: string; fg: string; border: string; stripe: string }
-const STATUS_VISUALS: Record<EvaluationStatus, StatusVisual> = {
-  DRAFT:        { bg: 'rgba(120,120,120,0.12)', fg: '#6b6b6b',  border: 'rgba(120,120,120,0.32)', stripe: 'var(--line-strong)' },
-  SUBMITTED:    { bg: 'rgba(200,150,40,0.14)',  fg: '#9c7416',  border: 'rgba(200,150,40,0.32)',  stripe: 'var(--warn, #c89628)' },
-  ACKNOWLEDGED: { bg: 'rgba(26,117,88,0.14)',   fg: 'var(--accent-2)', border: 'rgba(26,117,88,0.32)',  stripe: 'var(--accent-2)' },
-  APPEALED:     { bg: 'rgba(200,80,60,0.14)',   fg: '#b04d3a',  border: 'rgba(200,80,60,0.32)',   stripe: 'var(--danger)' },
-  CLOSED:       { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7',  border: 'rgba(120,150,200,0.32)', stripe: 'var(--info)' },
-}
-
-const STATUS_ORDER: EvaluationStatus[] = ['SUBMITTED', 'APPEALED', 'DRAFT', 'ACKNOWLEDGED', 'CLOSED']
-
-function timeGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Доброе утро'
-  if (h < 18) return 'Добрый день'
-  return 'Добрый вечер'
-}
-
-function todayLine(): string {
-  const now = new Date()
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  return `${datePart} · ${hh}:${mm}`
-}
-
-function fmtDateShort(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
-}
-
-function fmt(n: number | null | undefined, digits = 1): string {
-  if (n === null || n === undefined || Number.isNaN(Number(n))) return '—'
-  return Number(n).toFixed(digits)
-}
-
-function signedDelta(n: number | null) {
-  if (n === null || Number.isNaN(n)) return { txt: '—', tone: 'flat' as const }
-  if (Math.abs(n) < 0.05) return { txt: '±0.0', tone: 'flat' as const }
-  return { txt: `${n > 0 ? '▲' : '▼'} ${Math.abs(n).toFixed(1)}`, tone: (n > 0 ? 'up' : 'down') as 'up' | 'down' }
-}
+const PANEL_KEY = 'gfh_my_evaluations'
+const PLACEHOLDER = '··'
 
 function plural(n: number, forms: [string, string, string]): string {
   const m10 = n % 10, m100 = n % 100
@@ -67,9 +25,20 @@ function plural(n: number, forms: [string, string, string]): string {
   return forms[2]
 }
 
-const PAGE_SIZE = 10
+function fmtDateShort(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
 
-/* ────────────────────────────────────────────────────────────────────────── */
+function rowDate(e: Evaluation): string | null {
+  return e.submittedAt ?? e.createdAt
+}
+
+function signedDelta(n: number | null): { txt: string; tone: 'up' | 'down' | 'flat' } {
+  if (n === null || Number.isNaN(n)) return { txt: '—', tone: 'flat' }
+  if (Math.abs(n) < 0.05) return { txt: '±0.0', tone: 'flat' }
+  return { txt: `${n > 0 ? '▲' : '▼'} ${Math.abs(n).toFixed(1)}`, tone: n > 0 ? 'up' : 'down' }
+}
 
 export function MyEvaluationsPage() {
   const navigate = useNavigate()
@@ -77,29 +46,41 @@ export function MyEvaluationsPage() {
 
   const [all, setAll] = useState<Evaluation[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<EvaluationStatus | 'ALL'>('ALL')
-  const [page, setPage] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
     setLoading(true)
     evaluationsApi.myHistory(0, 200)
       .then(data => setAll(data.content))
-      .finally(() => setLoading(false))
+      .catch(() => setFailed(true))
+      .finally(() => { setLoading(false); setLoadedAt(new Date()) })
   }, [])
 
-  // newest-first as API delivers; ledger row deltas computed against next (older) entry.
-  const visible = useMemo(
-    () => filter === 'ALL' ? all : all.filter(e => e.status === filter),
-    [all, filter],
-  )
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
-  useEffect(() => { setPage(0) }, [filter])
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
 
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
-  const pageRows = visible.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE)
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
 
-  /* ── stats from full set ───────────────────────────────────────────────── */
-  const counts: Record<EvaluationStatus, number> = useMemo(() => {
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const counts = useMemo<Record<EvaluationStatus, number>>(() => {
     const c: Record<EvaluationStatus, number> = {
       DRAFT: 0, SUBMITTED: 0, ACKNOWLEDGED: 0, APPEALED: 0, CLOSED: 0,
     }
@@ -111,25 +92,130 @@ export function MyEvaluationsPage() {
   const avgScore = scored.length
     ? scored.reduce((s, e) => s + (e.finalScore as number), 0) / scored.length
     : null
+  const avgWhole = avgScore !== null ? Math.round(avgScore) : null
 
-  // newest-vs-prev delta on finalScore (only across scored evaluations)
-  const latestDelta = useMemo(() => {
-    if (scored.length < 2) return null
-    return (scored[0].finalScore as number) - (scored[1].finalScore as number)
+  const total = all.length
+  const pending = counts.SUBMITTED
+  const appealed = counts.APPEALED
+  const closed = counts.CLOSED + counts.ACKNOWLEDGED
+
+  // Per-evaluation delta vs the next-older scored entry, computed from the
+  // API order (newest-first) so it is stable regardless of DataPanel sorting.
+  const deltaById = useMemo(() => {
+    const m = new Map<number, number | null>()
+    for (let i = 0; i < scored.length; i++) {
+      const cur = scored[i].finalScore as number
+      const prev = i + 1 < scored.length ? scored[i + 1].finalScore : null
+      m.set(scored[i].id, prev !== null ? cur - prev : null)
+    }
+    return m
   }, [scored])
 
-  const latestScored = scored[0] ?? null
-  const pendingReaction = counts.SUBMITTED
-  const appealedCount = counts.APPEALED
-  const closedCount = counts.CLOSED + counts.ACKNOWLEDGED
+  /* ── DataPanel config ──────────────────────────────────────────────────── */
+  const columns: Column<Evaluation>[] = [
+    {
+      key: 'period', header: 'Период', sortable: true,
+      render: (e) => (
+        <div>
+          <div className="font-display" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+            Период #{e.periodId}
+          </div>
+          <div className="font-mono" style={{ fontSize: 10, color: 'var(--ink-dim)' }}>
+            {fmtDateShort(rowDate(e))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'evaluator', header: 'Оценщик', sortable: true,
+      render: (e) => <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{e.evaluatorName}</span>,
+    },
+    {
+      key: 'date', header: 'Дата', sortable: true,
+      render: (e) => <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{fmtDateShort(rowDate(e))}</span>,
+    },
+    {
+      key: 'status', header: 'Статус', sortable: true,
+      render: (e) => <EvaluationStatusBadge status={e.status} />,
+    },
+    {
+      key: 'finalScore', header: 'Итог', sortable: true, align: 'right',
+      render: (e) => (
+        <span className="font-display tabular-nums" style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
+          {e.finalScore !== null ? Number(e.finalScore).toFixed(1) : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'delta', header: 'Δ', align: 'right',
+      render: (e) => {
+        const d = signedDelta(deltaById.get(e.id) ?? null)
+        const color = d.tone === 'up' ? 'var(--accent-2)' : d.tone === 'down' ? 'var(--danger)' : 'var(--ink-faint)'
+        return <span className="font-mono tabular-nums" style={{ fontSize: 11, fontWeight: 600, color }}>{d.txt}</span>
+      },
+    },
+  ]
 
-  /* ── loading / empty ───────────────────────────────────────────────────── */
-  if (loading) {
+  const FILTERS: FilterDef[] = [
+    {
+      key: 'status', label: 'Статус', type: 'select',
+      options: [
+        { value: '', label: 'Все статусы' },
+        ...STATUS_ORDER.map(s => ({ value: s, label: STATUS_LABELS[s] })),
+      ],
+    },
+  ]
+
+  const searchText = (e: Evaluation) => `Период #${e.periodId} ${e.evaluatorName}`
+
+  const clientFilter = (e: Evaluation, v: Record<string, string>) =>
+    !v.status || e.status === v.status
+
+  const comparator = (key: string) => (a: Evaluation, b: Evaluation): number => {
+    switch (key) {
+      case 'evaluator':  return a.evaluatorName.localeCompare(b.evaluatorName, 'ru')
+      case 'status':     return STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)
+      case 'finalScore': return (a.finalScore ?? -1) - (b.finalScore ?? -1)
+      case 'date':
+      case 'period':
+      default:           return (rowDate(a) ?? '').localeCompare(rowDate(b) ?? '')
+    }
+  }
+
+  const renderCard = (e: Evaluation): ReactNode => {
+    const d = signedDelta(deltaById.get(e.id) ?? null)
+    const deltaColor = d.tone === 'up' ? 'var(--accent-2)' : d.tone === 'down' ? 'var(--danger)' : 'var(--ink-faint)'
     return (
-      <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-        <div className="font-mono uppercase tracking-widest animate-pulse"
-             style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-          Загрузка…
+      <div
+        onClick={() => navigate(`/my-evaluations/${e.id}`)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); navigate(`/my-evaluations/${e.id}`) } }}
+        style={{
+          background: 'var(--surface)', border: '1px solid var(--line)',
+          borderRadius: 12, padding: 16, cursor: 'pointer',
+          display: 'flex', flexDirection: 'column', gap: 12,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-display truncate" style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+              Период #{e.periodId}
+            </div>
+            <div className="font-mono" style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>
+              {fmtDateShort(rowDate(e))}
+            </div>
+          </div>
+          <EvaluationStatusBadge status={e.status} />
+        </div>
+        <div className="flex items-end justify-between gap-3" style={{ paddingTop: 12, borderTop: '1px dashed var(--line)' }}>
+          <span className="truncate" style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>{e.evaluatorName}</span>
+          <span className="flex items-baseline gap-1.5">
+            <span className="font-display tabular-nums" style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)' }}>
+              {e.finalScore !== null ? Number(e.finalScore).toFixed(1) : '—'}
+            </span>
+            <span className="font-mono tabular-nums" style={{ fontSize: 11, fontWeight: 600, color: deltaColor }}>{d.txt}</span>
+          </span>
         </div>
       </div>
     )
@@ -137,640 +223,124 @@ export function MyEvaluationsPage() {
 
   /* ── render ────────────────────────────────────────────────────────────── */
   return (
-    <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-      <style>{`
-        @keyframes ev-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-        .ev-rise { opacity: 0; animation: ev-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
-        @media (max-width: 640px) { .ev-hero-grid { grid-template-columns: 1fr !important; gap: 20px !important } }
-        @media (max-width: 880px) { .ev-stats-grid { grid-template-columns: 1fr 1fr !important } .ev-bottom-grid { grid-template-columns: 1fr !important } }
-        @media (max-width: 520px) { .ev-stats-grid { grid-template-columns: 1fr !important } }
-      `}</style>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
 
-      {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden rounded-2xl mb-6 ev-rise"
-        style={{
-          background: 'linear-gradient(135deg, #0e2724 0%, #0d4d3f 55%, #1a7558 100%)',
-          color: '#ecf2f0',
-          padding: '28px 32px',
-          border: '1px solid #06120f',
-          boxShadow: 'var(--shadow-md)',
-          animationDelay: '0ms',
-        }}
-      >
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 24px),' +
-            'repeating-linear-gradient(90deg,rgba(255,255,255,.020) 0 1px,transparent 1px 24px)',
-        }} />
-        <div className="absolute pointer-events-none" style={{
-          top: -80, right: -80, width: 320, height: 320,
-          background: 'radial-gradient(circle,rgba(168,133,43,.14),transparent 60%)',
-        }} />
-
-        <div className="relative grid items-center gap-8 ev-hero-grid"
-             style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* left — text */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block rounded-full animate-pulse"
-                    style={{ width: 6, height: 6, background: 'var(--gold)' }} />
-              <span className="font-mono uppercase tracking-widest"
-                    style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.7)' }}>
-                {todayLine()}
-              </span>
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">EVAL.LEDGER</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
             </div>
-
-            <h1 className="font-display mb-1.5"
-                style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.01em', color: '#ecf2f0' }}>
-              Мои <span style={{ color: 'var(--gold)' }}>оценки</span>
-              <span style={{ color: 'rgba(245,236,210,0.55)', fontSize: 18, fontWeight: 400, marginLeft: 10 }}>
-                · история и статусы
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Мои оценки</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : total}
+                  </span>
+                  <span className="dv3-hero-metric-lab">всего</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : pending}
+                  </span>
+                  <span className="dv3-hero-metric-lab">ждут реакции</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
               </span>
-            </h1>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
 
-            <HeroProse
-              timeGreet={timeGreeting()}
-              total={all.length}
-              pending={pendingReaction}
-              appealed={appealedCount}
-              avgScore={avgScore}
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="SELF.AVG" id="A01" loading={loading}
+              value={avgWhole} unit="/ 100" zoneScore={avgWhole}
+              gauge={{
+                pct: avgScore !== null ? avgScore / 100 : 0, variant: 'marker',
+                left: '0', right: '100',
+                current: avgWhole !== null ? avgWhole : '—',
+              }}
             />
-
-            <div className="flex items-center gap-2 font-mono flex-wrap"
-                 style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.65)' }}>
-              <span className="font-mono font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
-                    style={{
-                      fontSize: 10,
-                      background: 'rgba(120,200,150,0.14)',
-                      color: '#7fd4a3',
-                      border: '1px solid rgba(120,200,150,0.32)',
-                    }}>
-                Журнал
-              </span>
-              <span>{all.length} {plural(all.length, ['запись', 'записи', 'записей'])}</span>
-              {latestScored && (
-                <>
-                  <span>·</span>
-                  <span>последняя · {fmtDateShort(latestScored.submittedAt ?? latestScored.createdAt)}</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* right — count badge stack */}
-          <div className="flex flex-col items-end gap-2">
-            <HeroBigBadge
-              big={String(all.length)}
-              cap="всего"
-              accent="#f5ecd2"
+            <StatCard
+              className="dv3-col-3"
+              title="EVAL.TOTAL" id="T01" loading={loading}
+              value={total} label="оценок"
+              gauge={{
+                pct: total > 0 ? closed / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{closed}</strong> закрыто</>,
+                right: total,
+              }}
             />
-            {pendingReaction > 0 && (
-              <HeroPill
-                label={`${pendingReaction} ${plural(pendingReaction, ['ждёт', 'ждут', 'ждут'])} реакции`}
-                tone="warn"
-              />
-            )}
-            {appealedCount > 0 && (
-              <HeroPill
-                label={`${appealedCount} ${plural(appealedCount, ['апелляция', 'апелляции', 'апелляций'])}`}
-                tone="danger"
-              />
-            )}
+            <StatCard
+              className="dv3-col-3"
+              title="PENDING" id="P01" loading={loading}
+              value={pending} label="ждут реакции"
+              gauge={{
+                pct: total > 0 ? pending / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((pending / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="APPEALS" id="X01" loading={loading}
+              value={appealed} label="апелляции"
+              onClick={() => navigate('/my-tasks')}
+              gauge={{
+                pct: total > 0 ? appealed / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((appealed / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ── STATS ROW ─────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 mb-5 ev-stats-grid ev-rise"
-           style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', animationDelay: '90ms' }}>
-        <StatCard
-          label="Всего оценок"
-          mainText={String(all.length)}
-          mainColor="var(--ink)"
-          stripe="var(--accent-2)"
-          delta={{ txt: closedCount > 0 ? `${closedCount} закр.` : '—', tone: 'flat' }}
-          footer={`за всю историю`}
+      {/* LIST + DISTRIBUTION */}
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+        <DataPanel<Evaluation>
+          mode="client"
+          columns={columns}
+          rows={all}
+          rowKey={(e) => e.id}
+          loading={loading}
+          caption="Журнал моих оценок"
+          empty="Нет оценок"
+          searchable
+          searchText={searchText}
+          searchPlaceholder="Поиск по периоду или оценщику"
+          filters={FILTERS}
+          clientFilter={clientFilter}
+          comparator={comparator}
+          defaultSort={{ key: 'date', dir: 'desc' }}
+          views={['table', 'cards']}
+          renderCard={renderCard}
+          panelStorageKey={PANEL_KEY}
+          columnConfig
+          onRowClick={(e) => navigate(`/my-evaluations/${e.id}`)}
         />
-        <StatCard
-          label="Средний итог"
-          mainText={fmt(avgScore)}
-          mainColor="var(--ink)"
-          stripe="var(--info)"
-          delta={signedDelta(latestDelta)}
-          deltaSuffix={latestDelta !== null ? 'последний vs пред.' : undefined}
-          footer={`по ${scored.length} ${plural(scored.length, ['оценке', 'оценкам', 'оценкам'])} с баллом`}
-        />
-        <StatCard
-          label="Ожидают реакции"
-          mainText={String(pendingReaction)}
-          mainColor={pendingReaction > 0 ? '#9c7416' : 'var(--ink-faint)'}
-          stripe="var(--warn, #c89628)"
-          delta={{ txt: pendingReaction > 0 ? 'действуйте' : 'ок', tone: pendingReaction > 0 ? 'down' : 'up' }}
-          footer="статус SUBMITTED"
-        />
-        <StatCard
-          label="Апелляции"
-          mainText={String(appealedCount)}
-          mainColor={appealedCount > 0 ? 'var(--danger)' : 'var(--ink-faint)'}
-          stripe={appealedCount > 0 ? 'var(--danger)' : 'var(--line-strong)'}
-          delta={{ txt: appealedCount > 0 ? 'в работе' : '—', tone: 'flat' }}
-          footer="статус APPEALED"
-        />
+
+        <StatusDistribution counts={counts} total={total} />
       </div>
-
-      {/* ── LEDGER + DISTRIBUTION ─────────────────────────────────────────── */}
-      <div className="grid gap-3 ev-bottom-grid ev-rise"
-           style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', animationDelay: '180ms' }}>
-
-        <Card title="Журнал оценок"
-              pill="История"
-              pillSpec={{ bg: 'rgba(168,133,43,0.14)', fg: 'var(--gold)', border: 'rgba(168,133,43,0.32)' }}
-              stripe="var(--gold)"
-              rightMetric={`${visible.length}/${all.length}`}>
-          <FilterChips
-            value={filter}
-            onChange={setFilter}
-            counts={counts}
-            totalAll={all.length}
-          />
-
-          {visible.length === 0 ? (
-            <div className="font-mono py-10 text-center"
-                 style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.08em' }}>
-              Нет оценок в выбранном статусе
-            </div>
-          ) : (
-            <>
-              <EvaluationLedger
-                rows={pageRows}
-                allOrdered={visible}
-                offset={page * PAGE_SIZE}
-                onOpen={id => navigate(`/my-evaluations/${id}`)}
-              />
-              {totalPages > 1 && (
-                <Pagination page={page} totalPages={totalPages} onChange={setPage} />
-              )}
-            </>
-          )}
-        </Card>
-
-        <Card title="Распределение"
-              pill="Статусы"
-              pillSpec={{ bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7', border: 'rgba(120,150,200,0.32)' }}
-              stripe="var(--info)"
-              rightMetric={`${all.length} ${plural(all.length, ['запись', 'записи', 'записей'])}`}>
-          <StatusDistribution counts={counts} total={all.length} />
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Hero subcomponents
- * ────────────────────────────────────────────────────────────────────────── */
-
-function HeroProse({ timeGreet, total, pending, appealed, avgScore }: {
-  timeGreet: string
-  total: number
-  pending: number
-  appealed: number
-  avgScore: number | null
-}) {
-  const emphasis = { color: '#f5ecd2', fontWeight: 600 } as const
-
-  if (total === 0) {
-    return (
-      <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-        <p style={{ margin: 0 }}>{timeGreet}. Оценки появятся здесь после первого закрытого периода.</p>
-      </div>
-    )
-  }
-
-  const totalWord = plural(total, ['оценка', 'оценки', 'оценок'])
-
-  return (
-    <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-      <p style={{ margin: 0 }}>
-        {timeGreet}. В журнале <strong style={emphasis}>{total} {totalWord}</strong>
-        {avgScore !== null && (
-          <> · средний итог{' '}
-            <strong style={emphasis}>{avgScore.toFixed(1)}</strong></>
-        )}
-        .
-      </p>
-      {(pending > 0 || appealed > 0) && (
-        <p style={{ margin: 0, marginTop: 2 }}>
-          {pending > 0 && (
-            <>Требуют вашей реакции{' '}
-              <strong style={{ color: '#f0caa4', fontWeight: 600 }}>{pending}</strong>
-              {appealed > 0 ? ', ' : '. '}
-            </>
-          )}
-          {appealed > 0 && (
-            <>в апелляции{' '}
-              <strong style={{ color: '#f0a4a4', fontWeight: 600 }}>{appealed}</strong>.
-            </>
-          )}
-        </p>
-      )}
-    </div>
-  )
-}
-
-function HeroBigBadge({ big, cap, accent }: { big: string; cap: string; accent: string }) {
-  return (
-    <div
-      className="rounded-lg flex flex-col items-center"
-      style={{
-        padding: '14px 22px',
-        background: 'rgba(0,0,0,0.18)',
-        border: '1px solid rgba(245,236,210,0.18)',
-        boxShadow: 'inset 0 0 0 1px rgba(168,133,43,0.10)',
-        minWidth: 120,
-      }}
-    >
-      <span className="font-display tabular-nums"
-            style={{ fontSize: 44, fontWeight: 600, color: accent, lineHeight: 1, letterSpacing: '-0.02em' }}>
-        {big}
-      </span>
-      <span className="font-mono uppercase tracking-widest mt-1"
-            style={{ fontSize: 10, color: 'rgba(245,236,210,0.6)' }}>
-        {cap}
-      </span>
-    </div>
-  )
-}
-
-function HeroPill({ label, tone }: { label: string; tone: 'warn' | 'danger' }) {
-  const spec = tone === 'warn'
-    ? { bg: 'rgba(200,150,40,0.22)', fg: '#f0caa4', border: 'rgba(200,150,40,0.45)' }
-    : { bg: 'rgba(200,80,60,0.22)', fg: '#f0a4a4', border: 'rgba(200,80,60,0.45)' }
-  return (
-    <span className="font-mono font-semibold uppercase tracking-widest px-2 py-1 rounded"
-          style={{
-            fontSize: 10,
-            background: spec.bg,
-            color: spec.fg,
-            border: `1px solid ${spec.border}`,
-          }}>
-      {label}
-    </span>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Card shell (matches PersonalDashboardPage)
- * ────────────────────────────────────────────────────────────────────────── */
-
-interface PillSpec { bg: string; fg: string; border: string }
-
-function Card({
-  title, pill, pillSpec, stripe, rightMetric, children, className = '',
-}: {
-  title: string
-  pill?: string
-  pillSpec?: PillSpec
-  stripe: string
-  rightMetric?: string
-  children: React.ReactNode
-  className?: string
-}) {
-  return (
-    <div
-      className={`relative overflow-hidden rounded-lg ${className}`}
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '16px 18px',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-display truncate"
-                style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
-            {title}
-          </span>
-          {pill && pillSpec && (
-            <span className="font-mono font-semibold uppercase tracking-widest"
-                  style={{
-                    fontSize: 9.5, padding: '2px 7px', borderRadius: 4,
-                    background: pillSpec.bg, color: pillSpec.fg,
-                    border: `1px solid ${pillSpec.border}`,
-                  }}>
-              {pill}
-            </span>
-          )}
-        </div>
-        {rightMetric && (
-          <span className="font-mono font-semibold"
-                style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-            {rightMetric}
-          </span>
-        )}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Stat card (same contract as PersonalDashboardPage)
- * ────────────────────────────────────────────────────────────────────────── */
-
-function StatCard({
-  label, mainText, mainColor, stripe, delta, deltaSuffix, footer,
-}: {
-  label: string
-  mainText: string
-  mainColor: string
-  stripe: string
-  delta: { txt: string; tone: 'up' | 'down' | 'flat' }
-  deltaSuffix?: string
-  footer: string
-}) {
-  const deltaColor =
-    delta.tone === 'up' ? 'var(--accent-2)' :
-    delta.tone === 'down' ? 'var(--danger)' :
-    'var(--ink-faint)'
-  return (
-    <div
-      className="relative overflow-hidden rounded-lg"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '14px 16px',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="font-mono uppercase tracking-widest mb-2"
-           style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="font-display tabular-nums"
-              style={{ fontSize: 30, fontWeight: 600, color: mainColor, lineHeight: 1, letterSpacing: '-0.01em' }}>
-          {mainText}
-        </span>
-        <span className="font-mono tabular-nums" style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-          {delta.txt}
-        </span>
-      </div>
-      {deltaSuffix && (
-        <div className="font-mono mt-0.5"
-             style={{ fontSize: 9.5, color: 'var(--ink-dim)', letterSpacing: '0.04em' }}>
-          {deltaSuffix}
-        </div>
-      )}
-      <div className="font-mono mt-2"
-           style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-        {footer}
-      </div>
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Filter chips
- * ────────────────────────────────────────────────────────────────────────── */
-
-function FilterChips({
-  value, onChange, counts, totalAll,
-}: {
-  value: EvaluationStatus | 'ALL'
-  onChange: (v: EvaluationStatus | 'ALL') => void
-  counts: Record<EvaluationStatus, number>
-  totalAll: number
-}) {
-  const items: Array<{ key: EvaluationStatus | 'ALL'; label: string; count: number }> = [
-    { key: 'ALL', label: 'Все', count: totalAll },
-    ...STATUS_ORDER
-      .filter(s => counts[s] > 0)
-      .map(s => ({ key: s, label: STATUS_LABELS[s], count: counts[s] })),
-  ]
-
-  return (
-    <div className="flex flex-wrap gap-1.5 mb-3">
-      {items.map(it => {
-        const active = value === it.key
-        const v = it.key !== 'ALL' ? STATUS_VISUALS[it.key as EvaluationStatus] : null
-        return (
-          <button
-            key={it.key}
-            type="button"
-            onClick={() => onChange(it.key)}
-            className="font-mono uppercase tracking-widest transition-all"
-            style={{
-              fontSize: 10,
-              padding: '4px 9px',
-              borderRadius: 4,
-              fontWeight: 600,
-              cursor: 'pointer',
-              background: active
-                ? (v ? v.bg : 'var(--ink)')
-                : 'transparent',
-              color: active
-                ? (v ? v.fg : 'var(--bg)')
-                : 'var(--ink-soft)',
-              border: `1px solid ${active ? (v ? v.border : 'var(--ink)') : 'var(--line)'}`,
-            }}
-          >
-            {it.label}
-            <span className="ml-1.5 tabular-nums" style={{ opacity: 0.7 }}>{it.count}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Ledger
- * ────────────────────────────────────────────────────────────────────────── */
-
-function EvaluationLedger({
-  rows, allOrdered, offset, onOpen,
-}: {
-  rows: Evaluation[]
-  allOrdered: Evaluation[]
-  offset: number
-  onOpen: (id: number) => void
-}) {
-  // For delta computation, find each row's index in the *scored* subset of allOrdered
-  // so we can compare against the previous (older) scored entry.
-  const scored = allOrdered.filter(e => e.finalScore !== null)
-  const scoredIdxById = new Map(scored.map((e, i) => [e.id, i] as const))
-
-  return (
-    <div className="divide-y" style={{ borderColor: 'var(--line-soft)' }}>
-      {rows.map((e, i) => {
-        const v = STATUS_VISUALS[e.status]
-        const sIdx = scoredIdxById.get(e.id)
-        const prev = sIdx !== undefined && sIdx + 1 < scored.length
-          ? scored[sIdx + 1]
-          : null
-        const delta = (e.finalScore !== null && prev?.finalScore !== null && prev !== null)
-          ? Number(e.finalScore) - Number(prev.finalScore)
-          : null
-        const d = signedDelta(delta)
-        const deltaColor =
-          d.tone === 'up' ? 'var(--accent-2)' :
-          d.tone === 'down' ? 'var(--danger)' :
-          'var(--ink-faint)'
-
-        return (
-          <div
-            key={e.id}
-            onClick={() => onOpen(e.id)}
-            onKeyDown={ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onOpen(e.id) } }}
-            role="button"
-            tabIndex={0}
-            className="grid grid-cols-12 items-center gap-2 py-2.5 cursor-pointer transition-colors hover:bg-black/[0.02] focus:bg-black/[0.04] focus:outline-none"
-            style={{ borderColor: 'var(--line-soft)' }}
-          >
-            <div className="col-span-1 font-mono tabular-nums"
-                 style={{ fontSize: 10, color: 'var(--ink-dim)' }}>
-              {String(offset + i + 1).padStart(2, '0')}
-            </div>
-
-            <div className="col-span-3 min-w-0">
-              <div className="font-display truncate"
-                   style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
-                Период #{e.periodId}
-              </div>
-              <div className="font-mono"
-                   style={{ fontSize: 10, color: 'var(--ink-dim)' }}>
-                {fmtDateShort(e.submittedAt ?? e.createdAt)}
-              </div>
-            </div>
-
-            <div className="col-span-3 min-w-0">
-              <div className="font-mono uppercase tracking-wider"
-                   style={{ fontSize: 9.5, color: 'var(--ink-faint)', fontWeight: 600 }}>
-                Оценщик
-              </div>
-              <div className="truncate"
-                   style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                {e.evaluatorName}
-              </div>
-            </div>
-
-            <div className="col-span-2 flex justify-start">
-              <span className="font-mono font-semibold uppercase tracking-widest"
-                    style={{
-                      fontSize: 9.5, padding: '2px 7px', borderRadius: 4,
-                      background: v.bg, color: v.fg,
-                      border: `1px solid ${v.border}`,
-                    }}>
-                {STATUS_LABELS[e.status]}
-              </span>
-            </div>
-
-            <div className="col-span-2 font-display tabular-nums text-right"
-                 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
-              {e.finalScore !== null ? Number(e.finalScore).toFixed(1) : '—'}
-            </div>
-
-            <div className="col-span-1 font-mono tabular-nums text-right"
-                 style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-              {d.txt}
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Pagination
- * ────────────────────────────────────────────────────────────────────────── */
-
-function Pagination({ page, totalPages, onChange }: {
-  page: number
-  totalPages: number
-  onChange: (p: number) => void
-}) {
-  return (
-    <div className="flex justify-center gap-1 mt-4">
-      {Array.from({ length: totalPages }, (_, i) => (
-        <button
-          key={i}
-          type="button"
-          onClick={() => onChange(i)}
-          className="font-mono tabular-nums transition-all"
-          style={{
-            width: 30, height: 28,
-            borderRadius: 4,
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-            background: i === page ? 'var(--ink)' : 'transparent',
-            color: i === page ? 'var(--bg)' : 'var(--ink-soft)',
-            border: `1px solid ${i === page ? 'var(--ink)' : 'var(--line)'}`,
-          }}>
-          {i + 1}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Status distribution bars
- * ────────────────────────────────────────────────────────────────────────── */
-
-function StatusDistribution({ counts, total }: {
-  counts: Record<EvaluationStatus, number>
-  total: number
-}) {
-  if (total === 0) {
-    return (
-      <div className="font-mono"
-           style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-        Нет данных.
-      </div>
-    )
-  }
-
-  // dominant-first by count, but keep status order as tiebreaker
-  const rows = STATUS_ORDER
-    .map(s => ({ status: s, count: counts[s] }))
-    .filter(r => r.count > 0)
-    .sort((a, b) => b.count - a.count)
-
-  return (
-    <div>
-      {rows.map(r => {
-        const pct = (r.count / total) * 100
-        const v = STATUS_VISUALS[r.status]
-        return (
-          <div key={r.status} className="mb-2.5 last:mb-0">
-            <div className="flex items-baseline justify-between mb-1 gap-2">
-              <span className="truncate"
-                    style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 500 }}>
-                {STATUS_LABELS[r.status]}
-              </span>
-              <span className="font-mono tabular-nums whitespace-nowrap"
-                    style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600 }}>
-                {r.count}
-                <span className="ml-1" style={{ color: 'var(--ink-dim)', fontWeight: 400 }}>
-                  · {pct.toFixed(0)}%
-                </span>
-              </span>
-            </div>
-            <div className="relative overflow-hidden rounded-full"
-                 style={{ height: 6, background: 'var(--bg-soft, #ebe6db)' }}>
-              <div className="absolute inset-y-0 left-0 transition-all"
-                   style={{ width: `${pct}%`, background: v.stripe, borderRadius: 999 }} />
-            </div>
-          </div>
-        )
-      })}
-    </div>
+    </>
   )
 }
