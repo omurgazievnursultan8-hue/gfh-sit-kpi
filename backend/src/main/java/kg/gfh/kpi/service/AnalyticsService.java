@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.jdbc.core.RowCallbackHandler;
 
 import java.math.BigDecimal;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +30,8 @@ public class AnalyticsService {
 
     private final JdbcTemplate jdbc;
     private final UserRepository userRepository;
+    private final RatingService ratingService;
+    private final ProductionCalendarService calendarService;
 
     @Cacheable(value = "personalAnalytics", key = "#userId")
     public PersonalAnalyticsResponse getPersonalAnalytics(Long userId) {
@@ -109,15 +112,21 @@ public class AnalyticsService {
                 "Пользователь не найден", "Колдонуучу табылган жок"));
 
         // 1. Find target evaluation: active period first, else latest scored
-        record EvalRow(long id, long periodId, double score, String type, int year, int month) {}
+        record EvalRow(long id, long periodId, double score, String type, int year, int month,
+                       String evaluatorName, String evaluatorUnit, String evaluatorPosition) {}
         List<EvalRow> evalRows = jdbc.query("""
             SELECT e.id, e.period_id,
                    COALESCE(e.final_score, 0)::float        AS score,
                    ep.type,
                    EXTRACT(YEAR  FROM ep.start_date)::int   AS yr,
-                   EXTRACT(MONTH FROM ep.start_date)::int   AS mo
+                   EXTRACT(MONTH FROM ep.start_date)::int   AS mo,
+                   ev_u.full_name                          AS evaluator_name,
+                   ev_ou.name_ru                           AS evaluator_unit,
+                   ev_u.position                           AS evaluator_position
             FROM evaluations e
             JOIN evaluation_periods ep ON ep.id = e.period_id
+            LEFT JOIN users ev_u ON ev_u.id = e.evaluator_id
+            LEFT JOIN org_units ev_ou ON ev_ou.id = ev_u.unit_id
             WHERE e.evaluatee_id = ?
               AND e.status NOT IN ('DRAFT')
               AND (ep.status = 'ACTIVE' OR e.final_score IS NOT NULL)
@@ -127,7 +136,9 @@ public class AnalyticsService {
             """,
             (rs, i) -> new EvalRow(
                 rs.getLong("id"), rs.getLong("period_id"), rs.getDouble("score"),
-                rs.getString("type"), rs.getInt("yr"), rs.getInt("mo")
+                rs.getString("type"), rs.getInt("yr"), rs.getInt("mo"),
+                rs.getString("evaluator_name"), rs.getString("evaluator_unit"),
+                rs.getString("evaluator_position")
             ), userId);
 
         if (evalRows.isEmpty()) return null;
@@ -222,10 +233,23 @@ public class AnalyticsService {
         double antiBonusTotal = antiBonuses.stream()
             .mapToDouble(ScorecardResponse.CriteriaScoreDto::score).sum();
 
+        // Rating breakdown — formula + P/A aggregates that produced totalScore.
+        int workingDays = 0;
+        try {
+            workingDays = calendarService.getWorkingDays(YearMonth.of(ev.year(), ev.month()));
+        } catch (ApiException ignored) {
+            // calendar not configured — only FORMULA_3 needs it; fall back to 0
+        }
+        RatingService.RatingBreakdown breakdown = ratingService.explain(ev.id(), workingDays);
+
         return new ScorecardResponse(
             ev.periodId(), periodLabel, totalScore, computeGrade(totalScore),
             totalScore - GOAL_SCORE, vsPrevPeriod, prevPeriodLabel, rank,
-            antiBonusTotal, positiveCriteria, antiBonuses
+            antiBonusTotal, positiveCriteria, antiBonuses,
+            breakdown.formula().name(),
+            breakdown.positiveSum().doubleValue(),
+            breakdown.antiBonusSum().doubleValue(),
+            ev.evaluatorName(), ev.evaluatorUnit(), ev.evaluatorPosition()
         );
     }
 

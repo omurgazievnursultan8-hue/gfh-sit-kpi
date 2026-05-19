@@ -42,6 +42,7 @@ export interface StatCardProps {
   zoneScore?: number | null      // present → number colour + zone tag
   gauge: StatCardGauge
   onClick?: () => void           // present → clickable div + keydown handler
+  active?: boolean               // onClick cards: marks the card's panel open
   className?: string             // appended to the root element's class
 }
 
@@ -49,7 +50,7 @@ export interface StatCardProps {
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, zoneScore, gauge, onClick, className,
+  unit, label, zoneScore, gauge, onClick, active, className,
 }: StatCardProps) {
   const { t } = useTranslation()
   const zone = scoreZone(zoneScore)
@@ -71,18 +72,16 @@ export function StatCard({
       </div>
       <div className="dv3-card-body">
         <div className="dv3-kpi">
-          <div>
-            <div className={numClass}>
-              {displayValue}
-              {unit && <span className="dv3-kpi-unit">{unit}</span>}
-              {label && <span className="dv3-kpi-label">{label}</span>}
-            </div>
-            {!loading && zone.labelKey && (
-              <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
-                {t(zone.labelKey)}
-              </span>
-            )}
+          <div className={numClass}>
+            {displayValue}
+            {unit && <span className="dv3-kpi-unit">{unit}</span>}
+            {label && <span className="dv3-kpi-label">{label}</span>}
           </div>
+          {!loading && zone.labelKey && (
+            <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
+              {t(zone.labelKey)}
+            </span>
+          )}
         </div>
         <div className="dv3-gauge">
           <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
@@ -118,6 +117,7 @@ export function StatCard({
         className={`dv3-card dv3-card-btn${className ? ` ${className}` : ''}`}
         role="button"
         tabIndex={0}
+        aria-expanded={active}
         onClick={onClick}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
@@ -196,7 +196,7 @@ export const STAT_CARD_CSS = `
 .dv3-kpi-num--zone-warn { color: var(--dv3-zone-warn); }
 .dv3-kpi-num--zone-down { color: var(--dv3-zone-down); }
 .dv3-zone-tag {
-  display: inline-block; margin-top: 8px;
+  display: inline-block; padding-bottom: 4px; white-space: nowrap;
   font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
 }
 .dv3-zone-tag--up   { color: var(--dv3-zone-up); }

@@ -41,6 +41,12 @@ export interface ScorecardResponse {
   antiBonusTotal: number
   criteria: CriteriaScore[]
   antiBonuses: CriteriaScore[]
+  formula: string
+  positiveSum: number
+  antiBonusSum: number
+  evaluatorName: string | null
+  evaluatorUnit: string | null
+  evaluatorPosition: string | null
 }
 
 export interface TeamMemberDto {

@@ -120,4 +120,7 @@ export const DASHBOARD_CSS = `
   .dv3-hero-metrics { justify-content: flex-start; }
   .dv3-hero-metric { align-items: flex-start; }
 }
+
+/* card active state when its panel is open */
+.dv3-card-btn[aria-expanded="true"] { border-color: var(--dv3-accent); }
 `

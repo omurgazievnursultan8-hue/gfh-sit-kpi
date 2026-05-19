@@ -4,14 +4,13 @@ import { useTranslation } from 'react-i18next'
 import { usePageTitle } from '../../context/PageContext'
 import { analyticsApi } from '../analytics/analyticsApi'
 import type {
-  PersonalAnalytics, PendingSummary,
+  PersonalAnalytics, PendingSummary, ScorecardResponse,
 } from '../analytics/analyticsApi'
-import { periodsApi } from '../periods/periodsApi'
-import type { AppealPending } from '../periods/periodsApi'
 import { delegationsApi } from '../org/delegationsApi'
 import type { Delegation } from '../org/delegationsApi'
 import { DASHBOARD_CSS } from './dashboardStyles'
 import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
+import { RatingPanel } from './RatingPanel'
 
 // ── page ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
@@ -21,20 +20,47 @@ export function DashboardPage() {
 
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
   const [summary, setSummary] = useState<PendingSummary | null>(null)
-  const [appeals, setAppeals] = useState<AppealPending[]>([])
   const [delegations, setDelegations] = useState<Delegation[]>([])
   const [partialFailure, setPartialFailure] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
   const [now, setNow] = useState(new Date())
 
+  // Rating-calculation panel — opens below the grid when R01 card is clicked.
+  const [ratingPanelOpen, setRatingPanelOpen] = useState(false)
+  const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null)
+  const [scorecardLoaded, setScorecardLoaded] = useState(false)
+  const [scorecardLoading, setScorecardLoading] = useState(false)
+
+  // Toggle the panel; lazy-fetch the scorecard the first time it opens.
+  const toggleRatingPanel = () => {
+    setRatingPanelOpen(open => {
+      const next = !open
+      if (next && !scorecardLoaded && !scorecardLoading) {
+        setScorecardLoading(true)
+        analyticsApi.scorecard()
+          .then(setScorecard)
+          .finally(() => { setScorecardLoaded(true); setScorecardLoading(false) })
+      }
+      return next
+    })
+  }
+
   // Fetch all panels — render whatever succeeds, flag partial failure.
   useEffect(() => {
+    // Fetch all delegations: page once, refetch full if more rows exist.
+    const loadDelegations = delegationsApi.list(0, 100)
+      .then(first =>
+        first.totalElements > first.content.length
+          ? delegationsApi.list(0, first.totalElements)
+          : first,
+      )
+      .then(r => setDelegations(r.content))
+
     const tasks = [
       analyticsApi.personal().then(setAnalytics),
       analyticsApi.pendingSummary().then(setSummary),
-      periodsApi.pendingAppeals().then(setAppeals),
-      delegationsApi.list(0, 50).then(r => setDelegations(r.content)),
+      loadDelegations,
     ]
     Promise.allSettled(tasks).then(results => {
       if (results.some(r => r.status === 'rejected')) setPartialFailure(true)
@@ -49,8 +75,15 @@ export function DashboardPage() {
     return () => clearInterval(id)
   }, [])
 
-  // ── time / clock (derived from `now`) ────────────────────────────────────────
-  const hours = now.getHours()
+  // ── time / clock (derived from `now`, fixed to Bishkek tz) ───────────────────
+  // Clock is labelled "KGT" — compute it in Asia/Bishkek, not browser-local.
+  const BISHKEK_TZ = 'Asia/Bishkek'
+  const clockParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BISHKEK_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now)
+  const hh = clockParts.find(p => p.type === 'hour')?.value ?? '00'
+  const mm = clockParts.find(p => p.type === 'minute')?.value ?? '00'
+  const hours = Number(hh)
   const timeGreeting = hours < 12
     ? t('dashboard.greetingMorning')
     : hours < 18
@@ -59,10 +92,8 @@ export function DashboardPage() {
 
   const datePart = now.toLocaleDateString(
     i18n.language === 'kg' ? 'ky-KG' : 'ru-RU',
-    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: BISHKEK_TZ },
   )
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
   const todayLine = `${datePart} · ${hh}:${mm}`
   const clockKgt = `${hh}:${mm}`
 
@@ -89,7 +120,7 @@ export function DashboardPage() {
   const cyclePct = cycleTotal > 0 ? cycleDone / cycleTotal : 0
 
   // APPEALS — share of open tasks (appeals vs appeals + pending evaluations).
-  const appealsPending = summary?.pendingAppeals ?? appeals.length
+  const appealsPending = summary?.pendingAppeals ?? 0
   const pendingEvals = summary?.pendingEvaluations ?? 0
   const openTasks = appealsPending + pendingEvals
   const appealsPct = openTasks > 0 ? appealsPending / openTasks : 0
@@ -166,8 +197,9 @@ export function DashboardPage() {
           {/* SELF.RATING */}
           <StatCard
             className="dv3-col-3"
-            title="SELF.RATING" id="R01" loading={loading}
+            title={t('dashboard.cardSelfRating')} id="R01" loading={loading}
             value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
+            onClick={toggleRatingPanel} active={ratingPanelOpen}
             gauge={{
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
@@ -178,7 +210,7 @@ export function DashboardPage() {
           {/* EVAL.CYCLE.PROGRESS */}
           <StatCard
             className="dv3-col-3"
-            title="EVAL.CYCLE.PROGRESS" id="P01" loading={loading}
+            title={t('dashboard.cardEvalCycle')} id="P01" loading={loading}
             value={cycleDone}
             unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
             label={t('dashboard.evaluationsComplete')}
@@ -193,7 +225,7 @@ export function DashboardPage() {
           {/* APPEALS */}
           <StatCard
             className="dv3-col-3"
-            title="APPEALS" id="A01" loading={loading}
+            title={t('dashboard.cardAppeals')} id="A01" loading={loading}
             value={appealsPending}
             label={t('dashboard.pendingAppeals')}
             onClick={() => navigate('/my-tasks')}
@@ -208,7 +240,7 @@ export function DashboardPage() {
           {/* DELEGATIONS */}
           <StatCard
             className="dv3-col-3"
-            title="DELEGATIONS" id="D01" loading={loading}
+            title={t('dashboard.cardDelegations')} id="D01" loading={loading}
             value={delegActive}
             label={t('dashboard.activeDelegations')}
             gauge={{
@@ -218,6 +250,10 @@ export function DashboardPage() {
               right: delegTotal,
             }}
           />
+
+          {ratingPanelOpen && (
+            <RatingPanel card={scorecard} loading={scorecardLoading} />
+          )}
 
         </div>
       </div>
