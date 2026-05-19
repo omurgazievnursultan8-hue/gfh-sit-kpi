@@ -570,6 +570,14 @@
       "statusUPHELD": "Оставлено в силе",
       "statusOVERTURNED": "Пересмотрено",
       "statusAUTO_AGREED": "Авто-согласие"
+    },
+    "delegationsPanel": {
+      "activeTitle": "АКТИВНЫЕ ДЕЛЕГИРОВАНИЯ",
+      "inactiveTitle": "НЕАКТИВНЫЕ ДЕЛЕГИРОВАНИЯ",
+      "colEmployee": "Сотрудник",
+      "colPeriod": "Срок",
+      "noActive": "Нет активных делегирований",
+      "noInactive": "Нет неактивных делегирований"
     }
   },
   "dataPanel": {

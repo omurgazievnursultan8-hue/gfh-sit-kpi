@@ -14,6 +14,7 @@ import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
 import { RatingPanel } from './RatingPanel'
 import { EvalCyclePanel } from './EvalCyclePanel'
 import { AppealsPanel } from './AppealsPanel'
+import { DelegationsPanel } from './DelegationsPanel'
 
 // Sentinel for the "all periods" selector option.
 const ALL_PERIODS = 'ALL' as const
@@ -61,26 +62,39 @@ export function DashboardPage() {
   // Appeals panel — two appeal tables (pending + resolved) open on A01 hover.
   const [appealsPanelOpen, setAppealsPanelOpen] = useState(false)
 
+  // Delegations panel — active + inactive tables open on D01 hover.
+  const [delegationsPanelOpen, setDelegationsPanelOpen] = useState(false)
+
   // Panels are mutually exclusive — opening one closes any other.
   const openRatingPanel = () => {
     setRatingPanelOpen(true)
     setEvalCyclePanelOpen(false)
     setAppealsPanelOpen(false)
+    setDelegationsPanelOpen(false)
   }
   const openEvalCyclePanel = () => {
     setEvalCyclePanelOpen(true)
     setRatingPanelOpen(false)
     setAppealsPanelOpen(false)
+    setDelegationsPanelOpen(false)
   }
   const openAppealsPanel = () => {
     setAppealsPanelOpen(true)
     setRatingPanelOpen(false)
     setEvalCyclePanelOpen(false)
+    setDelegationsPanelOpen(false)
+  }
+  const openDelegationsPanel = () => {
+    setDelegationsPanelOpen(true)
+    setRatingPanelOpen(false)
+    setEvalCyclePanelOpen(false)
+    setAppealsPanelOpen(false)
   }
   const closePanels = () => {
     setRatingPanelOpen(false)
     setEvalCyclePanelOpen(false)
     setAppealsPanelOpen(false)
+    setDelegationsPanelOpen(false)
   }
 
   // Fetch everything — render whatever succeeds, flag partial failure.
@@ -231,8 +245,8 @@ export function DashboardPage() {
           {partialFailure ? t('dashboard.partialFailureSr') : ''}
         </div>
 
-        {/* ── HERO ── */}
-        <div className="dv3-hero">
+        {/* ── HERO ── temporarily hidden to preview headerless layout */}
+        {false && <div className="dv3-hero">
           <div className="dv3-hero-meta">
             <span className="dv3-hero-meta-l">{t('dashboard.heroMeta')}</span>
             <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
@@ -269,7 +283,7 @@ export function DashboardPage() {
             </span>
             <span>{updatedLabel}</span>
           </div>
-        </div>
+        </div>}
 
         {/* ── PERIOD SELECTOR ── */}
         <div className="dv3-periodbar">
@@ -350,7 +364,8 @@ export function DashboardPage() {
             title={t('dashboard.cardDelegations')} id="D01" loading={loading}
             value={delegActive}
             label={t('dashboard.activeDelegations')}
-            onHover={closePanels}
+            onHover={openDelegationsPanel}
+            active={delegationsPanelOpen}
             gauge={{
               pct: delegPct, variant: 'meta',
               left: '0',
@@ -369,6 +384,10 @@ export function DashboardPage() {
 
           {appealsPanelOpen && (
             <AppealsPanel rows={scopedAppeals} loading={loading} />
+          )}
+
+          {delegationsPanelOpen && (
+            <DelegationsPanel rows={delegations} loading={loading} />
           )}
 
         </div>

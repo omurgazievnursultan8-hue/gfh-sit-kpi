@@ -458,6 +458,14 @@
       "statusUPHELD": "Күчүндө калтырылды",
       "statusOVERTURNED": "Кайра каралды",
       "statusAUTO_AGREED": "Авто-макулдук"
+    },
+    "delegationsPanel": {
+      "activeTitle": "АКТИВДҮҮ ДЕЛЕГАЦИЯЛАР",
+      "inactiveTitle": "АКТИВДҮҮ ЭМЕС ДЕЛЕГАЦИЯЛАР",
+      "colEmployee": "Кызматкер",
+      "colPeriod": "Мөөнөтү",
+      "noActive": "Активдүү делегациялар жок",
+      "noInactive": "Активдүү эмес делегациялар жок"
     }
   },
   "v2": {
