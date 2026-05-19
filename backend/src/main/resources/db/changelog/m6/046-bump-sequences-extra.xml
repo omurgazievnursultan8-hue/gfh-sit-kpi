@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="046-bump-sequences-extra" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            SELECT setval(pg_get_serial_sequence('evaluation_periods',       'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_periods));
+            SELECT setval(pg_get_serial_sequence('evaluations',              'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluations));
+            SELECT setval(pg_get_serial_sequence('evaluation_scores',        'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_scores));
+            SELECT setval(pg_get_serial_sequence('evaluation_score_history', 'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluation_score_history));
+            SELECT setval(pg_get_serial_sequence('appeals',                  'id'), (SELECT COALESCE(MAX(id), 1) FROM appeals));
+            SELECT setval(pg_get_serial_sequence('evaluator_delegations',    'id'), (SELECT COALESCE(MAX(id), 1) FROM evaluator_delegations));
+        </sql>
+    </changeSet>
+</databaseChangeLog>
