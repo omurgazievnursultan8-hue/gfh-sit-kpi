@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { usePageTitle } from '../../context/PageContext'
 import { analyticsApi } from '../analytics/analyticsApi'
@@ -12,11 +11,11 @@ import { DASHBOARD_CSS } from './dashboardStyles'
 import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
 import { RatingPanel } from './RatingPanel'
 import { EvalCyclePanel } from './EvalCyclePanel'
+import { AppealsPanel } from './AppealsPanel'
 
 // ── page ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
   usePageTitle('nav.dashboard')
-  const navigate = useNavigate()
   const { t, i18n } = useTranslation()
 
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
@@ -36,6 +35,9 @@ export function DashboardPage() {
   // Eval-cycle panel — two evaluation tables open below the grid on P01 click.
   const [evalCyclePanelOpen, setEvalCyclePanelOpen] = useState(false)
 
+  // Appeals panel — two appeal tables (pending + resolved) open on A01 hover.
+  const [appealsPanelOpen, setAppealsPanelOpen] = useState(false)
+
   // Panels are mutually exclusive — opening one closes any other.
   // Panels open on card hover; closed when the pointer leaves the grid.
   // Open rating panel; lazy-fetch the scorecard the first time it opens.
@@ -48,18 +50,28 @@ export function DashboardPage() {
     }
     setRatingPanelOpen(true)
     setEvalCyclePanelOpen(false)
+    setAppealsPanelOpen(false)
   }
 
-  // Open eval-cycle panel; close rating panel.
+  // Open eval-cycle panel; close the others.
   const openEvalCyclePanel = () => {
     setEvalCyclePanelOpen(true)
     setRatingPanelOpen(false)
+    setAppealsPanelOpen(false)
   }
 
-  // Close both panels — fired when the pointer leaves the grid.
+  // Open appeals panel; close the others.
+  const openAppealsPanel = () => {
+    setAppealsPanelOpen(true)
+    setRatingPanelOpen(false)
+    setEvalCyclePanelOpen(false)
+  }
+
+  // Close all panels — fired when the pointer leaves the grid.
   const closePanels = () => {
     setRatingPanelOpen(false)
     setEvalCyclePanelOpen(false)
+    setAppealsPanelOpen(false)
   }
 
   // Fetch all panels — render whatever succeeds, flag partial failure.
@@ -246,8 +258,8 @@ export function DashboardPage() {
             title={t('dashboard.cardAppeals')} id="A01" loading={loading}
             value={appealsPending}
             label={t('dashboard.pendingAppeals')}
-            onClick={() => navigate('/my-tasks')}
-            onHover={closePanels}
+            onHover={openAppealsPanel}
+            active={appealsPanelOpen}
             gauge={{
               pct: appealsPct, variant: 'meta',
               left: '0%',
@@ -276,6 +288,8 @@ export function DashboardPage() {
           )}
 
           {evalCyclePanelOpen && <EvalCyclePanel />}
+
+          {appealsPanelOpen && <AppealsPanel />}
 
         </div>
       </div>

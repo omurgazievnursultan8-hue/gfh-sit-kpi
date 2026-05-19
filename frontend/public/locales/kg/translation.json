@@ -440,6 +440,20 @@
       "colWeight": "Салмак",
       "colScore": "Упай",
       "colMax": "Макс."
+    },
+    "appealsPanel": {
+      "pendingTitle": "КАРАЛЫП ЖАТКАН АПЕЛЛЯЦИЯЛАР",
+      "completedTitle": "КАРАЛГАН АПЕЛЛЯЦИЯЛАР",
+      "colEmployee": "Кызматкер",
+      "colReason": "Себеби",
+      "colDeadline": "Мөөнөтү",
+      "colStatus": "Статус",
+      "noPending": "Каралып жаткан апелляциялар жок",
+      "noCompleted": "Каралган апелляциялар жок",
+      "statusPENDING": "Каралууда",
+      "statusUPHELD": "Күчүндө калтырылды",
+      "statusOVERTURNED": "Кайра каралды",
+      "statusAUTO_AGREED": "Авто-макулдук"
     }
   },
   "v2": {

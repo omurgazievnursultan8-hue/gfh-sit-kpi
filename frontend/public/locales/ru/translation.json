@@ -552,6 +552,20 @@
       "colWeight": "Вес",
       "colScore": "Балл",
       "colMax": "Макс."
+    },
+    "appealsPanel": {
+      "pendingTitle": "АПЕЛЛЯЦИИ НА РАССМОТРЕНИИ",
+      "completedTitle": "РАССМОТРЕННЫЕ АПЕЛЛЯЦИИ",
+      "colEmployee": "Сотрудник",
+      "colReason": "Причина",
+      "colDeadline": "Срок",
+      "colStatus": "Статус",
+      "noPending": "Нет апелляций на рассмотрении",
+      "noCompleted": "Нет рассмотренных апелляций",
+      "statusPENDING": "На рассмотрении",
+      "statusUPHELD": "Оставлено в силе",
+      "statusOVERTURNED": "Пересмотрено",
+      "statusAUTO_AGREED": "Авто-согласие"
     }
   },
   "dataPanel": {

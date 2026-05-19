@@ -1,6 +1,7 @@
 package kg.gfh.kpi.controller;
 
 import kg.gfh.kpi.dto.AppealPendingResponse;
+import kg.gfh.kpi.dto.AppealSummaryResponse;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.service.AppealService;
@@ -43,6 +44,12 @@ public class AppealController {
     public List<AppealPendingResponse> getPendingAppeals(Authentication auth) {
         Long userId = resolveUserId(auth);
         return appealService.getPendingAppealsForEvaluator(userId);
+    }
+
+    @GetMapping
+    public List<AppealSummaryResponse> getMyAppeals(Authentication auth) {
+        Long userId = resolveUserId(auth);
+        return appealService.getAppealsForEvaluator(userId);
     }
 
     private Long resolveUserId(Authentication auth) {
