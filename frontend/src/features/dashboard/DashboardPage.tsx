@@ -11,6 +11,7 @@ import type { Delegation } from '../org/delegationsApi'
 import { DASHBOARD_CSS } from './dashboardStyles'
 import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
 import { RatingPanel } from './RatingPanel'
+import { EvalCyclePanel } from './EvalCyclePanel'
 
 // ── page ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
@@ -32,18 +33,33 @@ export function DashboardPage() {
   const [scorecardLoaded, setScorecardLoaded] = useState(false)
   const [scorecardLoading, setScorecardLoading] = useState(false)
 
-  // Toggle the panel; lazy-fetch the scorecard the first time it opens.
-  const toggleRatingPanel = () => {
-    setRatingPanelOpen(open => {
-      const next = !open
-      if (next && !scorecardLoaded && !scorecardLoading) {
-        setScorecardLoading(true)
-        analyticsApi.scorecard()
-          .then(setScorecard)
-          .finally(() => { setScorecardLoaded(true); setScorecardLoading(false) })
-      }
-      return next
-    })
+  // Eval-cycle panel — two evaluation tables open below the grid on P01 click.
+  const [evalCyclePanelOpen, setEvalCyclePanelOpen] = useState(false)
+
+  // Panels are mutually exclusive — opening one closes any other.
+  // Panels open on card hover; closed when the pointer leaves the grid.
+  // Open rating panel; lazy-fetch the scorecard the first time it opens.
+  const openRatingPanel = () => {
+    if (!scorecardLoaded && !scorecardLoading) {
+      setScorecardLoading(true)
+      analyticsApi.scorecard()
+        .then(setScorecard)
+        .finally(() => { setScorecardLoaded(true); setScorecardLoading(false) })
+    }
+    setRatingPanelOpen(true)
+    setEvalCyclePanelOpen(false)
+  }
+
+  // Open eval-cycle panel; close rating panel.
+  const openEvalCyclePanel = () => {
+    setEvalCyclePanelOpen(true)
+    setRatingPanelOpen(false)
+  }
+
+  // Close both panels — fired when the pointer leaves the grid.
+  const closePanels = () => {
+    setRatingPanelOpen(false)
+    setEvalCyclePanelOpen(false)
   }
 
   // Fetch all panels — render whatever succeeds, flag partial failure.
@@ -192,14 +208,14 @@ export function DashboardPage() {
         </div>
 
         {/* ── GRID ── */}
-        <div className="dv3-grid">
+        <div className="dv3-grid" onMouseLeave={closePanels}>
 
           {/* SELF.RATING */}
           <StatCard
             className="dv3-col-3"
             title={t('dashboard.cardSelfRating')} id="R01" loading={loading}
             value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
-            onClick={toggleRatingPanel} active={ratingPanelOpen}
+            onHover={openRatingPanel} active={ratingPanelOpen}
             gauge={{
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
@@ -214,6 +230,8 @@ export function DashboardPage() {
             value={cycleDone}
             unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
             label={t('dashboard.evaluationsComplete')}
+            onHover={openEvalCyclePanel}
+            active={evalCyclePanelOpen}
             gauge={{
               pct: cyclePct, variant: 'meta',
               left: '0%',
@@ -229,6 +247,7 @@ export function DashboardPage() {
             value={appealsPending}
             label={t('dashboard.pendingAppeals')}
             onClick={() => navigate('/my-tasks')}
+            onHover={closePanels}
             gauge={{
               pct: appealsPct, variant: 'meta',
               left: '0%',
@@ -243,6 +262,7 @@ export function DashboardPage() {
             title={t('dashboard.cardDelegations')} id="D01" loading={loading}
             value={delegActive}
             label={t('dashboard.activeDelegations')}
+            onHover={closePanels}
             gauge={{
               pct: delegPct, variant: 'meta',
               left: '0',
@@ -254,6 +274,8 @@ export function DashboardPage() {
           {ratingPanelOpen && (
             <RatingPanel card={scorecard} loading={scorecardLoading} />
           )}
+
+          {evalCyclePanelOpen && <EvalCyclePanel />}
 
         </div>
       </div>

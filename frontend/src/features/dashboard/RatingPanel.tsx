@@ -8,8 +8,9 @@ export interface RatingPanelProps {
   loading: boolean
 }
 
-// Evaluator info strip + two data tables (positive criteria + anti-bonuses)
-// side by side. Column headers hidden — data rows only.
+// Two data tables (positive criteria + anti-bonuses) side by side.
+// Column headers hidden — data rows only. Evaluator name shown at each
+// table header's right side.
 export function RatingPanel({ card, loading }: RatingPanelProps) {
   const { t, i18n } = useTranslation()
   const kg = i18n.language === 'kg'
@@ -33,7 +34,10 @@ export function RatingPanel({ card, loading }: RatingPanelProps) {
     <section className="dv3-card dv3-col-6">
       <div className="dv3-card-head">
         <span><strong>{title}</strong></span>
-        <span className="dv3-card-id">[ {rows.length} ]</span>
+        <span className="dv3-card-id" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {card?.evaluatorName && <span>{card.evaluatorName}</span>}
+          <span>[ {rows.length} ]</span>
+        </span>
       </div>
       <DataTable
         columns={columns}
@@ -49,21 +53,8 @@ export function RatingPanel({ card, loading }: RatingPanelProps) {
     </section>
   )
 
-  // Evaluator identity — name · position · unit, joined with the parts present.
-  const evaluatorLine = [card?.evaluatorName, card?.evaluatorPosition, card?.evaluatorUnit]
-    .filter(Boolean)
-    .join(' · ')
-
   return (
     <>
-      {evaluatorLine && (
-        <section className="dv3-card dv3-col-12">
-          <div className="dv3-card-head">
-            <span className="dv3-card-id">{t('dashboard.ratingPanel.evaluatedBy')}</span>
-            <span><strong>{evaluatorLine}</strong></span>
-          </div>
-        </section>
-      )}
       {table(t('dashboard.ratingPanel.posCardTitle'), card?.criteria ?? [])}
       {table(t('dashboard.ratingPanel.negCardTitle'), card?.antiBonuses ?? [])}
     </>

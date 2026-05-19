@@ -405,6 +405,16 @@
     "cardEvalCycle": "БААЛОО ЦИКЛИ",
     "cardAppeals": "ДАТТАНУУЛАР",
     "cardDelegations": "ДЕЛЕГИРЛӨӨ",
+    "evalCyclePanel": {
+      "incompleteTitle": "АЯКТАЛБАГАН БААЛООЛОР",
+      "completedTitle": "АЯКТАЛГАН БААЛООЛОР",
+      "colEmployee": "Кызматкер",
+      "colStatus": "Статус",
+      "colDate": "Күнү",
+      "colScore": "Упай",
+      "noIncomplete": "Аякталбаган баалоолор жок",
+      "noCompleted": "Аякталган баалоолор жок"
+    },
     "ratingPanel": {
       "title": "РЕЙТИНГ КАНТИП ЭСЕПТЕЛДИ",
       "close": "Жабуу",

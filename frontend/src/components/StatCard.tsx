@@ -42,6 +42,7 @@ export interface StatCardProps {
   zoneScore?: number | null      // present → number colour + zone tag
   gauge: StatCardGauge
   onClick?: () => void           // present → clickable div + keydown handler
+  onHover?: () => void           // present → opens on mouseenter
   active?: boolean               // onClick cards: marks the card's panel open
   className?: string             // appended to the root element's class
 }
@@ -50,7 +51,7 @@ export interface StatCardProps {
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, zoneScore, gauge, onClick, active, className,
+  unit, label, zoneScore, gauge, onClick, onHover, active, className,
 }: StatCardProps) {
   const { t } = useTranslation()
   const zone = scoreZone(zoneScore)
@@ -111,7 +112,7 @@ export function StatCard({
     </>
   )
 
-  if (onClick) {
+  if (onClick || onHover) {
     return (
       <div
         className={`dv3-card dv3-card-btn${className ? ` ${className}` : ''}`}
@@ -119,8 +120,10 @@ export function StatCard({
         tabIndex={0}
         aria-expanded={active}
         onClick={onClick}
+        onMouseEnter={onHover}
+        onFocus={onHover}
         onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (onClick && (e.key === 'Enter' || e.key === ' ')) {
             if (e.key === ' ') e.preventDefault()
             onClick()
           }

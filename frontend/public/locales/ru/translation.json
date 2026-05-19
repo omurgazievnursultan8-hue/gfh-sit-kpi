@@ -517,6 +517,16 @@
     "cardEvalCycle": "ЦИКЛ ОЦЕНКИ",
     "cardAppeals": "АПЕЛЛЯЦИИ",
     "cardDelegations": "ДЕЛЕГИРОВАНИЕ",
+    "evalCyclePanel": {
+      "incompleteTitle": "НЕЗАВЕРШЁННЫЕ ОЦЕНКИ",
+      "completedTitle": "ЗАВЕРШЁННЫЕ ОЦЕНКИ",
+      "colEmployee": "Сотрудник",
+      "colStatus": "Статус",
+      "colDate": "Дата",
+      "colScore": "Балл",
+      "noIncomplete": "Нет незавершённых оценок",
+      "noCompleted": "Нет завершённых оценок"
+    },
     "ratingPanel": {
       "title": "КАК РАССЧИТАН РЕЙТИНГ",
       "close": "Закрыть",
