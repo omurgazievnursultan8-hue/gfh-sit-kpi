@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { evaluationsApi, type Evaluation } from '../evaluations/evaluationsApi'
-import { periodsApi, type Period } from '../periods/periodsApi'
+import { type Evaluation } from '../evaluations/evaluationsApi'
+import { type Period } from '../periods/periodsApi'
 import { formatPeriodRange } from '../evaluations/components/periodFormat'
 import { EvaluationStatusBadge } from '../evaluations/components/evaluationStatus'
 import { DataTable } from '../../components/DataTable'
@@ -19,28 +18,18 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+interface EvalCyclePanelProps {
+  rows: Evaluation[]                       // already scoped to the selected period
+  periodById: Map<number, Period>
+  loading: boolean
+}
+
 // Two evaluation tables side by side — incomplete (left) + completed (right).
-// Opens below the dashboard grid when the EVAL.CYCLE.PROGRESS card is clicked.
-export function EvalCyclePanel() {
+// Opens below the dashboard grid when the EVAL.CYCLE.PROGRESS card is hovered.
+// Rows are supplied by DashboardPage, pre-filtered to the selected period.
+export function EvalCyclePanel({ rows, periodById, loading }: EvalCyclePanelProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-
-  const [rows, setRows] = useState<Evaluation[]>([])
-  const [periodById, setPeriodById] = useState<Map<number, Period>>(new Map())
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    Promise.allSettled([
-      evaluationsApi.asEvaluator(0, 200),
-      periodsApi.list(),
-    ]).then(([evals, periods]) => {
-      if (evals.status === 'fulfilled') setRows(evals.value.content)
-      if (periods.status === 'fulfilled') {
-        setPeriodById(new Map(periods.value.map(p => [p.id, p])))
-      }
-    }).finally(() => setLoading(false))
-  }, [])
 
   const incomplete = rows.filter(e => !isComplete(e))
   const completed = rows.filter(isComplete)

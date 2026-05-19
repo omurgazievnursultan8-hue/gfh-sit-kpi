@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { appealsApi, type AppealSummary, type AppealStatus } from '../appeals/appealsApi'
+import { type AppealSummary, type AppealStatus } from '../appeals/appealsApi'
 import { DataTable } from '../../components/DataTable'
 import type { Column } from '../../components/DataTable'
 
@@ -18,22 +17,17 @@ const STATUS_TONE: Record<AppealStatus, string> = {
   AUTO_AGREED: 'var(--ink-dim)',
 }
 
+interface AppealsPanelProps {
+  rows: AppealSummary[]                    // already scoped to the selected period
+  loading: boolean
+}
+
 // Two appeal tables side by side — pending (left) + resolved (right).
 // Opens below the dashboard grid when the APPEALS card is hovered.
-export function AppealsPanel() {
+// Rows are supplied by DashboardPage, pre-filtered to the selected period.
+export function AppealsPanel({ rows, loading }: AppealsPanelProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-
-  const [rows, setRows] = useState<AppealSummary[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    appealsApi.mine()
-      .then(setRows)
-      .catch(() => setRows([]))
-      .finally(() => setLoading(false))
-  }, [])
 
   const pending = rows.filter(a => a.status === 'PENDING')
   const completed = rows.filter(a => a.status !== 'PENDING')

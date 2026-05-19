@@ -107,14 +107,19 @@ public class AnalyticsService {
     }
 
     public ScorecardResponse getPersonalScorecard(Long userId) {
+        return getPersonalScorecard(userId, null);
+    }
+
+    public ScorecardResponse getPersonalScorecard(Long userId, Long periodId) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new ApiException("USER_NOT_FOUND",
                 "Пользователь не найден", "Колдонуучу табылган жок"));
 
-        // 1. Find target evaluation: active period first, else latest scored
+        // 1. Find target evaluation. With periodId → that exact period;
+        //    otherwise active period first, else latest scored.
         record EvalRow(long id, long periodId, double score, String type, int year, int month,
                        String evaluatorName, String evaluatorUnit, String evaluatorPosition) {}
-        List<EvalRow> evalRows = jdbc.query("""
+        String evalSql = """
             SELECT e.id, e.period_id,
                    COALESCE(e.final_score, 0)::float        AS score,
                    ep.type,
@@ -130,16 +135,22 @@ public class AnalyticsService {
             WHERE e.evaluatee_id = ?
               AND e.status NOT IN ('DRAFT')
               AND (ep.status = 'ACTIVE' OR e.final_score IS NOT NULL)
+            """
+            + (periodId != null ? " AND e.period_id = ?\n" : "")
+            + """
             ORDER BY CASE WHEN ep.status = 'ACTIVE' THEN 0 ELSE 1 END,
                      ep.start_date DESC
             LIMIT 1
-            """,
+            """;
+        Object[] evalParams = periodId != null
+            ? new Object[]{userId, periodId} : new Object[]{userId};
+        List<EvalRow> evalRows = jdbc.query(evalSql,
             (rs, i) -> new EvalRow(
                 rs.getLong("id"), rs.getLong("period_id"), rs.getDouble("score"),
                 rs.getString("type"), rs.getInt("yr"), rs.getInt("mo"),
                 rs.getString("evaluator_name"), rs.getString("evaluator_unit"),
                 rs.getString("evaluator_position")
-            ), userId);
+            ), evalParams);
 
         if (evalRows.isEmpty()) return null;
 
@@ -171,11 +182,12 @@ public class AnalyticsService {
               AND e.id != ?
               AND e.final_score IS NOT NULL
               AND e.status IN ('SUBMITTED','ACKNOWLEDGED','APPEALED','CLOSED')
+              AND ep.start_date < (SELECT start_date FROM evaluation_periods WHERE id = ?)
             ORDER BY ep.start_date DESC LIMIT 1
             """,
             (rs, i) -> new PrevRow(rs.getLong("id"), rs.getDouble("score"),
                 rs.getString("type"), rs.getInt("yr"), rs.getInt("mo")),
-            userId, ev.id());
+            userId, ev.id(), ev.periodId());
 
         Double vsPrevPeriod = null;
         String prevPeriodLabel = null;
