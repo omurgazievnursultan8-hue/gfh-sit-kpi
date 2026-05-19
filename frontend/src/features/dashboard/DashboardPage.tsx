@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
-import type { RootState } from '../../app/store'
 import { usePageTitle } from '../../context/PageContext'
 import { analyticsApi } from '../analytics/analyticsApi'
 import type {
@@ -20,7 +18,6 @@ export function DashboardPage() {
   usePageTitle('nav.dashboard')
   const navigate = useNavigate()
   const { t, i18n } = useTranslation()
-  const unreadCount = useSelector((s: RootState) => s.notifications.unreadCount)
 
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
   const [summary, setSummary] = useState<PendingSummary | null>(null)
@@ -97,10 +94,6 @@ export function DashboardPage() {
   const openTasks = appealsPending + pendingEvals
   const appealsPct = openTasks > 0 ? appealsPending / openTasks : 0
 
-  // NOTIFICATIONS — inbox-fill capacity bar (20 unread = full).
-  const NOTIF_CAP = 20
-  const notifPct = unreadCount / NOTIF_CAP
-
   // DELEGATIONS — active share of all delegations.
   const delegTotal = delegations.length
   const delegActive = activeDelegations.length
@@ -172,7 +165,7 @@ export function DashboardPage() {
 
           {/* SELF.RATING */}
           <StatCard
-            className="dv3-col-4"
+            className="dv3-col-3"
             title="SELF.RATING" id="R01" loading={loading}
             value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
             gauge={{
@@ -184,7 +177,7 @@ export function DashboardPage() {
 
           {/* EVAL.CYCLE.PROGRESS */}
           <StatCard
-            className="dv3-col-4"
+            className="dv3-col-3"
             title="EVAL.CYCLE.PROGRESS" id="P01" loading={loading}
             value={cycleDone}
             unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
@@ -199,7 +192,7 @@ export function DashboardPage() {
 
           {/* APPEALS */}
           <StatCard
-            className="dv3-col-4"
+            className="dv3-col-3"
             title="APPEALS" id="A01" loading={loading}
             value={appealsPending}
             label={t('dashboard.pendingAppeals')}
@@ -212,24 +205,9 @@ export function DashboardPage() {
             }}
           />
 
-          {/* NOTIFICATIONS */}
-          <StatCard
-            className="dv3-col-4"
-            title="NOTIFICATIONS" id="N01"
-            value={unreadCount}
-            label={t('dashboard.unread')}
-            onClick={() => navigate('/notifications')}
-            gauge={{
-              pct: notifPct, variant: 'meta',
-              left: '0',
-              center: <><strong>{unreadCount}</strong> / {NOTIF_CAP} {t('dashboard.inbox')}</>,
-              right: NOTIF_CAP,
-            }}
-          />
-
           {/* DELEGATIONS */}
           <StatCard
-            className="dv3-col-4"
+            className="dv3-col-3"
             title="DELEGATIONS" id="D01" loading={loading}
             value={delegActive}
             label={t('dashboard.activeDelegations')}
