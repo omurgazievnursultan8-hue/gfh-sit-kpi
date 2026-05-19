@@ -409,6 +409,8 @@
     "cardEvalCycle": "БААЛОО ЦИКЛИ",
     "cardAppeals": "ДАТТАНУУЛАР",
     "cardDelegations": "ДЕЛЕГИРЛӨӨ",
+    "ratingPending": "Баа күтүлүүдө",
+    "ratingNone": "Мезгил үчүн баа жок",
     "evalCyclePanel": {
       "incompleteTitle": "АЯКТАЛБАГАН БААЛООЛОР",
       "completedTitle": "АЯКТАЛГАН БААЛООЛОР",

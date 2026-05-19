@@ -57,4 +57,5 @@
     <include file="db/changelog/m6/045-seed-delegations-extra.xml"/>
     <include file="db/changelog/m6/046-bump-sequences-extra.xml"/>
     <include file="db/changelog/m6/047-seed-shortcut-data.xml"/>
+    <include file="db/changelog/m6/048-seed-norating-user.xml"/>
 </databaseChangeLog>

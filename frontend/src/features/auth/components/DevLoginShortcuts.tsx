@@ -18,6 +18,7 @@ const SHORTCUTS: Shortcut[] = [
   { label: 'Head of department', email: 'mikhail.sokolov@gfh.kg', password: 'Test123!@#' },
   { label: 'Head of unit', email: 'dmitry.petrov@gfh.kg', password: 'Test123!@#' },
   { label: 'Employee', email: 'bekbolot.tursunaliev@gfh.kg', password: 'Test123!@#' },
+  { label: 'New hire', email: 'nuraiym.bekova@gfh.kg', password: 'Test123!@#' },
   { label: 'Admin', email: 'admin@gfh.kg', password: 'Admin123!@#' },
 ]
 

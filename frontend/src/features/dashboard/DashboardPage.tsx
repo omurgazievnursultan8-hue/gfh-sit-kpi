@@ -40,6 +40,9 @@ export function DashboardPage() {
   const [delegations, setDelegations] = useState<Delegation[]>([])
   const [periods, setPeriods] = useState<Period[]>([])
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+  // Evaluations OF the current user (as evaluatee) — drives the SELF.RATING
+  // empty states: "pending" (eval exists, no score yet) vs "none" (no eval).
+  const [myEvaluations, setMyEvaluations] = useState<Evaluation[]>([])
   const [appeals, setAppeals] = useState<AppealSummary[]>([])
   const [partialFailure, setPartialFailure] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -116,6 +119,7 @@ export function DashboardPage() {
         setSelectedPeriod(pickNearestPeriod(ps))
       }),
       evaluationsApi.asEvaluator(0, 200).then(r => setEvaluations(r.content)),
+      evaluationsApi.myHistory(0, 50).then(r => setMyEvaluations(r.content)),
       appealsApi.mine().then(setAppeals),
     ]
     Promise.allSettled(tasks).then(results => {
@@ -195,6 +199,14 @@ export function DashboardPage() {
   const scoreWhole = periodScore !== null ? Math.round(periodScore) : null
   const scorePct = periodScore !== null ? periodScore / 100 : 0
   const zone = scoreZone(scoreWhole)
+
+  // SELF.RATING empty-state — distinguish "evaluation in progress, no score
+  // yet" from "no evaluation for this period at all".
+  const myPeriodEval = isAllPeriods
+    ? null
+    : myEvaluations.find(e => e.periodId === selectedPeriod) ?? null
+  const ratingState: 'scored' | 'pending' | 'none' =
+    periodScore !== null ? 'scored' : myPeriodEval ? 'pending' : 'none'
 
   // EVAL.CYCLE — completed = submitted or later; total = all in scope.
   const cycleDone = scopedEvals.filter(e => e.status !== 'DRAFT').length
@@ -316,13 +328,22 @@ export function DashboardPage() {
           <StatCard
             className="dv3-col-3"
             title={t('dashboard.cardSelfRating')} id="R01" loading={loading}
-            value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
+            value={scoreWhole}
+            unit={ratingState === 'scored' ? '/ 100' : undefined}
+            zoneScore={scoreWhole}
+            emptyNote={
+              ratingState === 'pending'
+                ? t('dashboard.ratingPending')
+                : ratingState === 'none'
+                  ? t('dashboard.ratingNone')
+                  : undefined
+            }
             onHover={openRatingPanel} active={ratingPanelOpen}
-            gauge={{
+            gauge={ratingState === 'scored' ? {
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
-              current: scoreWhole !== null ? scoreWhole : '—',
-            }}
+              current: scoreWhole,
+            } : undefined}
           />
 
           {/* EVAL.CYCLE.PROGRESS */}

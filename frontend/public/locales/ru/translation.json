@@ -521,6 +521,8 @@
     "cardEvalCycle": "ЦИКЛ ОЦЕНКИ",
     "cardAppeals": "АПЕЛЛЯЦИИ",
     "cardDelegations": "ДЕЛЕГИРОВАНИЕ",
+    "ratingPending": "Ожидает оценки",
+    "ratingNone": "Нет оценки за период",
     "evalCyclePanel": {
       "incompleteTitle": "НЕЗАВЕРШЁННЫЕ ОЦЕНКИ",
       "completedTitle": "ЗАВЕРШЁННЫЕ ОЦЕНКИ",

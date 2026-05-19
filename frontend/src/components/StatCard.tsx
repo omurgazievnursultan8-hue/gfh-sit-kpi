@@ -39,8 +39,9 @@ export interface StatCardProps {
   emptyValue?: string            // shown when value === null; default '—'
   unit?: string                  // e.g. '/ 100'
   label?: string                 // inline uppercase label after number
+  emptyNote?: ReactNode          // shown in place of value/gauge when value is null
   zoneScore?: number | null      // present → number colour + zone tag
-  gauge: StatCardGauge
+  gauge?: StatCardGauge          // omit → no gauge row (e.g. empty-note state)
   onClick?: () => void           // present → clickable div + keydown handler
   onHover?: () => void           // present → opens on mouseenter
   active?: boolean               // onClick cards: marks the card's panel open
@@ -51,11 +52,15 @@ export interface StatCardProps {
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, zoneScore, gauge, onClick, onHover, active, className,
+  unit, label, emptyNote, zoneScore, gauge, onClick, onHover, active, className,
 }: StatCardProps) {
   const { t } = useTranslation()
   const zone = scoreZone(zoneScore)
-  const bar = asciiBar(gauge.pct)
+  const bar = gauge ? asciiBar(gauge.pct) : null
+
+  // value absent (not loading) + a note supplied → show the note, drop the gauge.
+  const showEmptyNote =
+    !loading && (value === null || value === undefined) && emptyNote != null
 
   const displayValue = loading
     ? placeholder
@@ -72,42 +77,48 @@ export function StatCard({
         <span className="dv3-card-id">[ {id} ]</span>
       </div>
       <div className="dv3-card-body">
-        <div className="dv3-kpi">
-          <div className={numClass}>
-            {displayValue}
-            {unit && <span className="dv3-kpi-unit">{unit}</span>}
-            {label && <span className="dv3-kpi-label">{label}</span>}
-          </div>
-          {!loading && zone.labelKey && (
-            <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
-              {t(zone.labelKey)}
-            </span>
-          )}
-        </div>
-        <div className="dv3-gauge">
-          <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-            <span className="dv3-fill">{bar.fill}</span>
-            <span className="dv3-dim">{bar.empty}</span>
-          </div>
-          {gauge.variant === 'marker' ? (
-            <div className="dv3-gauge-meta dv3-gauge-meta--mark">
-              <span>{gauge.left}</span>
-              <span
-                className="dv3-gauge-cur"
-                style={{ left: `${Math.min(100, Math.round(gauge.pct * 100))}%` }}
-              >
-                <strong>{gauge.current}</strong>
+        {showEmptyNote ? (
+          <div className="dv3-kpi-empty">{emptyNote}</div>
+        ) : (
+          <div className="dv3-kpi">
+            <div className={numClass}>
+              {displayValue}
+              {unit && <span className="dv3-kpi-unit">{unit}</span>}
+              {label && <span className="dv3-kpi-label">{label}</span>}
+            </div>
+            {!loading && zone.labelKey && (
+              <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
+                {t(zone.labelKey)}
               </span>
-              <span>{gauge.right}</span>
+            )}
+          </div>
+        )}
+        {gauge && bar && !showEmptyNote && (
+          <div className="dv3-gauge">
+            <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
+              <span className="dv3-fill">{bar.fill}</span>
+              <span className="dv3-dim">{bar.empty}</span>
             </div>
-          ) : (
-            <div className="dv3-gauge-meta">
-              <span>{gauge.left}</span>
-              <span>{gauge.center}</span>
-              <span>{gauge.right}</span>
-            </div>
-          )}
-        </div>
+            {gauge.variant === 'marker' ? (
+              <div className="dv3-gauge-meta dv3-gauge-meta--mark">
+                <span>{gauge.left}</span>
+                <span
+                  className="dv3-gauge-cur"
+                  style={{ left: `${Math.min(100, Math.round(gauge.pct * 100))}%` }}
+                >
+                  <strong>{gauge.current}</strong>
+                </span>
+                <span>{gauge.right}</span>
+              </div>
+            ) : (
+              <div className="dv3-gauge-meta">
+                <span>{gauge.left}</span>
+                <span>{gauge.center}</span>
+                <span>{gauge.right}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   )
@@ -178,6 +189,11 @@ export const STAT_CARD_CSS = `
 }
 .dv3-kpi-unit { font-size: 16px; color: var(--dv3-text3); margin-left: 8px; font-weight: 400; }
 .dv3-kpi-label { font-size: 11px; color: var(--dv3-text3); margin-left: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
+.dv3-kpi-empty {
+  font-size: 26px; font-weight: 600; line-height: 1.2;
+  letter-spacing: -0.01em; color: var(--dv3-text3);
+  padding: 18px 0; flex: 1; display: flex; align-items: center;
+}
 @media (max-width: 640px) {
   .dv3-kpi { grid-template-columns: 1fr; }
   .dv3-kpi-num { font-size: 52px; }
