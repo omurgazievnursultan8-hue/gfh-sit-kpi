@@ -2,6 +2,7 @@ package kg.gfh.kpi.service;
 
 import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.AppealPendingResponse;
+import kg.gfh.kpi.dto.AppealSummaryResponse;
 import kg.gfh.kpi.entity.Appeal;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
 import kg.gfh.kpi.entity.Evaluation;
@@ -134,6 +135,25 @@ public class AppealService {
                     a.getReason(),
                     a.getDeadline(),
                     a.getCreatedAt()
+                );
+            })
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AppealSummaryResponse> getAppealsForEvaluator(Long evaluatorId) {
+        return appealRepository.findByEvaluatorId(evaluatorId).stream()
+            .map(a -> {
+                Evaluation eval = findEvaluation(a.getEvaluationId());
+                return new AppealSummaryResponse(
+                    a.getId(),
+                    a.getEvaluationId(),
+                    eval.getEvaluatee().getFullName(),
+                    a.getReason(),
+                    a.getStatus(),
+                    a.getDeadline(),
+                    a.getCreatedAt(),
+                    a.getResolvedAt()
                 );
             })
             .toList();

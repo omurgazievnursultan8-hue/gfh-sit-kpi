@@ -41,6 +41,12 @@ export interface ScorecardResponse {
   antiBonusTotal: number
   criteria: CriteriaScore[]
   antiBonuses: CriteriaScore[]
+  formula: string
+  positiveSum: number
+  antiBonusSum: number
+  evaluatorName: string | null
+  evaluatorUnit: string | null
+  evaluatorPosition: string | null
 }
 
 export interface TeamMemberDto {
@@ -120,8 +126,9 @@ export const analyticsApi = {
     api.get<PendingSummary>('/analytics/pending-summary').then(r => r.data),
 
 
-  scorecard: () =>
-    api.get<ScorecardResponse>('/analytics/personal/scorecard')
+  scorecard: (periodId?: number) =>
+    api.get<ScorecardResponse>('/analytics/personal/scorecard',
+      { params: periodId != null ? { periodId } : {} })
       .then(r => r.status === 204 ? null : r.data)
       .catch(() => null),
 

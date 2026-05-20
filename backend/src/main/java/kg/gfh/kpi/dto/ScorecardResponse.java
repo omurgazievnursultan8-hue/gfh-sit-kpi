@@ -13,7 +13,13 @@ public record ScorecardResponse(
     Integer rank,
     double antiBonusTotal,
     List<CriteriaScoreDto> criteria,
-    List<CriteriaScoreDto> antiBonuses
+    List<CriteriaScoreDto> antiBonuses,
+    String formula,
+    double positiveSum,
+    double antiBonusSum,
+    String evaluatorName,
+    String evaluatorUnit,
+    String evaluatorPosition
 ) {
     public record CriteriaScoreDto(
         Long criteriaId,

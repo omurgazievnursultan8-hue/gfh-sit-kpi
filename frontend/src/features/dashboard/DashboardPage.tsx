@@ -1,43 +1,121 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { RootState } from '../../app/store'
 import { usePageTitle } from '../../context/PageContext'
 import { analyticsApi } from '../analytics/analyticsApi'
-import type {
-  PersonalAnalytics, PendingSummary,
-} from '../analytics/analyticsApi'
-import { periodsApi } from '../periods/periodsApi'
-import type { AppealPending } from '../periods/periodsApi'
+import type { PersonalAnalytics, ScorecardResponse } from '../analytics/analyticsApi'
 import { delegationsApi } from '../org/delegationsApi'
 import type { Delegation } from '../org/delegationsApi'
+import { evaluationsApi, type Evaluation } from '../evaluations/evaluationsApi'
+import { appealsApi, type AppealSummary } from '../appeals/appealsApi'
+import { periodsApi, type Period } from '../periods/periodsApi'
+import { formatPeriodRange } from '../evaluations/components/periodFormat'
 import { DASHBOARD_CSS } from './dashboardStyles'
 import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
+import { RatingPanel } from './RatingPanel'
+import { EvalCyclePanel } from './EvalCyclePanel'
+import { AppealsPanel } from './AppealsPanel'
+import { DelegationsPanel } from './DelegationsPanel'
+
+// Sentinel for the "all periods" selector option.
+const ALL_PERIODS = 'ALL' as const
+type PeriodSelection = number | typeof ALL_PERIODS
+
+// Nearest period: the ACTIVE one if any, else the most recent period that has
+// already started, else the most recent of all. Returns ALL when empty.
+function pickNearestPeriod(periods: Period[]): PeriodSelection {
+  if (periods.length === 0) return ALL_PERIODS
+  const active = periods.find(p => p.status === 'ACTIVE')
+  if (active) return active.id
+  const today = new Date().toISOString().slice(0, 10)
+  const byStartDesc = [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate))
+  return (byStartDesc.find(p => p.startDate <= today) ?? byStartDesc[0]).id
+}
 
 // ── page ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
   usePageTitle('nav.dashboard')
-  const navigate = useNavigate()
   const { t, i18n } = useTranslation()
-  const unreadCount = useSelector((s: RootState) => s.notifications.unreadCount)
 
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
-  const [summary, setSummary] = useState<PendingSummary | null>(null)
-  const [appeals, setAppeals] = useState<AppealPending[]>([])
   const [delegations, setDelegations] = useState<Delegation[]>([])
+  const [periods, setPeriods] = useState<Period[]>([])
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+  // Evaluations OF the current user (as evaluatee) — drives the SELF.RATING
+  // empty states: "pending" (eval exists, no score yet) vs "none" (no eval).
+  const [myEvaluations, setMyEvaluations] = useState<Evaluation[]>([])
+  const [appeals, setAppeals] = useState<AppealSummary[]>([])
   const [partialFailure, setPartialFailure] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
   const [now, setNow] = useState(new Date())
 
-  // Fetch all panels — render whatever succeeds, flag partial failure.
+  // Selected period scopes every card + panel. Defaults to the nearest period
+  // once the periods list arrives.
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodSelection>(ALL_PERIODS)
+  const isAllPeriods = selectedPeriod === ALL_PERIODS
+
+  // Rating-calculation panel — opens below the grid when R01 card is clicked.
+  // Active by default so the rating tables show on initial load.
+  const [ratingPanelOpen, setRatingPanelOpen] = useState(true)
+  const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null)
+  const [scorecardLoading, setScorecardLoading] = useState(false)
+
+  // Eval-cycle panel — two evaluation tables open below the grid on P01 click.
+  const [evalCyclePanelOpen, setEvalCyclePanelOpen] = useState(false)
+
+  // Appeals panel — two appeal tables (pending + resolved) open on A01 click.
+  const [appealsPanelOpen, setAppealsPanelOpen] = useState(false)
+
+  // Delegations panel — active + inactive tables open on D01 click.
+  const [delegationsPanelOpen, setDelegationsPanelOpen] = useState(false)
+
+  // Panels are mutually exclusive — opening one closes any other.
+  const openRatingPanel = () => {
+    setRatingPanelOpen(true)
+    setEvalCyclePanelOpen(false)
+    setAppealsPanelOpen(false)
+    setDelegationsPanelOpen(false)
+  }
+  const openEvalCyclePanel = () => {
+    setEvalCyclePanelOpen(true)
+    setRatingPanelOpen(false)
+    setAppealsPanelOpen(false)
+    setDelegationsPanelOpen(false)
+  }
+  const openAppealsPanel = () => {
+    setAppealsPanelOpen(true)
+    setRatingPanelOpen(false)
+    setEvalCyclePanelOpen(false)
+    setDelegationsPanelOpen(false)
+  }
+  const openDelegationsPanel = () => {
+    setDelegationsPanelOpen(true)
+    setRatingPanelOpen(false)
+    setEvalCyclePanelOpen(false)
+    setAppealsPanelOpen(false)
+  }
+
+  // Fetch everything — render whatever succeeds, flag partial failure.
   useEffect(() => {
+    // Fetch all delegations: page once, refetch full if more rows exist.
+    const loadDelegations = delegationsApi.list(0, 100)
+      .then(first =>
+        first.totalElements > first.content.length
+          ? delegationsApi.list(0, first.totalElements)
+          : first,
+      )
+      .then(r => setDelegations(r.content))
+
     const tasks = [
       analyticsApi.personal().then(setAnalytics),
-      analyticsApi.pendingSummary().then(setSummary),
-      periodsApi.pendingAppeals().then(setAppeals),
-      delegationsApi.list(0, 50).then(r => setDelegations(r.content)),
+      loadDelegations,
+      periodsApi.list().then(ps => {
+        setPeriods(ps)
+        setSelectedPeriod(pickNearestPeriod(ps))
+      }),
+      evaluationsApi.asEvaluator(0, 200).then(r => setEvaluations(r.content)),
+      evaluationsApi.myHistory(0, 50).then(r => setMyEvaluations(r.content)),
+      appealsApi.mine().then(setAppeals),
     ]
     Promise.allSettled(tasks).then(results => {
       if (results.some(r => r.status === 'rejected')) setPartialFailure(true)
@@ -46,14 +124,30 @@ export function DashboardPage() {
     })
   }, [])
 
+  // Scorecard is period-scoped — (re)fetch when the rating panel is open or the
+  // selected period changes while it is open.
+  useEffect(() => {
+    if (!ratingPanelOpen) return
+    setScorecardLoading(true)
+    analyticsApi.scorecard(isAllPeriods ? undefined : selectedPeriod)
+      .then(setScorecard)
+      .finally(() => setScorecardLoading(false))
+  }, [ratingPanelOpen, selectedPeriod, isAllPeriods])
+
   // Live tick — re-render every 60s so clock + relative time stay fresh.
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000)
     return () => clearInterval(id)
   }, [])
 
-  // ── time / clock (derived from `now`) ────────────────────────────────────────
-  const hours = now.getHours()
+  // ── time / clock (derived from `now`, fixed to Bishkek tz) ───────────────────
+  const BISHKEK_TZ = 'Asia/Bishkek'
+  const clockParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BISHKEK_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now)
+  const hh = clockParts.find(p => p.type === 'hour')?.value ?? '00'
+  const mm = clockParts.find(p => p.type === 'minute')?.value ?? '00'
+  const hours = Number(hh)
   const timeGreeting = hours < 12
     ? t('dashboard.greetingMorning')
     : hours < 18
@@ -62,10 +156,8 @@ export function DashboardPage() {
 
   const datePart = now.toLocaleDateString(
     i18n.language === 'kg' ? 'ky-KG' : 'ru-RU',
-    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: BISHKEK_TZ },
   )
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
   const todayLine = `${datePart} · ${hh}:${mm}`
   const clockKgt = `${hh}:${mm}`
 
@@ -78,36 +170,69 @@ export function DashboardPage() {
       : t('dashboard.updatedMinutesAgo', { count: mins })
   }
 
-  // ── derived ────────────────────────────────────────────────────────────────
-  const currentScore = analytics?.currentScore ?? null
-  const scoreWhole = currentScore !== null ? Math.round(currentScore) : null
-  const scorePct = currentScore !== null ? currentScore / 100 : 0
+  // ── period scoping ──────────────────────────────────────────────────────────
+  const periodById = useMemo(
+    () => new Map(periods.map(p => [p.id, p])), [periods],
+  )
+  // evaluationId → periodId, so appeals (which carry no periodId) can be scoped.
+  const evalPeriodById = useMemo(
+    () => new Map(evaluations.map(e => [e.id, e.periodId])), [evaluations],
+  )
 
+  const scopedEvals = isAllPeriods
+    ? evaluations
+    : evaluations.filter(e => e.periodId === selectedPeriod)
+  const scopedAppeals = isAllPeriods
+    ? appeals
+    : appeals.filter(a => evalPeriodById.get(a.evaluationId) === selectedPeriod)
+
+  // ── derived stats (all scoped to the selected period) ───────────────────────
+  // SELF.RATING — overall current score for "all", else that period's score.
+  const periodScore = isAllPeriods
+    ? (analytics?.currentScore ?? null)
+    : (analytics?.history.find(h => h.periodId === selectedPeriod)?.score ?? null)
+  const scoreWhole = periodScore !== null ? Math.round(periodScore) : null
+  const scorePct = periodScore !== null ? periodScore / 100 : 0
   const zone = scoreZone(scoreWhole)
 
-  const activeDelegations = delegations.filter(d => d.isActive)
+  // SELF.RATING empty-state — distinguish "evaluation in progress, no score
+  // yet" from "no evaluation for this period at all".
+  const myPeriodEval = isAllPeriods
+    ? null
+    : myEvaluations.find(e => e.periodId === selectedPeriod) ?? null
+  const ratingState: 'scored' | 'pending' | 'none' =
+    periodScore !== null ? 'scored' : myPeriodEval ? 'pending' : 'none'
 
-  const cycleDone = summary?.completedEvaluations ?? 0
-  const cycleTotal = summary?.totalEvaluations ?? 0
+  // EVAL.CYCLE — completed = submitted or later; total = all in scope.
+  const cycleDone = scopedEvals.filter(e => e.status !== 'DRAFT').length
+  const cycleTotal = scopedEvals.length
   const cyclePct = cycleTotal > 0 ? cycleDone / cycleTotal : 0
+  const pendingEvals = scopedEvals.filter(e => e.status === 'DRAFT').length
 
   // APPEALS — share of open tasks (appeals vs appeals + pending evaluations).
-  const appealsPending = summary?.pendingAppeals ?? appeals.length
-  const pendingEvals = summary?.pendingEvaluations ?? 0
+  const appealsPending = scopedAppeals.filter(a => a.status === 'PENDING').length
   const openTasks = appealsPending + pendingEvals
   const appealsPct = openTasks > 0 ? appealsPending / openTasks : 0
 
-  // NOTIFICATIONS — inbox-fill capacity bar (20 unread = full).
-  const NOTIF_CAP = 20
-  const notifPct = unreadCount / NOTIF_CAP
-
-  // DELEGATIONS — active share of all delegations.
+  // DELEGATIONS — active share of all delegations (not period-scoped).
+  const activeDelegations = delegations.filter(d => d.isActive)
   const delegTotal = delegations.length
   const delegActive = activeDelegations.length
   const delegPct = delegTotal > 0 ? delegActive / delegTotal : 0
 
   // Neutral placeholder while loading; genuine zeros still render as 0.
   const PLACEHOLDER = '··'
+
+  // ── period selector options (newest first) ──────────────────────────────────
+  const periodOptions = useMemo(
+    () => [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate)),
+    [periods],
+  )
+
+  const onPeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value
+    setSelectedPeriod(v === ALL_PERIODS ? ALL_PERIODS : Number(v))
+  }
 
   // ── hero ───────────────────────────────────────────────────────────────────
   // Russian ФИО is "Surname Name Patronymic"; greet by Name + Patronymic.
@@ -127,8 +252,8 @@ export function DashboardPage() {
           {partialFailure ? t('dashboard.partialFailureSr') : ''}
         </div>
 
-        {/* ── HERO ── */}
-        <div className="dv3-hero">
+        {/* ── HERO ── temporarily hidden to preview headerless layout */}
+        {false && <div className="dv3-hero">
           <div className="dv3-hero-meta">
             <span className="dv3-hero-meta-l">{t('dashboard.heroMeta')}</span>
             <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
@@ -165,6 +290,30 @@ export function DashboardPage() {
             </span>
             <span>{updatedLabel}</span>
           </div>
+        </div>}
+
+        {/* ── PERIOD SELECTOR ── */}
+        <div className="dv3-periodbar">
+          <label className="dv3-periodbar-label" htmlFor="dv3-period">
+            {t('dashboard.periodLabel')}
+          </label>
+          <select
+            id="dv3-period"
+            className="dv3-period-select"
+            value={String(selectedPeriod)}
+            onChange={onPeriodChange}
+            disabled={loading}
+          >
+            <option value={ALL_PERIODS}>{t('dashboard.allPeriods')}</option>
+            {periodOptions.map(p => (
+              <option key={p.id} value={p.id}>
+                {formatPeriodRange(p, p.id)}
+                {p.status === 'ACTIVE' ? ` · ${t('dashboard.periodActive')}` : ''}
+              </option>
+            ))}
+          </select>
+          <span className="dv3-periodbar-spacer" />
+          <span className="dv3-periodbar-hint">{t('dashboard.periodHint')}</span>
         </div>
 
         {/* ── GRID ── */}
@@ -172,23 +321,35 @@ export function DashboardPage() {
 
           {/* SELF.RATING */}
           <StatCard
-            className="dv3-col-4"
-            title="SELF.RATING" id="R01" loading={loading}
-            value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
-            gauge={{
+            className="dv3-col-3"
+            title={t('dashboard.cardSelfRating')} id="R01" loading={loading}
+            value={scoreWhole}
+            unit={ratingState === 'scored' ? '/ 100' : undefined}
+            zoneScore={scoreWhole}
+            emptyNote={
+              ratingState === 'pending'
+                ? t('dashboard.ratingPending')
+                : ratingState === 'none'
+                  ? t('dashboard.ratingNone')
+                  : undefined
+            }
+            onClick={openRatingPanel} active={ratingPanelOpen}
+            gauge={ratingState === 'scored' ? {
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
-              current: scoreWhole !== null ? scoreWhole : '—',
-            }}
+              current: scoreWhole,
+            } : undefined}
           />
 
           {/* EVAL.CYCLE.PROGRESS */}
           <StatCard
-            className="dv3-col-4"
-            title="EVAL.CYCLE.PROGRESS" id="P01" loading={loading}
+            className="dv3-col-3"
+            title={t('dashboard.cardEvalCycle')} id="P01" loading={loading}
             value={cycleDone}
             unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
             label={t('dashboard.evaluationsComplete')}
+            onClick={openEvalCyclePanel}
+            active={evalCyclePanelOpen}
             gauge={{
               pct: cyclePct, variant: 'meta',
               left: '0%',
@@ -199,11 +360,12 @@ export function DashboardPage() {
 
           {/* APPEALS */}
           <StatCard
-            className="dv3-col-4"
-            title="APPEALS" id="A01" loading={loading}
+            className="dv3-col-3"
+            title={t('dashboard.cardAppeals')} id="A01" loading={loading}
             value={appealsPending}
             label={t('dashboard.pendingAppeals')}
-            onClick={() => navigate('/my-tasks')}
+            onClick={openAppealsPanel}
+            active={appealsPanelOpen}
             gauge={{
               pct: appealsPct, variant: 'meta',
               left: '0%',
@@ -212,27 +374,14 @@ export function DashboardPage() {
             }}
           />
 
-          {/* NOTIFICATIONS */}
-          <StatCard
-            className="dv3-col-4"
-            title="NOTIFICATIONS" id="N01"
-            value={unreadCount}
-            label={t('dashboard.unread')}
-            onClick={() => navigate('/notifications')}
-            gauge={{
-              pct: notifPct, variant: 'meta',
-              left: '0',
-              center: <><strong>{unreadCount}</strong> / {NOTIF_CAP} {t('dashboard.inbox')}</>,
-              right: NOTIF_CAP,
-            }}
-          />
-
           {/* DELEGATIONS */}
           <StatCard
-            className="dv3-col-4"
-            title="DELEGATIONS" id="D01" loading={loading}
+            className="dv3-col-3"
+            title={t('dashboard.cardDelegations')} id="D01" loading={loading}
             value={delegActive}
             label={t('dashboard.activeDelegations')}
+            onClick={openDelegationsPanel}
+            active={delegationsPanelOpen}
             gauge={{
               pct: delegPct, variant: 'meta',
               left: '0',
@@ -240,6 +389,22 @@ export function DashboardPage() {
               right: delegTotal,
             }}
           />
+
+          {ratingPanelOpen && (
+            <RatingPanel card={scorecard} loading={scorecardLoading} />
+          )}
+
+          {evalCyclePanelOpen && (
+            <EvalCyclePanel rows={scopedEvals} periodById={periodById} loading={loading} />
+          )}
+
+          {appealsPanelOpen && (
+            <AppealsPanel rows={scopedAppeals} loading={loading} />
+          )}
+
+          {delegationsPanelOpen && (
+            <DelegationsPanel rows={delegations} loading={loading} />
+          )}
 
         </div>
       </div>

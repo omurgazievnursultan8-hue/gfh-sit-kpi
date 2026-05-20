@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <!-- Dev login-shortcut user with no rating yet. A freshly-hired employee
+         whose evaluation for the active monthly period (P3) exists but is
+         still DRAFT — no score. Demonstrates the SELF.RATING "pending" state.
+         DEV-ONLY seed — paired with the login-page DevLoginShortcuts component. -->
+    <changeSet id="048-seed-norating-user" author="gfh" context="dev" runOnChange="false">
+        <sql splitStatements="true" stripComments="false">
+            -- New hire in the development unit (id 8), managed by Dmitry Petrov (id 10).
+            INSERT INTO users (id, full_name, email, password_hash, role, position, unit_id, manager_id, is_active, password_updated_at, password_history, failed_login_attempts, locked_until, created_at, updated_at, version) VALUES
+              (30, 'Нурайым Бекова', 'nuraiym.bekova@gfh.kg', '$2a$12$Brzk6GSztOuDR1Ysbno0YOCn2S4xZ6jVafLO9DoXhVXCaIMJ76u.O', 'EMPLOYEE', 'Junior разработчик', 8, 10, true, '2026-05-01 09:00:00', '[]'::jsonb, 0, NULL, '2026-05-01 09:00:00', '2026-05-01 09:00:00', 0);
+
+            -- DRAFT evaluatee evaluation for the active monthly period (P3): no score yet.
+            INSERT INTO evaluations (id, period_id, evaluatee_id, evaluator_id, status, final_score, version, evaluatee_comment, submitted_at, created_at, updated_at) VALUES
+              (220, 3, 30, 10, 'DRAFT', NULL, 0, NULL, NULL, '2026-05-02 09:00:00', '2026-05-02 09:00:00');
+
+            -- Keep identity sequences ahead of the explicit ids inserted above.
+            SELECT setval(pg_get_serial_sequence('users',       'id'), (SELECT MAX(id) FROM users));
+            SELECT setval(pg_get_serial_sequence('evaluations', 'id'), (SELECT MAX(id) FROM evaluations));
+        </sql>
+    </changeSet>
+</databaseChangeLog>

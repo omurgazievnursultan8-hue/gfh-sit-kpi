@@ -87,9 +87,11 @@ public class AnalyticsController {
     }
 
     @GetMapping("/personal/scorecard")
-    public ResponseEntity<ScorecardResponse> scorecard(Authentication auth) {
+    public ResponseEntity<ScorecardResponse> scorecard(
+            Authentication auth,
+            @RequestParam(required = false) Long periodId) {
         Long userId = resolveUserId(auth);
-        ScorecardResponse result = analyticsService.getPersonalScorecard(userId);
+        ScorecardResponse result = analyticsService.getPersonalScorecard(userId, periodId);
         return result == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(result);
     }
 

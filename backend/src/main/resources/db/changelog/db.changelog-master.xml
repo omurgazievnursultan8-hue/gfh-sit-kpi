@@ -48,4 +48,14 @@
     <include file="db/changelog/m6/036-seed-more-delegations.xml"/>
     <include file="db/changelog/m6/037-create-calendar-day.xml"/>
     <include file="db/changelog/m6/038-seed-calendar-days.xml"/>
+    <include file="db/changelog/m6/039-bump-antibonus-weights.xml"/>
+    <include file="db/changelog/m6/040-seed-periods-extra.xml"/>
+    <include file="db/changelog/m6/041-seed-evaluations-extra.xml"/>
+    <include file="db/changelog/m6/042-seed-evaluation-scores-extra.xml"/>
+    <include file="db/changelog/m6/043-seed-score-history-extra.xml"/>
+    <include file="db/changelog/m6/044-seed-appeals-extra.xml"/>
+    <include file="db/changelog/m6/045-seed-delegations-extra.xml"/>
+    <include file="db/changelog/m6/046-bump-sequences-extra.xml"/>
+    <include file="db/changelog/m6/047-seed-shortcut-data.xml"/>
+    <include file="db/changelog/m6/048-seed-norating-user.xml"/>
 </databaseChangeLog>

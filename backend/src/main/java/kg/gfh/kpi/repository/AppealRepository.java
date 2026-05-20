@@ -26,6 +26,11 @@ public interface AppealRepository extends JpaRepository<Appeal, Long> {
         return findPendingByEvaluatorId(evaluatorId, AppealStatus.PENDING);
     }
 
+    @Query("SELECT a FROM Appeal a WHERE a.evaluationId IN " +
+           "(SELECT e.id FROM Evaluation e WHERE e.evaluator.id = :evaluatorId) " +
+           "ORDER BY a.createdAt DESC")
+    List<Appeal> findByEvaluatorId(@Param("evaluatorId") Long evaluatorId);
+
     @Query("SELECT count(a) FROM Appeal a WHERE a.evaluationId IN " +
            "(SELECT e.id FROM Evaluation e WHERE e.evaluator.id = :evaluatorId) " +
            "AND a.status = :status")

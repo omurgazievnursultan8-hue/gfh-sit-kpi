@@ -58,6 +58,36 @@ export const DASHBOARD_CSS = `
   .dv3-col-4, .dv3-col-3 { grid-column: span 12; }
 }
 
+/* PERIOD SELECTOR BAR */
+.dv3-periodbar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+  padding: 9px 16px;
+  border: 1px solid var(--dv3-border);
+  background: var(--dv3-bg2);
+}
+.dv3-periodbar-label {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--dv3-text3);
+}
+.dv3-periodbar-spacer { flex: 1 1 auto; }
+.dv3-periodbar-hint {
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--dv3-text4);
+}
+.dv3-period-select {
+  background: var(--dv3-bg3);
+  color: var(--dv3-text);
+  border: 1px solid var(--dv3-border2);
+  font-family: inherit; font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.dv3-period-select:hover { border-color: var(--dv3-border-hi); }
+.dv3-period-select:focus-visible {
+  outline: 2px solid var(--dv3-accent); outline-offset: 1px;
+}
+
 .dv3-hero-metric-num--zone-up   { color: var(--dv3-zone-up); }
 .dv3-hero-metric-num--zone-warn { color: var(--dv3-zone-warn); }
 .dv3-hero-metric-num--zone-down { color: var(--dv3-zone-down); }
@@ -120,4 +150,7 @@ export const DASHBOARD_CSS = `
   .dv3-hero-metrics { justify-content: flex-start; }
   .dv3-hero-metric { align-items: flex-start; }
 }
+
+/* card active state when its panel is open */
+.dv3-card-btn[aria-expanded="true"] { border-color: var(--dv3-accent); }
 `

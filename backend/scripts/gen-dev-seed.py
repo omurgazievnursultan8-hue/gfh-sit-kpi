@@ -206,7 +206,9 @@ def write_scores():
 # ---- evaluation_score_history --------------------------------------------
 
 def write_history():
-    """Score history only for CLOSED evaluations (P1, P2)."""
+    """Score history for every submitted evaluation — P1/P2 CLOSED, P3
+    SUBMITTED, P4 first 14 SUBMITTED. Mirrors EvaluationService.submit(),
+    which writes history rows on submit. P4 DRAFT evals have no history."""
     cols = ("(evaluation_id, criteria_id, raw_value, weighted_value, "
             "weight_snapshot, recorded_at, criteria_type)")
     rows = []
@@ -214,7 +216,8 @@ def write_history():
     for (pid, *_rest) in PERIODS:
         d = PERIOD_DATES[pid]
         for idx, (uid, _mid) in enumerate(USERS):
-            if pid in (1, 2):
+            submitted = pid in (1, 2, 3) or (pid == 4 and idx < 14)
+            if submitted:
                 target = TARGET[PERSONALITY.get(uid, "avg")]
                 for (cid, ctype, w) in CRITERIA:
                     raw = raw_value(uid, cid, ctype, target, salt=pid)

@@ -21,10 +21,32 @@ public class RatingService {
     private final EvaluationScoreHistoryRepository scoreHistoryRepository;
 
     /**
+     * Full breakdown of a rating computation — the formula used, the aggregate
+     * inputs fed into it, and the floored result. Lets callers explain the score.
+     */
+    public record RatingBreakdown(
+        RatingFormula formula,
+        BigDecimal positiveSum,
+        BigDecimal antiBonusSum,
+        BigDecimal antiBonusWeightSum,
+        long antiBonusIncidents,
+        int workingDays,
+        BigDecimal result
+    ) {}
+
+    /**
      * Computes final rating for a given evaluation from its score history rows.
      * Returns MAX(0, computed) enforced by all formulas.
      */
     public BigDecimal computeRating(Long evaluationId, int workingDaysInMonth) {
+        return explain(evaluationId, workingDaysInMonth).result();
+    }
+
+    /**
+     * Like {@link #computeRating} but returns the full {@link RatingBreakdown}
+     * (formula + inputs + result) so the score can be explained to the user.
+     */
+    public RatingBreakdown explain(Long evaluationId, int workingDaysInMonth) {
         RatingFormula formula = resolveFormula();
 
         BigDecimal positiveSum = scoreHistoryRepository
@@ -63,7 +85,9 @@ public class RatingService {
         };
 
         // All formulas enforce MAX(0, result)
-        return result.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal floored = result.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        return new RatingBreakdown(formula, positiveSum, antiBonusSum, antiBonusWeightSum,
+            antiBonusIncidents, workingDaysInMonth, floored);
     }
 
     /**

@@ -57,6 +57,8 @@ export interface DataTableProps<T> {
   totalCount?: number
   /** Optional per-row className — e.g. to dim or highlight rows. */
   rowClassName?: (row: T) => string | undefined
+  /** Hide the column-header row (data rows only). Caption keeps a11y context. */
+  hideHeader?: boolean
 }
 
 interface DensityTokens {
@@ -78,7 +80,7 @@ export function DataTable<T>({
   columns, rows, rowKey, caption, loading = false,
   sort, onSort, onRowClick, density: densityProp,
   empty, skeletonRows = 8, renderExpanded, expandedKeys, totalCount,
-  rowClassName,
+  rowClassName, hideHeader = false,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
   const { density: contextDensity } = useDensity()
@@ -105,7 +107,7 @@ export function DataTable<T>({
         style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: d.fontSize }}
       >
         <caption style={srOnly}>{caption}</caption>
-        <thead>
+        <thead style={hideHeader ? srOnly : undefined}>
           <tr>
             {columns.map(col => {
               const active = sort?.key === col.key

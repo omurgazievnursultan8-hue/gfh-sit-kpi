@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { LangSwitcher } from '../../shared/layout/LangSwitcher'
 import { BrandPanel } from './components/BrandPanel'
 import { LoginForm } from './components/LoginForm'
+import { DevLoginShortcuts } from './components/DevLoginShortcuts'
 
 export function LoginPage() {
   const { t } = useTranslation()
@@ -21,6 +22,9 @@ export function LoginPage() {
           <LoginForm />
         </section>
       </main>
+
+      {/* DEV-ONLY — remove after testing */}
+      <DevLoginShortcuts />
     </div>
   )
 }

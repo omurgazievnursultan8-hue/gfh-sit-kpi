@@ -76,6 +76,7 @@ export function PasswordField({ id, value, onChange, onBlur, error, label, descr
       label={label}
       icon={<LockIcon />}
       type={show ? 'text' : 'password'}
+      placeholder={show ? '' : '••••••••'}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onBlur}

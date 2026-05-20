@@ -95,6 +95,49 @@ html, body {
     #f4f1ea;
 }
 
+/* DEV-ONLY quick-login bar — remove after testing */
+.dev-login-shortcuts {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 24px);
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(13,77,63,0.18);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+.dev-login-shortcuts__tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: #b91c1c;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.dev-login-shortcuts__btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0d4d3f;
+  background: #f4f1ea;
+  border: 1px solid rgba(13,77,63,0.22);
+  border-radius: 6px;
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.dev-login-shortcuts__btn:hover {
+  background: #e6efe9;
+}
+
 /* Lang switcher */
 .login-lang-bar {
   position: fixed;
@@ -356,7 +399,6 @@ html, body {
   color: #0e1714;
   line-height: 1.2;
   font-family: Georgia, 'Times New Roman', serif;
-  text-transform: uppercase;
   text-align: center;
   min-height: 54px;
   display: flex;
@@ -552,7 +594,6 @@ html, body {
 .login-btn-submit:focus-visible,
 .login-btn-eye:focus-visible,
 .login-forgot:focus-visible,
-.login-notice-link:focus-visible,
 .login-lang-trigger:focus-visible,
 .login-lang-option:focus-visible {
   outline: 2px solid var(--gold, #c9a961);

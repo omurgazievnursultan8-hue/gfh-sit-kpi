@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { ThemeCustomizer } from './components/ThemeCustomizer'
 import { useIdleTimeout } from './hooks/useIdleTimeout'
 import { useNotifications } from './hooks/useNotifications'
 import { bootstrapAuth } from './features/auth/authSlice'
@@ -41,6 +42,8 @@ export default function App() {
   useIdleTimeout()
   useNotifications()
   return (
+    <>
+    <ThemeCustomizer />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -113,5 +116,6 @@ export default function App() {
           forwards anons to /login). Prevents blank page on broken/stale links. */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </>
   )
 }

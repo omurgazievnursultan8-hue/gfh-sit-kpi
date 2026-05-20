@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="045-seed-delegations-extra" author="gfh" context="dev" runOnChange="false">
+        <sql>
+            INSERT INTO evaluator_delegations
+              (id, evaluatee_id, original_evaluator_id, delegated_to_id, valid_from, valid_to, reason, created_by, created_at, is_active) VALUES
+              (9,  5,  3,  4,  '2025-02-01', '2025-02-20', 'Отпуск руководителя (завершено)',    1, '2025-01-28 10:00:00', true),
+              (10, 17, 6,  10, '2025-05-01', '2025-05-15', 'Командировка (завершено)',           1, '2025-04-26 10:00:00', true),
+              (11, 11, 7,  5,  '2025-09-01', '2025-09-30', 'Длительная командировка (завершено)',1, '2025-08-27 10:00:00', true),
+              (12, 21, 10, 7,  '2026-05-15', '2026-05-28', 'Больничный руководителя',            1, '2026-05-13 09:00:00', true),
+              (13, 26, 8,  9,  '2026-05-18', '2026-06-02', 'Учебный отпуск руководителя',        1, '2026-05-15 11:00:00', true),
+              (14, 24, 11, 8,  '2026-05-20', '2026-05-30', 'Краткосрочная замена',               1, '2026-05-19 16:00:00', true),
+              (15, 9,  4,  3,  '2026-06-01', '2026-06-15', 'Плановый отпуск руководителя',       1, '2026-05-18 10:00:00', true),
+              (16, 7,  4,  6,  '2026-04-10', '2026-04-25', 'Делегирование отменено',             1, '2026-04-08 10:00:00', false);
+
+            SELECT setval(pg_get_serial_sequence('evaluator_delegations', 'id'),
+                          (SELECT COALESCE(MAX(id), 1) FROM evaluator_delegations));
+        </sql>
+    </changeSet>
+</databaseChangeLog>
