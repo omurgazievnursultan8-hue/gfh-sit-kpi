@@ -54,18 +54,19 @@ export function DashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodSelection>(ALL_PERIODS)
   const isAllPeriods = selectedPeriod === ALL_PERIODS
 
-  // Rating-calculation panel — opens below the grid when R01 card is hovered.
-  const [ratingPanelOpen, setRatingPanelOpen] = useState(false)
+  // Rating-calculation panel — opens below the grid when R01 card is clicked.
+  // Active by default so the rating tables show on initial load.
+  const [ratingPanelOpen, setRatingPanelOpen] = useState(true)
   const [scorecard, setScorecard] = useState<ScorecardResponse | null>(null)
   const [scorecardLoading, setScorecardLoading] = useState(false)
 
-  // Eval-cycle panel — two evaluation tables open below the grid on P01 hover.
+  // Eval-cycle panel — two evaluation tables open below the grid on P01 click.
   const [evalCyclePanelOpen, setEvalCyclePanelOpen] = useState(false)
 
-  // Appeals panel — two appeal tables (pending + resolved) open on A01 hover.
+  // Appeals panel — two appeal tables (pending + resolved) open on A01 click.
   const [appealsPanelOpen, setAppealsPanelOpen] = useState(false)
 
-  // Delegations panel — active + inactive tables open on D01 hover.
+  // Delegations panel — active + inactive tables open on D01 click.
   const [delegationsPanelOpen, setDelegationsPanelOpen] = useState(false)
 
   // Panels are mutually exclusive — opening one closes any other.
@@ -92,12 +93,6 @@ export function DashboardPage() {
     setRatingPanelOpen(false)
     setEvalCyclePanelOpen(false)
     setAppealsPanelOpen(false)
-  }
-  const closePanels = () => {
-    setRatingPanelOpen(false)
-    setEvalCyclePanelOpen(false)
-    setAppealsPanelOpen(false)
-    setDelegationsPanelOpen(false)
   }
 
   // Fetch everything — render whatever succeeds, flag partial failure.
@@ -322,7 +317,7 @@ export function DashboardPage() {
         </div>
 
         {/* ── GRID ── */}
-        <div className="dv3-grid" onMouseLeave={closePanels}>
+        <div className="dv3-grid">
 
           {/* SELF.RATING */}
           <StatCard
@@ -338,7 +333,7 @@ export function DashboardPage() {
                   ? t('dashboard.ratingNone')
                   : undefined
             }
-            onHover={openRatingPanel} active={ratingPanelOpen}
+            onClick={openRatingPanel} active={ratingPanelOpen}
             gauge={ratingState === 'scored' ? {
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
@@ -353,7 +348,7 @@ export function DashboardPage() {
             value={cycleDone}
             unit={`/ ${loading ? PLACEHOLDER : cycleTotal}`}
             label={t('dashboard.evaluationsComplete')}
-            onHover={openEvalCyclePanel}
+            onClick={openEvalCyclePanel}
             active={evalCyclePanelOpen}
             gauge={{
               pct: cyclePct, variant: 'meta',
@@ -369,7 +364,7 @@ export function DashboardPage() {
             title={t('dashboard.cardAppeals')} id="A01" loading={loading}
             value={appealsPending}
             label={t('dashboard.pendingAppeals')}
-            onHover={openAppealsPanel}
+            onClick={openAppealsPanel}
             active={appealsPanelOpen}
             gauge={{
               pct: appealsPct, variant: 'meta',
@@ -385,7 +380,7 @@ export function DashboardPage() {
             title={t('dashboard.cardDelegations')} id="D01" loading={loading}
             value={delegActive}
             label={t('dashboard.activeDelegations')}
-            onHover={openDelegationsPanel}
+            onClick={openDelegationsPanel}
             active={delegationsPanelOpen}
             gauge={{
               pct: delegPct, variant: 'meta',
