@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { applyDv3Palette, dv3PaletteOptions, DV3_PALETTE_EVENT } from '../lib/dashboardPalettes'
 
 type Option = { label: string; value: string }
 type Setting = {
@@ -44,11 +45,112 @@ const inkPresets: Record<string, { ink: string; inkSoft: string; inkFaint: strin
   light:    { ink: '#e8efec', inkSoft: '#b6c3bf', inkFaint: '#7e9591', inkDim: '#5b716c' },
 }
 
+// 9-token semantic palette presets (bg, surface, line, ink, ink-soft, accent, success, warn, danger)
+type TokenPalette = { bg: string; surface: string; line: string; ink: string; inkSoft: string; accent: string; success: string; warn: string; danger: string }
+const tokenPalettes: Record<string, TokenPalette> = {
+  parchment: { bg: '#f4f1ea', surface: '#ffffff', line: '#d8d2c2', ink: '#0e1714', inkSoft: '#344843', accent: '#0d4d3f', success: '#1a7558', warn: '#b25a16', danger: '#a31f1f' },
+  porcelain: { bg: '#f7f7f5', surface: '#ffffff', line: '#e2e2dd', ink: '#111111', inkSoft: '#3a3a3a', accent: '#3730a3', success: '#15803d', warn: '#b45309', danger: '#b91c1c' },
+  fog:       { bg: '#eef2f6', surface: '#ffffff', line: '#cbd5e1', ink: '#0f172a', inkSoft: '#334155', accent: '#0e7490', success: '#0f766e', warn: '#c2410c', danger: '#be123c' },
+  blush:     { bg: '#f7eff1', surface: '#ffffff', line: '#e6d5d9', ink: '#1f1014', inkSoft: '#4a2b32', accent: '#9f1239', success: '#15803d', warn: '#c2410c', danger: '#7f1d1d' },
+  midnight:  { bg: '#0d1714', surface: '#182a23', line: '#1f3329', ink: '#e8efec', inkSoft: '#b6c3bf', accent: '#1a7558', success: '#22c55e', warn: '#f59e0b', danger: '#ef4444' },
+}
+type TokenDef = { cssVar: string; label: string; group: string; selector?: string; presetKey?: keyof TokenPalette }
+const TOKEN_KEYS: TokenDef[] = [
+  // Core 9 — wired to palette preset
+  { cssVar: '--bg',        label: 'Surface base',      group: 'Core 9', presetKey: 'bg' },
+  { cssVar: '--surface',   label: 'Surface raised',    group: 'Core 9', presetKey: 'surface' },
+  { cssVar: '--line',      label: 'Border',            group: 'Core 9', presetKey: 'line' },
+  { cssVar: '--ink',       label: 'Text primary',      group: 'Core 9', presetKey: 'ink' },
+  { cssVar: '--ink-soft',  label: 'Text muted',        group: 'Core 9', presetKey: 'inkSoft' },
+  { cssVar: '--accent',    label: 'Accent / brand',    group: 'Core 9', presetKey: 'accent' },
+  { cssVar: '--success',   label: 'Success',           group: 'Core 9', presetKey: 'success' },
+  { cssVar: '--warn',      label: 'Warning',           group: 'Core 9', presetKey: 'warn' },
+  { cssVar: '--danger',    label: 'Danger',            group: 'Core 9', presetKey: 'danger' },
+  // Navigation chrome
+  { cssVar: '--rail-bg-1', label: 'Rail bg (top)',     group: 'Navigation' },
+  { cssVar: '--rail-bg-2', label: 'Rail bg (bottom)',  group: 'Navigation' },
+  { cssVar: '--nav-bg-1',  label: 'Sidebar bg (top)',  group: 'Navigation' },
+  { cssVar: '--nav-bg-2',  label: 'Sidebar bg (bottom)', group: 'Navigation' },
+  { cssVar: '--nav-ink',         label: 'Nav text',           group: 'Navigation' },
+  { cssVar: '--nav-ink-soft',    label: 'Nav text muted',     group: 'Navigation' },
+  // Dashboard (.dv3-root scope)
+  { cssVar: '--dv3-bg',    label: 'Dashboard bg',           group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-bg2',   label: 'Stat card surface',      group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-bg3',   label: 'Stat card header bg',    group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-text',  label: 'Dashboard text',         group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-text3', label: 'Dashboard text muted',   group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-border', label: 'Dashboard border',      group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-accent', label: 'Dashboard accent',      group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-zone-up',   label: 'Zone up',            group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-zone-warn', label: 'Zone warn',          group: 'Dashboard', selector: '.dv3-root' },
+  { cssVar: '--dv3-zone-down', label: 'Zone down',          group: 'Dashboard', selector: '.dv3-root' },
+]
+
+const OVERRIDES_STYLE_ID = 'gfh-token-overrides'
+function applyTokenOverridesToDom(overrides: Record<string, string>) {
+  let el = document.getElementById(OVERRIDES_STYLE_ID) as HTMLStyleElement | null
+  if (!el) {
+    el = document.createElement('style')
+    el.id = OVERRIDES_STYLE_ID
+  }
+  // Always re-append to end of <body> so this block sits after any React-rendered
+  // <style> tags inside the component tree (e.g. DASHBOARD_CSS). Combined with
+  // !important on each declaration, this guarantees overrides win the cascade.
+  document.body.appendChild(el)
+  const bySel: Record<string, string[]> = {}
+  for (const [cssVar, color] of Object.entries(overrides)) {
+    const def = TOKEN_KEYS.find(t => t.cssVar === cssVar)
+    const sel = def?.selector || ':root'
+    ;(bySel[sel] ||= []).push(`${cssVar}: ${color} !important;`)
+  }
+  el.textContent = Object.entries(bySel)
+    .map(([sel, decls]) => `${sel}{${decls.join('')}}`)
+    .join('\n')
+}
+
+function rgbToHex(rgb: string): string {
+  const s = rgb.trim()
+  if (!s) return '#000000'
+  if (s.startsWith('#')) return s.length === 7 ? s : s
+  const m = s.match(/rgba?\(([^)]+)\)/i)
+  if (!m) return '#000000'
+  const parts = m[1].split(/[\s,/]+/).filter(Boolean).map(p => parseFloat(p))
+  const [r, g, b] = parts
+  if ([r, g, b].some(n => Number.isNaN(n))) return '#000000'
+  return '#' + [r, g, b].map(n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')).join('')
+}
+
 const settings: Setting[] = [
   // Theme
   { key: 'theme', label: 'Theme mode', group: 'Theme', default: 'light',
     options: [{ label: 'Light', value: 'light' }, { label: 'Dark', value: 'dark' }],
     apply: (v) => { document.documentElement.setAttribute('data-theme', v); return {} } },
+
+  // 9-token semantic palette. Default `auto` = let CSS theme rules (light/dark)
+  // control core tokens. Any concrete preset writes inline vars on :root which
+  // override the data-theme cascade — so only apply when user explicitly picks.
+  { key: 'tokenPalette', label: '9-token palette', group: 'Palette', default: 'auto',
+    options: [{ label: 'auto (follow theme)', value: 'auto' }, ...Object.keys(tokenPalettes).map(k => ({ label: k, value: k }))],
+    apply: (v) => {
+      const root = document.documentElement
+      if (v === 'auto') {
+        for (const { cssVar, presetKey } of TOKEN_KEYS) {
+          if (presetKey) root.style.removeProperty(cssVar)
+        }
+        return {}
+      }
+      const p = tokenPalettes[v] || tokenPalettes.parchment
+      const out: Record<string, string> = {}
+      for (const { cssVar, presetKey } of TOKEN_KEYS) {
+        if (presetKey) out[cssVar] = p[presetKey]
+      }
+      return out
+    } },
+
+  // Full dashboard palette — writes every .dv3-* token. 'default' clears overrides.
+  { key: 'dashboardPalette', label: 'Dashboard palette', group: 'Palette', default: 'azure-paper',
+    options: dv3PaletteOptions,
+    apply: (v) => { applyDv3Palette(v); return {} } },
 
   // Color presets
   { key: 'accent', label: 'Accent color', group: 'Colors', default: 'emerald',
@@ -349,14 +451,66 @@ const settings: Setting[] = [
     } },
 ]
 
+// Vars whose value is theme-controlled by [data-theme="dark"] in index.css.
+// Writing them inline on :root would beat the dark cascade and break the
+// light→dark switch. Route these through a light-only <style> tag instead.
+const THEME_SENSITIVE_VARS = new Set([
+  '--bg', '--bg-soft', '--surface', '--surface-mute',
+  '--ink', '--ink-soft', '--ink-faint', '--ink-dim',
+  '--line', '--line-soft', '--line-strong',
+])
+
+const LIGHT_ONLY_STYLE_ID = 'gfh-light-only-vars'
+// Accumulator persisted across applySetting calls so each setting only
+// owns its own keys; later writes overwrite by key.
+const lightOnlyVars: Record<string, string> = {}
+
+function flushLightOnly() {
+  let el = document.getElementById(LIGHT_ONLY_STYLE_ID) as HTMLStyleElement | null
+  if (!el) {
+    el = document.createElement('style')
+    el.id = LIGHT_ONLY_STYLE_ID
+  }
+  document.body.appendChild(el)
+  const decls = Object.entries(lightOnlyVars).map(([k, v]) => `${k}:${v} !important;`).join('')
+  el.textContent = decls ? `html:not([data-theme="dark"]):root{${decls}}` : ''
+}
+
 function applySetting(s: Setting, val: string) {
   const vars = s.apply(val)
   const root = document.documentElement
-  for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v)
+  let touchedLightOnly = false
+  for (const [k, v] of Object.entries(vars)) {
+    if (THEME_SENSITIVE_VARS.has(k)) {
+      // Clear any prior inline write (legacy state) and route through <style>.
+      root.style.removeProperty(k)
+      lightOnlyVars[k] = v
+      touchedLightOnly = true
+    } else {
+      root.style.setProperty(k, v)
+    }
+  }
+  if (touchedLightOnly) flushLightOnly()
 }
 
+const TOKEN_OVERRIDES_KEY = 'gfh_theme_token_overrides_v1'
+
+const MIGRATION_FLAG = 'gfh_theme_v2_migrated'
 function loadStored(): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} }
+  try {
+    const s: Record<string, string> = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}')
+    // v2: tokenPalette default flipped from 'parchment' to 'auto' so the preset
+    // no longer clobbers the dark-theme cascade. Migrate existing users once.
+    if (!localStorage.getItem(MIGRATION_FLAG)) {
+      if (s.tokenPalette === 'parchment') s.tokenPalette = 'auto'
+      localStorage.setItem(MIGRATION_FLAG, '1')
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(s))
+    }
+    return s
+  } catch { return {} }
+}
+function loadTokenOverrides(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(TOKEN_OVERRIDES_KEY) || '{}') } catch { return {} }
 }
 
 export function ThemeCustomizer() {
@@ -367,11 +521,63 @@ export function ThemeCustomizer() {
     for (const s of settings) init[s.key] = stored[s.key] ?? s.default
     return init
   })
+  const [tokenOverrides, setTokenOverrides] = useState<Record<string, string>>(loadTokenOverrides)
 
   useEffect(() => {
     for (const s of settings) applySetting(s, values[s.key])
     localStorage.setItem(STORAGE_KEY, JSON.stringify(values))
   }, [values])
+
+  // External palette switch (e.g. from DashboardPage period bar) — pull new
+  // value into local state so the sidebar select reflects it.
+  useEffect(() => {
+    function onPaletteChange(e: Event) {
+      const next = (e as CustomEvent<string>).detail
+      if (typeof next === 'string' && next !== values.dashboardPalette) {
+        setValues(prev => ({ ...prev, dashboardPalette: next }))
+      }
+    }
+    window.addEventListener(DV3_PALETTE_EVENT, onPaletteChange)
+    return () => window.removeEventListener(DV3_PALETTE_EVENT, onPaletteChange)
+  }, [values.dashboardPalette])
+
+  // Per-token overrides apply AFTER preset via a dedicated <style> block so
+  // dashboard-scoped tokens (`.dv3-root`) win over their original definitions.
+  useEffect(() => {
+    applyTokenOverridesToDom(tokenOverrides)
+    localStorage.setItem(TOKEN_OVERRIDES_KEY, JSON.stringify(tokenOverrides))
+  }, [tokenOverrides, values])
+
+  function setToken(cssVar: string, color: string) {
+    setTokenOverrides(prev => ({ ...prev, [cssVar]: color }))
+  }
+  function clearToken(cssVar: string) {
+    setTokenOverrides(prev => {
+      const next = { ...prev }; delete next[cssVar]; return next
+    })
+    // For core tokens, restore preset value (or remove inline so theme cascade wins).
+    const def = TOKEN_KEYS.find(t => t.cssVar === cssVar)
+    if (def?.presetKey) {
+      const root = document.documentElement
+      if (values.tokenPalette === 'auto' || !tokenPalettes[values.tokenPalette]) {
+        root.style.removeProperty(cssVar)
+      } else {
+        root.style.setProperty(cssVar, tokenPalettes[values.tokenPalette][def.presetKey])
+      }
+    }
+  }
+  function currentTokenColor(cssVar: string): string {
+    if (tokenOverrides[cssVar]) return tokenOverrides[cssVar]
+    const def = TOKEN_KEYS.find(t => t.cssVar === cssVar)
+    if (def?.presetKey && values.tokenPalette && values.tokenPalette !== 'auto') {
+      const p = tokenPalettes[values.tokenPalette]
+      if (p) return p[def.presetKey]
+    }
+    // Resolve from computed style at the right scope.
+    const target = (def?.selector && document.querySelector(def.selector)) || document.documentElement
+    const raw = getComputedStyle(target as Element).getPropertyValue(cssVar)
+    return rgbToHex(raw)
+  }
 
   const groups = useMemo(() => {
     const map: Record<string, Setting[]> = {}
@@ -387,6 +593,7 @@ export function ThemeCustomizer() {
     const init: Record<string, string> = {}
     for (const s of settings) init[s.key] = s.default
     setValues(init)
+    setTokenOverrides({})
     document.documentElement.style.fontSize = ''
     document.body.style.lineHeight = ''
     document.body.style.letterSpacing = ''
@@ -442,6 +649,54 @@ export function ThemeCustomizer() {
             </header>
 
             <div style={{ overflow: 'auto', padding: '8px 16px 24px', flex: 1 }}>
+              {['Core 9', 'Navigation', 'Dashboard'].map(grp => {
+                const items = TOKEN_KEYS.filter(t => t.group === grp)
+                if (!items.length) return null
+                const grpHasOverride = items.some(t => tokenOverrides[t.cssVar])
+                return (
+                  <section key={grp} style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-faint, #666)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>{grp} swatches</span>
+                      {grpHasOverride && (
+                        <button
+                          onClick={() => setTokenOverrides(prev => {
+                            const next = { ...prev }
+                            for (const t of items) delete next[t.cssVar]
+                            return next
+                          })}
+                          style={{ ...btnStyle, padding: '2px 6px', fontSize: 10 }}
+                        >Clear group</button>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {items.map(({ cssVar, label }) => {
+                        const overridden = !!tokenOverrides[cssVar]
+                        return (
+                          <label key={cssVar} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                            <span style={{ color: 'var(--ink-soft, #333)' }}>
+                              {label}
+                              <code style={{ marginLeft: 6, fontSize: 10, color: 'var(--ink-faint, #888)' }}>{cssVar}</code>
+                            </span>
+                            <input
+                              type="color"
+                              value={currentTokenColor(cssVar)}
+                              onChange={(e) => setToken(cssVar, e.target.value)}
+                              style={{ width: 34, height: 24, padding: 0, border: '1px solid var(--line, #ccc)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}
+                            />
+                            <button
+                              onClick={() => clearToken(cssVar)}
+                              disabled={!overridden}
+                              title={overridden ? 'Reset to preset' : 'No override'}
+                              style={{ ...btnStyle, padding: '2px 6px', fontSize: 10, opacity: overridden ? 1 : 0.35, cursor: overridden ? 'pointer' : 'default' }}
+                            >↺</button>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </section>
+                )
+              })}
+
               {Object.entries(groups).map(([group, items]) => (
                 <section key={group} style={{ marginTop: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-faint, #666)', marginBottom: 8 }}>{group}</div>

@@ -312,8 +312,6 @@ export function DashboardPage() {
               </option>
             ))}
           </select>
-          <span className="dv3-periodbar-spacer" />
-          <span className="dv3-periodbar-hint">{t('dashboard.periodHint')}</span>
         </div>
 
         {/* ── GRID ── */}

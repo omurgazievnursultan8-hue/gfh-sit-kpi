@@ -339,7 +339,7 @@ export function DataPanel<T>({
   }, [mode, search, filterValues, sort, pageSize])
 
   return (
-    <div>
+    <div className="dp-dash">
       {panelStorageKey && (
         <SavedViewsTabs
           views={savedViews}

@@ -1,35 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { analyticsApi, PersonalAnalytics, ScorecardResponse, PeriodScore, CriteriaScore } from './analyticsApi'
 import { ExportButtons } from '../../components/ExportButtons'
-import { KpiRing } from '../dashboard/KpiRing'
+import { usePageTitle } from '../../context/PageContext'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
 
-/* ────────────────────────────────────────────────────────────────────────────
- * "Мой KPI" — visual language matched to the main Dashboard:
- *   cream paper bg · deep-green gradient hero w/ blueprint grid + gold ring ·
- *   white surface cards w/ 3px stripe top · JetBrains Mono labels · ▲/▼ deltas.
- * ────────────────────────────────────────────────────────────────────────── */
-
-function useCountUp(target: number | null, duration = 900) {
-  const [value, setValue] = useState(0)
-  const startRef = useRef<number | null>(null)
-  useEffect(() => {
-    if (target === null || Number.isNaN(target)) { setValue(0); return }
-    let raf = 0
-    const tick = (t: number) => {
-      if (startRef.current === null) startRef.current = t
-      const p = Math.min(1, (t - startRef.current) / duration)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setValue(target * eased)
-      if (p < 1) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => { cancelAnimationFrame(raf); startRef.current = null }
-  }, [target, duration])
-  return value
-}
+// "Мой KPI" — rewritten to match the main Dashboard terminal/Swiss-grid aesthetic.
 
 function fmt(n: number | null | undefined, digits = 1): string {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return '—'
@@ -37,10 +17,16 @@ function fmt(n: number | null | undefined, digits = 1): string {
 }
 
 function signedDelta(n: number | null | undefined) {
-  if (n === null || n === undefined || Number.isNaN(Number(n))) return { txt: '—', tone: 'flat' as const }
+  if (n === null || n === undefined || Number.isNaN(Number(n))) {
+    return { txt: '—', tone: 'flat' as const, value: null as number | null }
+  }
   const v = Number(n)
-  if (Math.abs(v) < 0.05) return { txt: '±0.0', tone: 'flat' as const }
-  return { txt: `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(1)}`, tone: (v > 0 ? 'up' : 'down') as 'up' | 'down' }
+  if (Math.abs(v) < 0.05) return { txt: '±0.0', tone: 'flat' as const, value: 0 }
+  return {
+    txt: `${v > 0 ? '▲' : '▼'} ${Math.abs(v).toFixed(1)}`,
+    tone: (v > 0 ? 'up' : 'down') as 'up' | 'down',
+    value: v,
+  }
 }
 
 function deriveGrade(score: number | null): string {
@@ -53,21 +39,6 @@ function deriveGrade(score: number | null): string {
   return 'D'
 }
 
-function timeGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Доброе утро'
-  if (h < 18) return 'Добрый день'
-  return 'Добрый вечер'
-}
-
-function todayLine(): string {
-  const now = new Date()
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  return `${datePart} · ${hh}:${mm}`
-}
-
 function periodTick(periodType: string, startDate: string): string {
   const d = new Date(startDate)
   if (periodType === 'QUARTERLY') return `Q${Math.floor(d.getMonth() / 3) + 1} ${String(d.getFullYear()).slice(2)}`
@@ -75,22 +46,29 @@ function periodTick(periodType: string, startDate: string): string {
   return `${d.getFullYear()}`
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-
 export function PersonalDashboardPage() {
+  usePageTitle('nav.myKpi')
+  const { t, i18n } = useTranslation()
+
   const [data, setData] = useState<PersonalAnalytics | null>(null)
   const [card, setCard] = useState<ScorecardResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
     Promise.all([analyticsApi.personal(), analyticsApi.scorecard()])
       .then(([p, s]) => { setData(p); setCard(s) })
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setLoadedAt(new Date()) })
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
   }, [])
 
   const sortedHistory = useMemo(() => {
     if (!data) return []
-    // chronological for chart; data.history seems newest-first from API
     return [...data.history].sort((a, b) => a.startDate.localeCompare(b.startDate))
   }, [data])
 
@@ -99,480 +77,328 @@ export function PersonalDashboardPage() {
     score: Number(Number(h.score).toFixed(2)),
   })), [sortedHistory])
 
-  const animatedScore = useCountUp(data?.currentScore ?? null)
+  // Time / clock — Bishkek tz, matches DashboardPage formatting.
+  const BISHKEK_TZ = 'Asia/Bishkek'
+  const clockParts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BISHKEK_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(now)
+  const hh = clockParts.find(p => p.type === 'hour')?.value ?? '00'
+  const mm = clockParts.find(p => p.type === 'minute')?.value ?? '00'
+  const hours = Number(hh)
+  const timeGreeting = hours < 12
+    ? t('dashboard.greetingMorning')
+    : hours < 18
+      ? t('dashboard.greetingAfternoon')
+      : t('dashboard.greetingEvening')
+  const datePart = now.toLocaleDateString(
+    i18n.language === 'kg' ? 'ky-KG' : 'ru-RU',
+    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: BISHKEK_TZ },
+  )
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
 
-  if (loading) {
-    return (
-      <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-        <div className="font-mono uppercase tracking-widest animate-pulse"
-             style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-          Загрузка…
-        </div>
-      </div>
-    )
-  }
-  if (!data) {
-    return (
-      <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-        <div className="font-display" style={{ fontSize: 18, color: 'var(--danger)' }}>
-          Ошибка загрузки
-        </div>
-      </div>
-    )
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1
+      ? t('dashboard.updatedJustNow')
+      : t('dashboard.updatedMinutesAgo', { count: mins })
   }
 
-  const currentScore = data.currentScore
+  const currentScore = data?.currentScore ?? null
+  const scoreWhole = currentScore !== null ? Math.round(currentScore) : null
+  const scorePct = currentScore !== null ? currentScore / 100 : 0
+  const zone = scoreZone(scoreWhole)
   const grade = card?.grade || deriveGrade(currentScore)
   const rank = card?.rank ?? null
   const vsGoal = card?.vsGoal ?? null
   const vsPrev = card?.vsPrevPeriod ?? null
-  const periodLabel = card?.periodLabel ?? 'Текущий период'
+  const periodLabel = card?.periodLabel ?? ''
 
-  const myMinusDept = currentScore !== null && data.departmentAvg !== null
+  const myMinusDept = currentScore !== null && data?.departmentAvg !== null && data?.departmentAvg !== undefined
     ? Number(currentScore) - Number(data.departmentAvg) : null
-  const myMinusCo = currentScore !== null && data.companyAvg !== null
+  const myMinusCo = currentScore !== null && data?.companyAvg !== null && data?.companyAvg !== undefined
     ? Number(currentScore) - Number(data.companyAvg) : null
 
+  // ФИО → Name Patronymic
+  const nameParts = data?.fullName?.trim().split(/\s+/) ?? []
+  const greetingName = nameParts.length >= 3
+    ? `${nameParts[1]} ${nameParts[2]}`
+    : nameParts.slice(1).join(' ') || nameParts[0] || ''
+
   return (
-    <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-      <style>{`
-        @keyframes kpi-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-        .k-rise { opacity: 0; animation: kpi-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
-        @media (max-width: 640px) { .kpi-hero-grid { grid-template-columns: 1fr !important; gap: 20px !important } }
-        @media (max-width: 880px) { .kpi-stats-grid { grid-template-columns: 1fr !important } .kpi-bottom-grid { grid-template-columns: 1fr !important } }
-      `}</style>
+    <div className="dv3-root">
+      <style>{DASHBOARD_CSS}</style>
+      <style>{STAT_CARD_CSS}</style>
+      <style>{MYKPI_CSS}</style>
 
-      {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden rounded-2xl mb-6 k-rise"
-        style={{
-          background: 'linear-gradient(135deg, #0e2724 0%, #0d4d3f 55%, #1a7558 100%)',
-          color: '#ecf2f0',
-          padding: '28px 32px',
-          border: '1px solid #06120f',
-          boxShadow: 'var(--shadow-md)',
-          animationDelay: '0ms',
-        }}
-      >
-        {/* blueprint grid */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 24px),' +
-            'repeating-linear-gradient(90deg,rgba(255,255,255,.020) 0 1px,transparent 1px 24px)',
-        }} />
-        {/* gold radial */}
-        <div className="absolute pointer-events-none" style={{
-          top: -80, right: -80, width: 320, height: 320,
-          background: 'radial-gradient(circle,rgba(168,133,43,.14),transparent 60%)',
-        }} />
+      <div className="dv3-terminal">
 
-        <div className="relative grid items-center gap-8 kpi-hero-grid"
-             style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* left — text */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block rounded-full animate-pulse"
-                    style={{ width: 6, height: 6, background: 'var(--gold)' }} />
-              <span className="font-mono uppercase tracking-widest"
-                    style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.7)' }}>
-                {todayLine()}
-              </span>
-            </div>
-
-            <h1 className="font-display mb-1.5"
-                style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.01em', color: '#ecf2f0' }}>
-              Мой <span style={{ color: 'var(--gold)' }}>KPI</span>
-              <span style={{ color: 'rgba(245,236,210,0.55)', fontSize: 18, fontWeight: 400, marginLeft: 10 }}>
-                · {data.fullName}
-              </span>
-            </h1>
-
-            <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-              <p style={{ margin: 0 }}>
-                {timeGreeting()}. Текущий рейтинг —{' '}
-                <strong style={{ color: '#f5ecd2', fontWeight: 600 }}>
-                  {currentScore === null ? 'нет данных' : `${currentScore.toFixed(1)} / 100`}
-                </strong>
-                {myMinusDept !== null && (
-                  <> · разрыв с отделом{' '}
-                    <strong style={{
-                      color: myMinusDept >= 0 ? '#9bd6b1' : '#f0a4a4',
-                      fontWeight: 600,
-                    }}>
-                      {myMinusDept >= 0 ? '+' : '−'}{Math.abs(myMinusDept).toFixed(1)} пт
-                    </strong>
-                  </>
-                )}
+        {/* ── HERO ── */}
+        <div className="dv3-hero">
+          <div className="dv3-hero-meta">
+            <span className="dv3-hero-meta-l">MY.KPI · {periodLabel || t('dashboard.heroMeta')}</span>
+            <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+          </div>
+          <div className="dv3-hero-main">
+            <div>
+              <h1 className="dv3-hero-title">
+                {timeGreeting}, <span className="dv3-accent">{greetingName || '—'}.</span>
+              </h1>
+              <p className="dv3-hero-sub">{todayLine}</p>
+              <div className="mk-hero-chips">
+                <span className="mk-chip">GRADE · <strong>{grade}</strong></span>
                 {rank !== null && (
-                  <> · позиция <strong style={{ color: '#f5ecd2', fontWeight: 600 }}>№{rank}</strong></>
+                  <span className="mk-chip">RANK · <strong>№{rank}</strong></span>
                 )}
-                .
-              </p>
+                <span className="mk-chip mk-chip--muted">
+                  {sortedHistory.length} {t('dashboard.periodsInHistory', { defaultValue: 'periods' })}
+                </span>
+              </div>
+              <div className="mk-hero-export"><ExportButtons type="personal" /></div>
             </div>
-
-            <div className="flex items-center gap-2 font-mono flex-wrap"
-                 style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.65)' }}>
-              <span className="font-mono font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
-                    style={{
-                      fontSize: 10,
-                      background: 'rgba(120,200,150,0.14)',
-                      color: '#7fd4a3',
-                      border: '1px solid rgba(120,200,150,0.32)',
-                    }}>
-                {periodLabel}
-              </span>
-              <span>Grade <strong style={{ color: 'var(--gold)', fontWeight: 700 }}>{grade}</strong></span>
-              <span>·</span>
-              <span>{sortedHistory.length} {sortedHistory.length === 1 ? 'период' : 'периодов'} в истории</span>
-            </div>
-
-            <div className="mt-4">
-              <ExportButtons type="personal" />
+            <div className="dv3-hero-metrics">
+              <div className="dv3-hero-metric">
+                <span
+                  className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}${
+                    !loading && zone.numClass ? ` dv3-hero-metric-num--${zone.numClass}` : ''
+                  }`}
+                >
+                  {loading ? '··' : (scoreWhole !== null ? scoreWhole : '—')}
+                </span>
+                <span className="dv3-hero-metric-lab">{t('dashboard.kpiOf100')}</span>
+              </div>
             </div>
           </div>
-
-          {/* right — KPI ring */}
-          <div className="flex items-center justify-end">
-            <KpiRing
-              score={currentScore !== null ? Number(animatedScore.toFixed(0)) : null}
-              periodShort={card?.periodLabel?.split(' ')[0] || null}
-            />
+          <div className="dv3-hero-foot">
+            <span className="dv3-hero-foot-ok">STATUS · {t('dashboard.statusOk')}</span>
+            <span>{updatedLabel}</span>
           </div>
         </div>
-      </div>
 
-      {/* ── STATS ROW ─────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 mb-5 kpi-stats-grid k-rise"
-           style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', animationDelay: '90ms' }}>
-        <StatCard
-          label="Текущий рейтинг"
-          mainText={fmt(currentScore)}
-          mainColor="var(--ink)"
-          stripe="var(--accent-2)"
-          delta={signedDelta(vsPrev)}
-          deltaSuffix={vsPrev !== null ? 'vs прошлый' : undefined}
-          footer={`из 100 · grade ${grade}`}
-        />
-        <StatCard
-          label="Средний по отделу"
-          mainText={fmt(data.departmentAvg)}
-          mainColor="var(--ink)"
-          stripe="var(--info)"
-          delta={signedDelta(myMinusDept)}
-          deltaSuffix={myMinusDept !== null ? 'вы — отдел' : undefined}
-          footer="средний балл коллег"
-        />
-        <StatCard
-          label="Средний по компании"
-          mainText={fmt(data.companyAvg)}
-          mainColor="var(--ink)"
-          stripe="var(--gold)"
-          delta={signedDelta(myMinusCo)}
-          deltaSuffix={myMinusCo !== null ? 'вы — компания' : undefined}
-          footer="общий уровень"
-        />
-        <StatCard
-          label="vs. цель"
-          mainText={vsGoal !== null ? (vsGoal >= 0 ? '+' : '−') + Math.abs(vsGoal).toFixed(1) : '—'}
-          mainColor={vsGoal === null ? 'var(--ink-faint)' : vsGoal >= 0 ? 'var(--accent-2)' : 'var(--danger)'}
-          stripe={vsGoal === null ? 'var(--line-strong)' : vsGoal >= 0 ? 'var(--accent-2)' : 'var(--danger)'}
-          delta={{ txt: rank !== null ? `№${rank}` : '—', tone: 'flat' }}
-          deltaSuffix={rank !== null ? 'ранг' : undefined}
-          footer={vsGoal === null ? 'нет цели для периода' : 'отклонение от цели'}
-        />
-      </div>
+        {/* ── STAT GRID ── */}
+        <div className="dv3-grid">
+          <StatCard
+            className="dv3-col-3"
+            title={t('analytics.currentRating', { defaultValue: 'Current Rating' })}
+            id="K01" loading={loading}
+            value={scoreWhole}
+            unit={currentScore !== null ? '/ 100' : undefined}
+            zoneScore={scoreWhole}
+            delta={vsPrev !== null && !Number.isNaN(Number(vsPrev)) ? {
+              value: Number(Number(vsPrev).toFixed(1)),
+              unit: 'pt',
+              label: t('analytics.vsPrev', { defaultValue: 'vs prev' }),
+            } : undefined}
+            gauge={currentScore !== null ? {
+              pct: scorePct, variant: 'marker',
+              left: '0', right: '100', current: scoreWhole,
+            } : undefined}
+          />
+          <StatCard
+            className="dv3-col-3"
+            title={t('analytics.deptAvg', { defaultValue: 'Department Avg' })}
+            id="K02" loading={loading}
+            value={data?.departmentAvg !== null && data?.departmentAvg !== undefined ? fmt(data.departmentAvg) : null}
+            unit={data?.departmentAvg !== null && data?.departmentAvg !== undefined ? '/ 100' : undefined}
+            delta={myMinusDept !== null ? {
+              value: Number(myMinusDept.toFixed(1)),
+              unit: 'pt',
+              label: t('analytics.youVsDept', { defaultValue: 'you − dept' }),
+            } : undefined}
+            gauge={data?.departmentAvg !== null && data?.departmentAvg !== undefined ? {
+              pct: Number(data.departmentAvg) / 100, variant: 'meta',
+              left: '0%',
+              center: <strong>{fmt(data.departmentAvg)}</strong>,
+              right: '100',
+            } : undefined}
+          />
+          <StatCard
+            className="dv3-col-3"
+            title={t('analytics.companyAvg', { defaultValue: 'Company Avg' })}
+            id="K03" loading={loading}
+            value={data?.companyAvg !== null && data?.companyAvg !== undefined ? fmt(data.companyAvg) : null}
+            unit={data?.companyAvg !== null && data?.companyAvg !== undefined ? '/ 100' : undefined}
+            delta={myMinusCo !== null ? {
+              value: Number(myMinusCo.toFixed(1)),
+              unit: 'pt',
+              label: t('analytics.youVsCompany', { defaultValue: 'you − co' }),
+            } : undefined}
+            gauge={data?.companyAvg !== null && data?.companyAvg !== undefined ? {
+              pct: Number(data.companyAvg) / 100, variant: 'meta',
+              left: '0%',
+              center: <strong>{fmt(data.companyAvg)}</strong>,
+              right: '100',
+            } : undefined}
+          />
+          <StatCard
+            className="dv3-col-3"
+            title={t('analytics.vsGoal', { defaultValue: 'vs Goal' })}
+            id="K04" loading={loading}
+            value={vsGoal !== null && !Number.isNaN(Number(vsGoal))
+              ? (vsGoal >= 0 ? '+' : '−') + Math.abs(vsGoal).toFixed(1)
+              : null}
+            label={vsGoal !== null ? 'pt' : undefined}
+            emptyNote={vsGoal === null ? t('analytics.noGoal', { defaultValue: 'no goal for period' }) : undefined}
+            delta={rank !== null ? {
+              value: 0,
+              label: `№${rank}`,
+            } : undefined}
+          />
 
-      {/* ── CHART CARD ─────────────────────────────────────────────────────── */}
-      <Card title="Динамика рейтинга"
-            pill="Аналитика"
-            pillSpec={{ bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7', border: 'rgba(120,150,200,0.32)' }}
-            stripe="var(--info)"
-            rightMetric={`${chartData.length} обс. · шкала 0–100`}
-            className="mb-5 k-rise"
-            animationDelay={180}>
-        {chartData.length > 1 ? (
-          <div style={{ height: 280 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 8, right: 28, bottom: 4, left: -10 }}>
-                <defs>
-                  <linearGradient id="kpiAreaFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%"   stopColor="#4a73c7" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#4a73c7" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fontFamily: 'JetBrains Mono', fill: 'var(--ink-faint)' }}
-                  tickLine={false}
-                  axisLine={{ stroke: 'var(--line)' }}
-                />
-                <YAxis
-                  domain={[0, 100]}
-                  tick={{ fontSize: 10, fontFamily: 'JetBrains Mono', fill: 'var(--ink-faint)' }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={36}
-                />
-                <Tooltip
-                  cursor={{ stroke: 'var(--ink-soft)', strokeDasharray: '2 4' }}
-                  contentStyle={{
-                    background: 'var(--ink)',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '8px 12px',
-                    color: 'var(--bg)',
-                    fontSize: 11,
-                    fontFamily: 'JetBrains Mono',
-                  }}
-                  labelStyle={{ color: 'rgba(255,255,255,0.55)', fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase' }}
-                  itemStyle={{ color: '#f5ecd2' }}
-                  formatter={(v: number) => [v.toFixed(1), 'балл']}
-                />
-                {data.departmentAvg !== null && (
-                  <ReferenceLine
-                    y={Number(data.departmentAvg)}
-                    stroke="var(--accent-2)"
-                    strokeDasharray="4 4"
-                    strokeWidth={1}
-                    label={{
-                      value: `отдел ${fmt(data.departmentAvg)}`,
-                      position: 'insideTopRight',
-                      fill: 'var(--accent-2)' as any,
-                      fontSize: 9,
-                      fontFamily: 'JetBrains Mono',
-                    }}
-                  />
-                )}
-                {data.companyAvg !== null && (
-                  <ReferenceLine
-                    y={Number(data.companyAvg)}
-                    stroke="var(--gold)"
-                    strokeDasharray="2 6"
-                    strokeWidth={1}
-                    label={{
-                      value: `компания ${fmt(data.companyAvg)}`,
-                      position: 'insideBottomRight',
-                      fill: 'var(--gold)' as any,
-                      fontSize: 9,
-                      fontFamily: 'JetBrains Mono',
-                    }}
-                  />
-                )}
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="#4a73c7"
-                  strokeWidth={2.2}
-                  fill="url(#kpiAreaFill)"
-                  dot={{ r: 3, fill: 'var(--surface)', stroke: '#4a73c7', strokeWidth: 2 }}
-                  activeDot={{ r: 5, fill: '#4a73c7', stroke: 'var(--surface)', strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div className="font-mono text-center py-10"
-               style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: '0.08em' }}>
-            Нет данных — оценки ещё не проводились
-          </div>
-        )}
-      </Card>
-
-      {/* ── BOTTOM ROW — period ledger + criteria ──────────────────────────── */}
-      <div className="grid gap-3 kpi-bottom-grid k-rise"
-           style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', animationDelay: '280ms' }}>
-
-        <Card title="Журнал периодов"
-              pill="История"
-              pillSpec={{ bg: 'rgba(168,133,43,0.14)', fg: 'var(--gold)', border: 'rgba(168,133,43,0.32)' }}
-              stripe="var(--gold)"
-              rightMetric={`${sortedHistory.length} записей`}>
-          <PeriodLedger history={data.history} />
-        </Card>
-
-        {card?.criteria && card.criteria.length > 0 ? (
-          <Card title="Критерии"
-                pill="Разбор"
-                pillSpec={{ bg: 'rgba(26,117,88,0.14)', fg: 'var(--accent-2)', border: 'rgba(26,117,88,0.32)' }}
-                stripe="var(--accent-2)"
-                rightMetric={`топ-${Math.min(5, card.criteria.length)}`}>
-            <CriteriaBars items={card.criteria} />
-          </Card>
-        ) : (
-          <Card title="Критерии"
-                pill="Разбор"
-                pillSpec={{ bg: 'rgba(26,117,88,0.14)', fg: 'var(--accent-2)', border: 'rgba(26,117,88,0.32)' }}
-                stripe="var(--accent-2)"
-                rightMetric="—">
-            <div className="font-mono"
-                 style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-              Разбор по критериям появится после закрытия периода.
+          {/* CHART */}
+          <section className="dv3-card dv3-col-12 mk-panel">
+            <div className="dv3-card-head">
+              <span><strong>{t('analytics.dynamics', { defaultValue: 'Rating dynamics' })}</strong></span>
+              <span>[ {chartData.length} obs · 0–100 ]</span>
             </div>
-          </Card>
-        )}
+            <div className="mk-panel-body">
+              {chartData.length > 1 ? (
+                <div style={{ height: 280 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 8, right: 28, bottom: 4, left: -10 }}>
+                      <defs>
+                        <linearGradient id="kpiAreaFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor="var(--dv3-zone-info)" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="var(--dv3-zone-info)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 10, fontFamily: 'Geist Mono, ui-monospace, monospace', fill: 'var(--dv3-text3)' }}
+                        tickLine={false}
+                        axisLine={{ stroke: 'var(--dv3-border)' }}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tick={{ fontSize: 10, fontFamily: 'Geist Mono, ui-monospace, monospace', fill: 'var(--dv3-text3)' }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={36}
+                      />
+                      <Tooltip
+                        cursor={{ stroke: 'var(--dv3-border-hi)', strokeDasharray: '2 4' }}
+                        contentStyle={{
+                          background: 'var(--dv3-bg)',
+                          border: '1px solid var(--dv3-border-hi)',
+                          borderRadius: 0,
+                          padding: '8px 12px',
+                          color: 'var(--dv3-text)',
+                          fontSize: 11,
+                          fontFamily: 'Geist Mono, ui-monospace, monospace',
+                        }}
+                        labelStyle={{ color: 'var(--dv3-text3)', fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase' }}
+                        itemStyle={{ color: 'var(--dv3-accent)' }}
+                        formatter={(v: number) => [v.toFixed(1), t('analytics.score', { defaultValue: 'score' })]}
+                      />
+                      {data?.departmentAvg !== null && data?.departmentAvg !== undefined && (
+                        <ReferenceLine
+                          y={Number(data.departmentAvg)}
+                          stroke="var(--dv3-zone-up)"
+                          strokeDasharray="4 4"
+                          strokeWidth={1}
+                          label={{
+                            value: `dept ${fmt(data.departmentAvg)}`,
+                            position: 'insideTopRight',
+                            fill: 'var(--dv3-zone-up)' as any,
+                            fontSize: 9,
+                            fontFamily: 'Geist Mono, ui-monospace, monospace',
+                          }}
+                        />
+                      )}
+                      {data?.companyAvg !== null && data?.companyAvg !== undefined && (
+                        <ReferenceLine
+                          y={Number(data.companyAvg)}
+                          stroke="var(--dv3-zone-warn)"
+                          strokeDasharray="2 6"
+                          strokeWidth={1}
+                          label={{
+                            value: `co ${fmt(data.companyAvg)}`,
+                            position: 'insideBottomRight',
+                            fill: 'var(--dv3-zone-warn)' as any,
+                            fontSize: 9,
+                            fontFamily: 'Geist Mono, ui-monospace, monospace',
+                          }}
+                        />
+                      )}
+                      <Area
+                        type="monotone"
+                        dataKey="score"
+                        stroke="var(--dv3-zone-info)"
+                        strokeWidth={2.2}
+                        fill="url(#kpiAreaFill)"
+                        dot={{ r: 3, fill: 'var(--dv3-bg2)', stroke: 'var(--dv3-zone-info)', strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: 'var(--dv3-zone-info)', stroke: 'var(--dv3-bg2)', strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="mk-empty">
+                  {t('analytics.noChart', { defaultValue: 'No data — no evaluations yet' })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* PERIOD LEDGER */}
+          <section className="dv3-card dv3-col-6 mk-panel">
+            <div className="dv3-card-head">
+              <span><strong>{t('analytics.ledger', { defaultValue: 'Period ledger' })}</strong></span>
+              <span>[ {data?.history.length ?? 0} ]</span>
+            </div>
+            <div className="mk-panel-body">
+              <PeriodLedger history={data?.history ?? []} loading={loading} />
+            </div>
+          </section>
+
+          {/* CRITERIA */}
+          <section className="dv3-card dv3-col-6 mk-panel">
+            <div className="dv3-card-head">
+              <span><strong>{t('analytics.criteria', { defaultValue: 'Criteria' })}</strong></span>
+              <span>[ {Math.min(5, card?.criteria?.length ?? 0)} ]</span>
+            </div>
+            <div className="mk-panel-body">
+              {card?.criteria && card.criteria.length > 0 ? (
+                <CriteriaBars items={card.criteria} kg={i18n.language === 'kg'} />
+              ) : (
+                <div className="mk-empty">
+                  {t('analytics.noCriteria', { defaultValue: 'Criteria breakdown appears after period close.' })}
+                </div>
+              )}
+            </div>
+          </section>
+
+        </div>
       </div>
     </div>
   )
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
- * Reusable card shell — matches DashboardInsights CardShell visual contract.
- * ────────────────────────────────────────────────────────────────────────── */
-
-interface PillSpec { bg: string; fg: string; border: string }
-
-function Card({
-  title, pill, pillSpec, stripe, rightMetric, children, className = '', animationDelay,
-}: {
-  title: string
-  pill?: string
-  pillSpec?: PillSpec
-  stripe: string
-  rightMetric?: string
-  children: React.ReactNode
-  className?: string
-  animationDelay?: number
-}) {
-  return (
-    <div
-      className={`relative overflow-hidden rounded-lg ${className}`}
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '16px 18px',
-        boxShadow: 'var(--shadow-sm)',
-        animationDelay: animationDelay !== undefined ? `${animationDelay}ms` : undefined,
-      }}
-    >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-display truncate"
-                style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
-            {title}
-          </span>
-          {pill && pillSpec && (
-            <span className="font-mono font-semibold uppercase tracking-widest"
-                  style={{
-                    fontSize: 9.5, padding: '2px 7px', borderRadius: 4,
-                    background: pillSpec.bg, color: pillSpec.fg,
-                    border: `1px solid ${pillSpec.border}`,
-                  }}>
-              {pill}
-            </span>
-          )}
-        </div>
-        {rightMetric && (
-          <span className="font-mono font-semibold"
-                style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-            {rightMetric}
-          </span>
-        )}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
-
-function StatCard({
-  label, mainText, mainColor, stripe, delta, deltaSuffix, footer,
-}: {
-  label: string
-  mainText: string
-  mainColor: string
-  stripe: string
-  delta: { txt: string; tone: 'up' | 'down' | 'flat' }
-  deltaSuffix?: string
-  footer: string
-}) {
-  const deltaColor =
-    delta.tone === 'up' ? 'var(--accent-2)' :
-    delta.tone === 'down' ? 'var(--danger)' :
-    'var(--ink-faint)'
-  return (
-    <div
-      className="relative overflow-hidden rounded-lg"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '14px 16px',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="font-mono uppercase tracking-widest mb-2"
-           style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="font-display tabular-nums"
-              style={{ fontSize: 30, fontWeight: 600, color: mainColor, lineHeight: 1, letterSpacing: '-0.01em' }}>
-          {mainText}
-        </span>
-        <span className="font-mono tabular-nums" style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-          {delta.txt}
-        </span>
-      </div>
-      {deltaSuffix && (
-        <div className="font-mono mt-0.5"
-             style={{ fontSize: 9.5, color: 'var(--ink-dim)', letterSpacing: '0.04em' }}>
-          {deltaSuffix}
-        </div>
-      )}
-      <div className="font-mono mt-2"
-           style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-        {footer}
-      </div>
-    </div>
-  )
-}
-
-/* ────────────────────────────────────────────────────────────────────────── */
-
-function PeriodLedger({ history }: { history: PeriodScore[] }) {
-  // history newest-first per API; deltas computed against next (older) entry.
+// ── PeriodLedger ─────────────────────────────────────────────────────────────
+function PeriodLedger({ history, loading }: { history: PeriodScore[]; loading: boolean }) {
+  if (loading) {
+    return <div className="mk-empty dv3-loading">··</div>
+  }
   if (history.length === 0) {
-    return (
-      <div className="font-mono"
-           style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-        Нет закрытых периодов.
-      </div>
-    )
+    return <div className="mk-empty">—</div>
   }
   return (
-    <div className="divide-y" style={{ borderColor: 'var(--line-soft)' }}>
+    <div className="mk-ledger">
       {history.slice(0, 6).map((h, idx) => {
         const next = history[idx + 1]
         const d = signedDelta(next ? Number(h.score) - Number(next.score) : null)
-        const deltaColor =
-          d.tone === 'up' ? 'var(--accent-2)' :
-          d.tone === 'down' ? 'var(--danger)' :
-          'var(--ink-faint)'
         return (
-          <div key={h.periodId} className="grid grid-cols-12 items-center gap-2 py-2"
-               style={{ borderColor: 'var(--line-soft)' }}>
-            <div className="col-span-1 font-mono tabular-nums"
-                 style={{ fontSize: 10, color: 'var(--ink-dim)' }}>
-              {String(idx + 1).padStart(2, '0')}
-            </div>
-            <div className="col-span-5 font-mono"
-                 style={{ fontSize: 11, color: 'var(--ink-soft)' }}>
-              {h.startDate}<span style={{ color: 'var(--ink-dim)' }}> → </span>{h.endDate}
-            </div>
-            <div className="col-span-2 font-mono uppercase tracking-wider"
-                 style={{ fontSize: 9.5, color: 'var(--ink-faint)', fontWeight: 600 }}>
+          <div key={h.periodId} className="mk-ledger-row">
+            <span className="mk-ledger-idx">{String(idx + 1).padStart(2, '0')}</span>
+            <span className="mk-ledger-range">
+              {h.startDate}<span className="mk-ledger-sep"> → </span>{h.endDate}
+            </span>
+            <span className="mk-ledger-type">
               {h.periodType === 'QUARTERLY' ? 'кв.' : h.periodType === 'MONTHLY' ? 'мес.' : '—'}
-            </div>
-            <div className="col-span-2 font-display tabular-nums text-right"
-                 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
-              {fmt(h.score)}
-            </div>
-            <div className="col-span-2 font-mono tabular-nums text-right"
-                 style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-              {d.txt}
-            </div>
+            </span>
+            <span className="mk-ledger-score">{fmt(h.score)}</span>
+            <span className={`mk-ledger-delta mk-ledger-delta--${d.tone}`}>{d.txt}</span>
           </div>
         )
       })}
@@ -580,44 +406,31 @@ function PeriodLedger({ history }: { history: PeriodScore[] }) {
   )
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
-
-function CriteriaBars({ items }: { items: CriteriaScore[] }) {
-  // sort by score desc, take up to 5 — high impact summary
+// ── CriteriaBars ─────────────────────────────────────────────────────────────
+function CriteriaBars({ items, kg }: { items: CriteriaScore[]; kg: boolean }) {
   const sorted = [...items].sort((a, b) => b.score - a.score).slice(0, 5)
   return (
-    <div>
-      {sorted.map((c) => {
+    <div className="mk-crit">
+      {sorted.map(c => {
         const pct = Math.max(0, Math.min(100, Number(c.score)))
-        const color = pct >= 80 ? 'var(--accent-2)' : pct >= 60 ? 'var(--gold)' : pct >= 40 ? 'var(--warn)' : 'var(--danger)'
+        const tone = pct >= 80 ? 'up' : pct >= 50 ? 'warn' : 'down'
         const d = signedDelta(c.delta)
-        const deltaColor =
-          d.tone === 'up' ? 'var(--accent-2)' :
-          d.tone === 'down' ? 'var(--danger)' :
-          'var(--ink-faint)'
         return (
-          <div key={c.criteriaId} className="mb-2.5 last:mb-0">
-            <div className="flex items-baseline justify-between mb-1 gap-2">
-              <span className="truncate"
-                    style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 500 }}>
-                {c.nameRu}
-                <span className="font-mono ml-2"
-                      style={{ fontSize: 9.5, color: 'var(--ink-dim)' }}>
-                  w·{Number(c.weight).toFixed(1)}
-                </span>
+          <div key={c.criteriaId} className="mk-crit-row">
+            <div className="mk-crit-head">
+              <span className="mk-crit-name">
+                {kg ? c.nameKg : c.nameRu}
+                <span className="mk-crit-weight">w·{Number(c.weight).toFixed(1)}</span>
               </span>
-              <span className="font-mono tabular-nums whitespace-nowrap"
-                    style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600 }}>
+              <span className="mk-crit-score">
                 {fmt(c.score)}
                 {c.delta !== null && (
-                  <span className="ml-1" style={{ color: deltaColor }}>{d.txt}</span>
+                  <span className={`mk-crit-delta mk-crit-delta--${d.tone}`}> {d.txt}</span>
                 )}
               </span>
             </div>
-            <div className="relative overflow-hidden rounded-full"
-                 style={{ height: 6, background: 'var(--bg-soft, #ebe6db)' }}>
-              <div className="absolute inset-y-0 left-0 transition-all"
-                   style={{ width: `${pct}%`, background: color, borderRadius: 999 }} />
+            <div className="mk-crit-bar">
+              <div className={`mk-crit-fill mk-crit-fill--${tone}`} style={{ width: `${pct}%` }} />
             </div>
           </div>
         )
@@ -625,3 +438,98 @@ function CriteriaBars({ items }: { items: CriteriaScore[] }) {
     </div>
   )
 }
+
+// ── page-specific css ────────────────────────────────────────────────────────
+const MYKPI_CSS = `
+.mk-hero-chips {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 14px;
+}
+.mk-chip {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 3px 9px;
+  border: 1px solid var(--dv3-border);
+  background: var(--dv3-bg3);
+  color: var(--dv3-text3);
+}
+.mk-chip strong { color: var(--dv3-accent); font-weight: 700; }
+.mk-chip--muted { color: var(--dv3-text4); }
+.mk-hero-export { margin-top: 14px; }
+
+.mk-panel { background: var(--dv3-bg2); }
+.mk-panel-body { padding: 16px 18px 18px; }
+
+.mk-empty {
+  font-size: 11px; color: var(--dv3-text3);
+  letter-spacing: 0.06em;
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* LEDGER */
+.mk-ledger { display: flex; flex-direction: column; }
+.mk-ledger-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto 64px 70px;
+  align-items: center; gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--dv3-border);
+  font-variant-numeric: tabular-nums;
+}
+.mk-ledger-row:last-child { border-bottom: none; }
+.mk-ledger-idx { font-size: 10px; color: var(--dv3-text4); }
+.mk-ledger-range { font-size: 11px; color: var(--dv3-text2); }
+.mk-ledger-sep { color: var(--dv3-text4); }
+.mk-ledger-type {
+  font-size: 9.5px; color: var(--dv3-text3);
+  letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600;
+}
+.mk-ledger-score {
+  font-size: 16px; font-weight: 600;
+  color: var(--dv3-text); text-align: right;
+  letter-spacing: -0.01em;
+}
+.mk-ledger-delta { font-size: 11px; text-align: right; font-weight: 600; }
+.mk-ledger-delta--up   { color: var(--dv3-zone-up); }
+.mk-ledger-delta--down { color: var(--dv3-zone-down); }
+.mk-ledger-delta--flat { color: var(--dv3-text3); }
+
+/* CRITERIA */
+.mk-crit { display: flex; flex-direction: column; gap: 12px; }
+.mk-crit-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 8px; margin-bottom: 5px;
+}
+.mk-crit-name {
+  font-size: 12px; color: var(--dv3-text2); font-weight: 500;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mk-crit-weight {
+  font-size: 9.5px; color: var(--dv3-text4);
+  margin-left: 8px; letter-spacing: 0.04em;
+}
+.mk-crit-score {
+  font-size: 11px; color: var(--dv3-text); font-weight: 600;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.mk-crit-delta--up   { color: var(--dv3-zone-up); }
+.mk-crit-delta--down { color: var(--dv3-zone-down); }
+.mk-crit-delta--flat { color: var(--dv3-text3); }
+.mk-crit-bar {
+  position: relative; height: 4px;
+  background: var(--dv3-border);
+  overflow: hidden;
+}
+.mk-crit-fill {
+  position: absolute; inset: 0 auto 0 0;
+  transition: width 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.mk-crit-fill--up   { background: var(--dv3-zone-up); }
+.mk-crit-fill--warn { background: var(--dv3-zone-warn); }
+.mk-crit-fill--down { background: var(--dv3-zone-down); }
+
+@media (max-width: 640px) {
+  .mk-ledger-row { grid-template-columns: 24px 1fr 56px 60px; }
+  .mk-ledger-type { display: none; }
+}
+`

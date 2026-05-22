@@ -2,32 +2,32 @@
 // Scoped under .dv3-root; follows the global app theme set on <html data-theme>.
 // Dark is the base/default; [data-theme="light"] overrides it.
 export const DASHBOARD_CSS = `
-.dv3-root {
+:root, .dv3-root {
   --dv3-green: #a3c585;
 
-  --dv3-zone-up:   #86c46a;
-  --dv3-zone-down: #e07a6a;
-  --dv3-zone-warn: #e0b34f;
-  --dv3-zone-info: #7fb3c4;
+  --dv3-zone-up:   #5a9b3e;
+  --dv3-zone-down: #c0533f;
+  --dv3-zone-warn: #b8902e;
+  --dv3-zone-info: #4b8aa0;
 
-  --dv3-bg: #0d1410; --dv3-bg2: #141a15; --dv3-bg3: #1c241d;
-  --dv3-text: #e8ece4; --dv3-text2: #9ba798; --dv3-text3: #6b756a; --dv3-text4: #454e46;
-  --dv3-border: #1f2820; --dv3-border2: #2a342b; --dv3-border-hi: #3d4a3e;
-  --dv3-accent: var(--dv3-green);
-  --dv3-accent-bg: rgba(163,197,133,0.10);
-}
-[data-theme="light"] .dv3-root {
   --dv3-bg: #f4f6ee; --dv3-bg2: #fbfcf6; --dv3-bg3: #e8ecdc;
   --dv3-text: #1a2014; --dv3-text2: #4d5544; --dv3-text3: #828a76; --dv3-text4: #b0b8a3;
   --dv3-border: #d9ddc8; --dv3-border2: #c5cab2; --dv3-border-hi: #98a07f;
   --dv3-accent: #6b8a52;
   --dv3-accent-bg: rgba(107,138,82,0.10);
-  --dv3-zone-up: #5a9b3e; --dv3-zone-down: #c0533f; --dv3-zone-warn: #b8902e; --dv3-zone-info: #4b8aa0;
+}
+[data-theme="dark"]:root, [data-theme="dark"] .dv3-root {
+  --dv3-bg: #0d1410; --dv3-bg2: #141a15; --dv3-bg3: #1c241d;
+  --dv3-text: #e8ece4; --dv3-text2: #9ba798; --dv3-text3: #6b756a; --dv3-text4: #454e46;
+  --dv3-border: #1f2820; --dv3-border2: #2a342b; --dv3-border-hi: #3d4a3e;
+  --dv3-accent: var(--dv3-green);
+  --dv3-accent-bg: rgba(163,197,133,0.10);
+  --dv3-zone-up: #86c46a; --dv3-zone-down: #e07a6a; --dv3-zone-warn: #e0b34f; --dv3-zone-info: #7fb3c4;
 }
 
 .dv3-root {
   min-height: 100%;
-  background: var(--dv3-bg);
+  background: transparent;
   color: var(--dv3-text);
   font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
   font-size: 13px;
@@ -60,7 +60,7 @@ export const DASHBOARD_CSS = `
 
 /* PERIOD SELECTOR BAR */
 .dv3-periodbar {
-  display: flex; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   margin-bottom: 16px;
   padding: 9px 16px;
   border: 1px solid var(--dv3-border);

@@ -8,6 +8,9 @@ import { fetchNotifications } from '../../features/notifications/notificationsSl
 import { usePageTitleKey } from '../../context/PageContext'
 import { NAV_SECTIONS } from './navConfig'
 import { NotificationsMenu } from './NotificationsMenu'
+import {
+  applyDv3Palette, dv3PaletteOptions, loadDv3Palette, setDv3Palette, DV3_PALETTE_EVENT,
+} from '../../lib/dashboardPalettes'
 
 interface TopbarProps {
   onHamburgerClick: () => void
@@ -25,6 +28,16 @@ export function Topbar({ onHamburgerClick, onSearchClick, mobileNavOpen }: Topba
   const dispatch = useDispatch<AppDispatch>()
   const contextTitleKey = usePageTitleKey()
   const [bellOpen, setBellOpen] = useState(false)
+  const [palette, setPalette] = useState<string>(loadDv3Palette)
+  useEffect(() => { applyDv3Palette(palette) }, [palette])
+  useEffect(() => {
+    function onPaletteEvt(e: Event) {
+      const v = (e as CustomEvent<string>).detail
+      if (typeof v === 'string') setPalette(v)
+    }
+    window.addEventListener(DV3_PALETTE_EVENT, onPaletteEvt)
+    return () => window.removeEventListener(DV3_PALETTE_EVENT, onPaletteEvt)
+  }, [])
   const bellWrapRef = useRef<HTMLDivElement>(null)
   const bellBtnRef = useRef<HTMLButtonElement>(null)
   const prevBellOpenRef = useRef(false)
@@ -154,6 +167,18 @@ export function Topbar({ onHamburgerClick, onSearchClick, mobileNavOpen }: Topba
             <kbd className="topbar-search-kbd" aria-hidden="true">{SEARCH_KBD}</kbd>
           </button>
         )}
+
+        <select
+          className="topbar-palette-select"
+          value={palette}
+          onChange={e => setDv3Palette(e.target.value)}
+          title={t('dashboard.paletteLabel', 'Palette') as string}
+          aria-label={t('dashboard.paletteLabel', 'Palette') as string}
+        >
+          {dv3PaletteOptions.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
 
         <div
           className="topbar-bell-wrap"

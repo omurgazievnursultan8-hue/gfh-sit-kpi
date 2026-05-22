@@ -1,29 +1,41 @@
-/* ===== Design Tokens ===== */
+/* ===== Design Tokens =====
+ * Core palette = 9 semantic roles. All other variables are derived aliases
+ * so existing `var(--xxx)` references keep rendering, but the only knobs
+ * that need tuning live in the 9 canonical tokens (mirrored in
+ * ThemeCustomizer's TOKEN_KEYS).
+ */
 :root {
+  /* — Core 9 — */
   --bg: #f4f1ea;
-  --bg-soft: #ebe6db;
   --surface: #ffffff;
-  --surface-mute: #faf8f3;
+  --line: #d8d2c2;
   --ink: #0e1714;
   --ink-soft: #344843;
-  --ink-faint: #6b7c77;
-  --ink-dim: #98a8a3;
-  --line: #d8d2c2;
-  --line-soft: #e7e2d4;
-  --line-strong: #b9b1a0;
   --accent: #0d4d3f;
-  --accent-2: #1a7558;
-  --accent-soft: #d6e9e0;
-  --accent-mute: #ebf5f0;
-  --accent-ink: #08362b;
-  --gold: #a8852b;
-  --gold-soft: #f5ecd2;
+  --success: #1a7558;
   --warn: #b25a16;
-  --warn-soft: #f8e9d8;
   --danger: #a31f1f;
-  --danger-soft: #fadcdc;
-  --info: #1f4e85;
-  --info-soft: #d8e4f3;
+
+  /* — Derived aliases (computed from core) — */
+  --bg-soft:      color-mix(in srgb, var(--ink) 5%,  var(--bg));
+  --surface-mute: color-mix(in srgb, var(--bg)  40%, var(--surface));
+  --row-zebra:    color-mix(in srgb, var(--ink) 6%, var(--surface));
+  --ink-faint:    color-mix(in srgb, var(--ink) 55%, var(--bg));
+  --ink-dim:      color-mix(in srgb, var(--ink) 35%, var(--bg));
+  --line-soft:    color-mix(in srgb, var(--line) 55%, var(--bg));
+  --line-strong:  color-mix(in srgb, var(--line) 70%, var(--ink));
+  --accent-2:     var(--success);
+  --accent-soft:  color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --accent-mute:  color-mix(in srgb, var(--accent) 8%,  var(--surface));
+  --accent-ink:   color-mix(in srgb, var(--accent) 70%, var(--ink));
+  --gold:         var(--warn);
+  --gold-soft:    color-mix(in srgb, var(--warn) 22%, var(--surface));
+  --warn-soft:    color-mix(in srgb, var(--warn) 22%, var(--surface));
+  --danger-soft:  color-mix(in srgb, var(--danger) 18%, var(--surface));
+  --info:         var(--accent);
+  --info-soft:    color-mix(in srgb, var(--accent) 14%, var(--surface));
+
+  /* — Non-color tokens — */
   --shadow-sm: 0 1px 2px rgba(15,23,20,0.06);
   --shadow-md: 0 4px 12px -4px rgba(15,23,20,0.10),0 2px 4px -2px rgba(15,23,20,0.06);
   --shadow-lg: 0 24px 60px -20px rgba(8,22,18,0.18),0 8px 20px -8px rgba(8,22,18,0.10);
@@ -48,18 +60,14 @@
 
 [data-theme="dark"] {
   --bg: #0d1714;
-  --bg-soft: #122019;
   --surface: #182a23;
-  --surface-mute: #14241e;
+  --line: #1f3329;
   --ink: #e8efec;
   --ink-soft: #b6c3bf;
-  --ink-faint: #7e9591;
-  --ink-dim: #5b716c;
-  --line: #1f3329;
-  --line-soft: #182a23;
-  --line-strong: #294539;
-  --accent-soft: rgba(26,117,88,0.20);
-  --accent-mute: rgba(26,117,88,0.08);
+  --accent: #1a7558;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
 }
 
 html, body {
@@ -1677,6 +1685,25 @@ html, body {
   .topbar-search { min-width: 0; padding: 0 8px; }
 }
 
+/* Topbar palette selector */
+.topbar-palette-select {
+  height: 32px; padding: 0 26px 0 10px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  color: var(--ink-soft);
+  font: inherit; font-size: 12.5px;
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-faint) 50%), linear-gradient(135deg, var(--ink-faint) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 14px, calc(100% - 10px) 14px;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.topbar-palette-select:hover { border-color: var(--line); color: var(--ink); }
+@media (max-width: 768px) { .topbar-palette-select { display: none; } }
+
 /* Rail count pill — numeric badge on icon top-right */
 .rail-count {
   position: absolute;
@@ -2001,11 +2028,11 @@ html, body {
    <style> tags so the rules are defined once, not per mounted instance. */
 
 /* DataTable */
-.dt-row td { border-bottom: 1px solid var(--line-soft); }
+.dt-row td { border-bottom: 1px solid var(--line-soft); background: var(--row-odd, transparent); }
 .dt-row:last-child td { border-bottom: none; }
 /* Explicit zebra class — nth-child miscounts because expanded rows add a
    second <tr>; the data-row index is tracked in JS instead. */
-.dt-row-even td { background: var(--surface-mute); }
+.dt-row-even td { background: var(--row-zebra); }
 .dt-expanded-row td { background: var(--surface-mute); border-bottom: 1px solid var(--line); }
 .dt-clickable .dt-row { cursor: pointer; transition: background 100ms ease; outline: none; }
 .dt-clickable .dt-row:hover td { background: var(--accent-mute); }
@@ -2052,4 +2079,28 @@ html, body {
   content: ''; position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   width: 36px; height: 36px;
+}
+
+/* ===== Data/Table panel zebra token =====
+ * Only rebinds the zebra row tint so DataTable rows are visible against the
+ * active theme's --surface. All other tokens inherit from the global theme
+ * (responds to light/dark + ThemeCustomizer palette changes). */
+.dp-dash {
+  --surface: var(--dv3-bg2);
+  --surface-mute: var(--dv3-bg3);
+  --ink: var(--dv3-text);
+  --ink-soft: var(--dv3-text2);
+  --ink-faint: var(--dv3-text3);
+  --ink-dim: var(--dv3-text4);
+  --line: var(--dv3-border);
+  --line-soft: var(--dv3-border);
+  --line-strong: var(--dv3-border-hi);
+  --accent: var(--dv3-accent);
+  --row-odd: #ffffff;
+  --row-zebra: color-mix(in srgb, #000 3%, var(--dv3-bg2));
+  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+}
+[data-theme="dark"] .dp-dash {
+  --row-odd: var(--dv3-bg);
+  --row-zebra: color-mix(in srgb, #fff 3%, var(--dv3-bg));
 }

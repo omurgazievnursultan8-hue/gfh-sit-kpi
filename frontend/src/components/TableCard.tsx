@@ -20,7 +20,7 @@ export interface TableCardProps {
 export function TableCard({ header, footer, accent = true, children, className }: TableCardProps) {
   return (
     <div
-      className={className}
+      className={['dp-dash', className].filter(Boolean).join(' ')}
       style={{
         position: 'relative',
         background: 'var(--surface)',

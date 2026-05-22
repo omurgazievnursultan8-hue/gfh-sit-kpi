@@ -2,12 +2,6 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
-function asciiBar(pct: number, width = 22): { fill: string; empty: string } {
-  const clamped = Math.max(0, Math.min(1, pct))
-  const filled = Math.round(clamped * width)
-  return { fill: '█'.repeat(filled), empty: '░'.repeat(width - filled) }
-}
-
 // Maps a 0–100 score to a colour zone. null/undefined → neutral.
 export function scoreZone(score: number | null | undefined): {
   numClass: string; tagClass: string; labelKey: string | null
@@ -30,81 +24,135 @@ export interface StatCardGauge {
   current?: ReactNode            // 'marker' variant pin value
 }
 
+export interface StatCardDelta {
+  value: number                  // signed; sign drives direction glyph
+  unit?: string                  // e.g. 'pts', '%', defaults to nothing
+  label?: string                 // e.g. 'vs Q1' — small caption below chip
+}
+
 export interface StatCardProps {
   title: string
-  id: string                     // rendered as [ id ] in header
+  id: string
   loading?: boolean
   value: number | string | null
-  placeholder?: string           // shown while loading; default '··'
-  emptyValue?: string            // shown when value === null; default '—'
-  unit?: string                  // e.g. '/ 100'
-  label?: string                 // inline uppercase label after number
-  emptyNote?: ReactNode          // shown in place of value/gauge when value is null
-  zoneScore?: number | null      // present → number colour + zone tag
-  gauge?: StatCardGauge          // omit → no gauge row (e.g. empty-note state)
-  onClick?: () => void           // present → clickable div + keydown handler
-  onHover?: () => void           // present → opens on mouseenter
-  active?: boolean               // onClick cards: marks the card's panel open
-  className?: string             // appended to the root element's class
+  placeholder?: string
+  emptyValue?: string
+  unit?: string
+  label?: string
+  emptyNote?: ReactNode
+  zoneScore?: number | null
+  gauge?: StatCardGauge
+  delta?: StatCardDelta          // optional ▲/▼ trend chip
+  onClick?: () => void
+  onHover?: () => void
+  active?: boolean
+  className?: string
 }
 
 // ── component ───────────────────────────────────────────────────────────────
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, emptyNote, zoneScore, gauge, onClick, onHover, active, className,
+  unit, label, emptyNote, zoneScore, gauge, delta,
+  onClick, onHover, active, className,
 }: StatCardProps) {
   const { t } = useTranslation()
   const zone = scoreZone(zoneScore)
-  const bar = gauge ? asciiBar(gauge.pct) : null
 
-  // value absent (not loading) + a note supplied → show the note, drop the gauge.
   const showEmptyNote =
     !loading && (value === null || value === undefined) && emptyNote != null
 
   const displayValue = loading
-    ? placeholder
+    ? null
     : (value !== null && value !== undefined ? value : emptyValue)
 
   const numClass =
-    `dv3-kpi-num${loading ? ' dv3-loading' : ''}` +
-    (!loading && zone.numClass ? ` dv3-kpi-num--${zone.numClass}` : '')
+    'dv3-kpi-num' +
+    (!loading && zone.numClass ? ` dv3-kpi-num--${zone.numClass}` : '') +
+    (showEmptyNote ? ' dv3-kpi-num--empty' : '')
+
+  const rootZoneClass =
+    !loading && zone.tagClass ? ` dv3-card--zone-${zone.tagClass}` : ''
+
+  const deltaDir = delta ? (delta.value > 0 ? 'up' : delta.value < 0 ? 'down' : 'flat') : null
+  const deltaGlyph = deltaDir === 'up' ? '▲' : deltaDir === 'down' ? '▼' : '◆'
+
+  const gaugePct = gauge ? Math.max(0, Math.min(1, gauge.pct)) : 0
+  const gaugeWidthPct = Math.round(gaugePct * 100)
 
   const body = (
     <>
+      <span className="dv3-card-tag">[ {id} ]</span>
       <div className="dv3-card-head">
-        <span><strong>{title}</strong></span>
-        <span className="dv3-card-id">[ {id} ]</span>
+        <span className="dv3-card-title"><strong>{title}</strong></span>
+        <span className="dv3-card-status" aria-hidden="true">
+          <i className={`dv3-dot${zone.tagClass ? ` dv3-dot--${zone.tagClass}` : ''}`} />
+        </span>
       </div>
       <div className="dv3-card-body">
         {showEmptyNote ? (
-          <div className="dv3-kpi-empty">{emptyNote}</div>
+          <div className="dv3-kpi dv3-kpi--empty">
+            <div className={numClass}>—</div>
+            <div className="dv3-kpi-empty-note">{emptyNote}</div>
+          </div>
         ) : (
           <div className="dv3-kpi">
             <div className={numClass}>
-              {displayValue}
-              {unit && <span className="dv3-kpi-unit">{unit}</span>}
-              {label && <span className="dv3-kpi-label">{label}</span>}
+              {loading ? (
+                <span className="dv3-skel dv3-skel--num" aria-hidden="true">{placeholder}</span>
+              ) : (
+                <>
+                  {displayValue}
+                  {unit && <span className="dv3-kpi-unit">{unit}</span>}
+                  {label && <span className="dv3-kpi-label">{label}</span>}
+                </>
+              )}
             </div>
-            {!loading && zone.labelKey && (
-              <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
-                {t(zone.labelKey)}
-              </span>
-            )}
+            <div className="dv3-kpi-side">
+              {!loading && zone.labelKey && (
+                <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
+                  {t(zone.labelKey)}
+                </span>
+              )}
+              {!loading && delta && deltaDir && (
+                <span className={`dv3-delta dv3-delta--${deltaDir}`}>
+                  <span className="dv3-delta-glyph" aria-hidden="true">{deltaGlyph}</span>
+                  <span className="dv3-delta-val">
+                    {delta.value > 0 ? '+' : ''}{delta.value}
+                    {delta.unit && <span className="dv3-delta-unit">{delta.unit}</span>}
+                  </span>
+                  {delta.label && <span className="dv3-delta-lab">{delta.label}</span>}
+                </span>
+              )}
+            </div>
           </div>
         )}
-        {gauge && bar && !showEmptyNote && (
-          <div className="dv3-gauge">
-            <div className="dv3-gauge-bar dv3-gauge-bar--lg" aria-hidden="true">
-              <span className="dv3-fill">{bar.fill}</span>
-              <span className="dv3-dim">{bar.empty}</span>
-            </div>
+        {gauge && !showEmptyNote && (
+          <div className={`dv3-gauge dv3-gauge--${gauge.variant}`}>
+            <svg
+              className="dv3-gauge-svg"
+              viewBox="0 0 100 4"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <rect x="0" y="0" width="100" height="4" className="dv3-gauge-track" />
+              <rect
+                x="0" y="0" height="4"
+                width={loading ? 0 : gaugeWidthPct}
+                className="dv3-gauge-fill"
+              />
+              {gauge.variant === 'marker' && !loading && (
+                <g transform={`translate(${gaugeWidthPct} 0)`}>
+                  <rect x="-0.5" y="-1" width="1" height="6" className="dv3-gauge-pin" />
+                </g>
+              )}
+            </svg>
             {gauge.variant === 'marker' ? (
               <div className="dv3-gauge-meta dv3-gauge-meta--mark">
                 <span>{gauge.left}</span>
                 <span
                   className="dv3-gauge-cur"
-                  style={{ left: `${Math.min(100, Math.round(gauge.pct * 100))}%` }}
+                  style={{ left: `${gaugeWidthPct}%` }}
                 >
                   <strong>{gauge.current}</strong>
                 </span>
@@ -123,10 +171,14 @@ export function StatCard({
     </>
   )
 
+  const rootCls =
+    `dv3-card${rootZoneClass}${active ? ' dv3-card--active' : ''}${loading ? ' dv3-card--loading' : ''}` +
+    (className ? ` ${className}` : '')
+
   if (onClick || onHover) {
     return (
       <div
-        className={`dv3-card dv3-card-btn${className ? ` ${className}` : ''}`}
+        className={`${rootCls} dv3-card-btn`}
         role="button"
         tabIndex={0}
         aria-expanded={active}
@@ -144,29 +196,74 @@ export function StatCard({
       </div>
     )
   }
-  return <section className={`dv3-card${className ? ` ${className}` : ''}`}>{body}</section>
+  return <section className={rootCls}>{body}</section>
 }
 
 // ── styles ──────────────────────────────────────────────────────────────────
-// Card/KPI/gauge/zone-KPI CSS. Relies on --dv3-* vars and .dv3-loading
-// provided by DASHBOARD_CSS; StatCard always renders inside .dv3-root.
 export const STAT_CARD_CSS = `
 /* CARD */
 .dv3-card {
+  --dv3-card-zone: var(--dv3-accent);
+  --surface: var(--dv3-bg2);
+  --surface-mute: var(--dv3-bg3);
+  --row-odd: #ffffff;
+  --row-zebra: color-mix(in srgb, #000 3%, var(--dv3-bg2));
   background: var(--dv3-bg2);
   border: 1px solid var(--dv3-border);
   position: relative;
   display: flex; flex-direction: column;
   text-align: left;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 220ms ease;
 }
+.dv3-card--zone-up   { --dv3-card-zone: var(--dv3-zone-up); }
+.dv3-card--zone-warn { --dv3-card-zone: var(--dv3-zone-warn); }
+.dv3-card--zone-down { --dv3-card-zone: var(--dv3-zone-down); }
+[data-theme="dark"] .dv3-card {
+  --row-odd: var(--dv3-bg);
+  --row-zebra: color-mix(in srgb, #fff 3%, var(--dv3-bg));
+}
+
+/* corner ticks — zone-aware, fill when active */
 .dv3-card::before, .dv3-card::after {
-  content: ""; position: absolute; width: 8px; height: 8px; pointer-events: none;
+  content: ""; position: absolute; width: 9px; height: 9px; pointer-events: none;
+  transition: background 180ms ease, border-color 180ms ease;
 }
-.dv3-card::before { top: -1px; left: -1px; border-top: 1px solid var(--dv3-accent); border-left: 1px solid var(--dv3-accent); }
-.dv3-card::after { bottom: -1px; right: -1px; border-bottom: 1px solid var(--dv3-accent); border-right: 1px solid var(--dv3-accent); }
-.dv3-card-btn { cursor: pointer; font-family: inherit; color: inherit; }
-.dv3-card-btn:hover { border-color: var(--dv3-border-hi); }
+.dv3-card::before {
+  top: -1px; left: -1px;
+  border-top: 1px solid var(--dv3-card-zone);
+  border-left: 1px solid var(--dv3-card-zone);
+}
+.dv3-card::after {
+  bottom: -1px; right: -1px;
+  border-bottom: 1px solid var(--dv3-card-zone);
+  border-right: 1px solid var(--dv3-card-zone);
+}
+.dv3-card--active::before,
+.dv3-card--active::after {
+  background: var(--dv3-card-zone);
+}
+
+/* floating id tag */
+.dv3-card-tag {
+  position: absolute; top: -8px; right: 10px;
+  padding: 2px 7px;
+  background: var(--dv3-bg);
+  color: var(--dv3-text4);
+  font-size: 9px; letter-spacing: 0.14em;
+  line-height: 1; z-index: 1;
+}
+
+.dv3-card-btn {
+  cursor: pointer; font-family: inherit; color: inherit;
+}
+.dv3-card-btn:hover {
+  border-color: var(--dv3-border-hi);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -10px var(--dv3-card-zone), 0 1px 0 0 var(--dv3-border-hi) inset;
+}
+.dv3-card-btn:active { transform: translateY(0); }
 .dv3-card-btn:focus-visible { outline: 2px solid var(--dv3-accent); outline-offset: 2px; }
+
 .dv3-card-head {
   display: flex; align-items: center; justify-content: space-between;
   padding: 8px 14px;
@@ -176,49 +273,142 @@ export const STAT_CARD_CSS = `
   color: var(--dv3-text3);
 }
 .dv3-card-head strong { color: var(--dv3-text); font-weight: 600; letter-spacing: 0.14em; }
-.dv3-card-id { font-size: 9px; color: var(--dv3-text4); letter-spacing: 0.1em; }
-.dv3-card-body { padding: 16px 18px; flex: 1; display: flex; flex-direction: column; }
+.dv3-card-title { position: relative; padding-left: 0; }
+.dv3-card-btn:hover .dv3-card-title strong::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px;
+  background: var(--dv3-card-zone); opacity: 0.8;
+  animation: dv3-underline 320ms ease-out;
+}
+@keyframes dv3-underline { from { transform: scaleX(0); transform-origin: left; } to { transform: scaleX(1); transform-origin: left; } }
+
+.dv3-card-status { display: inline-flex; }
+.dv3-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--dv3-text4);
+  box-shadow: 0 0 0 0 var(--dv3-card-zone);
+}
+.dv3-dot--up   { background: var(--dv3-zone-up);   box-shadow: 0 0 6px var(--dv3-zone-up); }
+.dv3-dot--warn { background: var(--dv3-zone-warn); box-shadow: 0 0 6px var(--dv3-zone-warn); }
+.dv3-dot--down { background: var(--dv3-zone-down); box-shadow: 0 0 6px var(--dv3-zone-down); animation: dv3-pulse-dot 1.6s ease-in-out infinite; }
+@keyframes dv3-pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.dv3-card-body { padding: 18px 18px 16px; flex: 1; display: flex; flex-direction: column; }
 
 /* KPI */
-.dv3-kpi { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: flex-end; }
+.dv3-kpi { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: flex-end; }
 .dv3-kpi-num {
-  font-weight: 600; font-size: 80px; line-height: 0.9;
+  font-weight: 600; font-size: 76px; line-height: 0.9;
   letter-spacing: -0.04em; color: var(--dv3-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  animation: dv3-num-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+@keyframes dv3-num-in {
+  from { opacity: 0; transform: translateY(6px); letter-spacing: -0.06em; }
+  to   { opacity: 1; transform: translateY(0);   letter-spacing: -0.04em; }
+}
+.dv3-kpi-num--empty { color: var(--dv3-text4); font-weight: 400; }
 .dv3-kpi-unit { font-size: 16px; color: var(--dv3-text3); margin-left: 8px; font-weight: 400; }
 .dv3-kpi-label { font-size: 11px; color: var(--dv3-text3); margin-left: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 500; }
-.dv3-kpi-empty {
-  font-size: 26px; font-weight: 600; line-height: 1.2;
-  letter-spacing: -0.01em; color: var(--dv3-text3);
-  padding: 18px 0; flex: 1; display: flex; align-items: center;
+.dv3-kpi-side {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  padding-bottom: 6px;
 }
-@media (max-width: 640px) {
-  .dv3-kpi { grid-template-columns: 1fr; }
-  .dv3-kpi-num { font-size: 52px; }
+.dv3-kpi--empty { grid-template-columns: auto 1fr; align-items: center; gap: 14px; }
+.dv3-kpi-empty-note {
+  font-size: 12px; line-height: 1.45;
+  font-style: italic; color: var(--dv3-text3);
+  letter-spacing: 0.01em;
 }
 
-/* GAUGE */
-.dv3-gauge { align-self: flex-start; margin-top: 12px; font-size: 11px; color: var(--dv3-text3); }
-.dv3-gauge-bar { letter-spacing: 0.05em; margin: 6px 0; line-height: 1; white-space: nowrap; }
-.dv3-gauge-bar--lg { font-size: 13px; letter-spacing: 0; }
-.dv3-fill { color: var(--dv3-accent); }
-.dv3-dim { color: var(--dv3-border-hi); }
-.dv3-gauge-meta { display: flex; justify-content: space-between; font-size: 10px; color: var(--dv3-text3); }
-.dv3-gauge-meta strong { color: var(--dv3-text); font-weight: 600; }
-.dv3-gauge-meta--mark { position: relative; }
-.dv3-gauge-cur { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
-
-/* ZONE-COLORED KPI */
+/* zone KPI / tag */
 .dv3-kpi-num--zone-up   { color: var(--dv3-zone-up); }
 .dv3-kpi-num--zone-warn { color: var(--dv3-zone-warn); }
 .dv3-kpi-num--zone-down { color: var(--dv3-zone-down); }
 .dv3-zone-tag {
-  display: inline-block; padding-bottom: 4px; white-space: nowrap;
+  white-space: nowrap;
   font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
 }
 .dv3-zone-tag--up   { color: var(--dv3-zone-up); }
 .dv3-zone-tag--warn { color: var(--dv3-zone-warn); }
 .dv3-zone-tag--down { color: var(--dv3-zone-down); }
+
+/* DELTA chip */
+.dv3-delta {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid var(--dv3-border);
+  background: var(--dv3-bg);
+  font-size: 11px; line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.dv3-delta-glyph { font-size: 9px; }
+.dv3-delta-unit { font-size: 9px; color: var(--dv3-text3); margin-left: 1px; }
+.dv3-delta-lab { font-size: 9px; color: var(--dv3-text4); letter-spacing: 0.1em; text-transform: uppercase; margin-left: 4px; }
+.dv3-delta--up   { color: var(--dv3-zone-up);   border-color: color-mix(in srgb, var(--dv3-zone-up)   40%, var(--dv3-border)); }
+.dv3-delta--down { color: var(--dv3-zone-down); border-color: color-mix(in srgb, var(--dv3-zone-down) 40%, var(--dv3-border)); }
+.dv3-delta--flat { color: var(--dv3-text3); }
+
+/* SVG GAUGE */
+.dv3-gauge { align-self: stretch; margin-top: 14px; font-size: 11px; color: var(--dv3-text3); }
+.dv3-gauge-svg { display: block; width: 100%; height: 6px; overflow: visible; }
+.dv3-gauge-track { fill: var(--dv3-border); }
+.dv3-gauge-fill {
+  fill: var(--dv3-card-zone);
+  transition: width 720ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dv3-gauge-pin {
+  fill: var(--dv3-text);
+  stroke: var(--dv3-card-zone); stroke-width: 0.4;
+}
+.dv3-gauge-meta {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--dv3-text3);
+  margin-top: 8px;
+}
+.dv3-gauge-meta strong { color: var(--dv3-text); font-weight: 600; }
+.dv3-gauge-meta--mark { position: relative; }
+.dv3-gauge-cur {
+  position: absolute; top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  max-width: 60%;
+  text-align: center;
+}
+
+/* SKELETON shimmer */
+.dv3-skel {
+  display: inline-block;
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    var(--dv3-bg3) 0%,
+    var(--dv3-border-hi) 50%,
+    var(--dv3-bg3) 100%
+  );
+  background-size: 200% 100%;
+  animation: dv3-shimmer 1.4s linear infinite;
+  border-radius: 2px;
+}
+.dv3-skel--num { min-width: 1.6em; height: 0.7em; vertical-align: baseline; }
+@keyframes dv3-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+.dv3-card--loading .dv3-gauge-fill { transition: none; }
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .dv3-kpi { grid-template-columns: 1fr; gap: 10px; }
+  .dv3-kpi-side { flex-direction: row; align-items: center; align-self: flex-start; }
+  .dv3-kpi-num { font-size: 44px; }
+  .dv3-kpi-unit { font-size: 13px; }
+  .dv3-card-body { padding: 14px 14px 12px; }
+  .dv3-card-tag { top: -7px; right: 8px; padding: 2px 6px; font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv3-kpi-num, .dv3-card-btn:hover, .dv3-gauge-fill, .dv3-skel, .dv3-dot--down {
+    animation: none !important; transition: none !important;
+  }
+}
 `
