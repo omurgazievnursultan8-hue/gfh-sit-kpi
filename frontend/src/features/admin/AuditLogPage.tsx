@@ -1,14 +1,17 @@
-import { useEffect, useState, useCallback, useId } from 'react'
+import { useEffect, useState, useCallback, useId, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Download, Search, RotateCcw, ChevronLeft, ChevronRight,
-  ChevronDown, FileSearch, ShieldCheck,
+  ChevronDown, FileSearch,
 } from 'lucide-react'
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
-import { Layout } from '../../components/Layout'
 import { DataTable, type Column } from '../../components/DataTable'
 import { TableCard } from '../../components/TableCard'
 import { Badge, type BadgeTone } from '../../components/Badge'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+
+const PLACEHOLDER = '··'
 
 const KNOWN_ACTIONS = [
   'CREATE_USER', 'UPDATE_USER', 'DEACTIVATE_USER',
@@ -54,6 +57,10 @@ export function AuditLogPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
 
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
+
   const actionId = useId()
   const entityTypeId = useId()
   const fromId = useId()
@@ -78,18 +85,57 @@ export function AuditLogPage() {
       setEntries(data.content)
       setTotalElements(data.totalElements)
       setTotalPages(data.totalPages)
+      setFailed(false)
     } catch {
       setEntries([])
       setTotalElements(0)
       setTotalPages(0)
+      setFailed(true)
     } finally {
       setLoading(false)
+      setLoadedAt(new Date())
     }
   }, [buildParams])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
+
+  /* ── derived stats (current page) ──────────────────────────────────────── */
+  const todayKey = new Date().toDateString()
+  const todayCount = useMemo(
+    () => entries.filter(e => new Date(e.createdAt).toDateString() === todayKey).length,
+    [entries, todayKey],
+  )
+  const distinctActors = useMemo(
+    () => new Set(entries.map(e => e.actorEmail)).size,
+    [entries],
+  )
+  const distinctActions = useMemo(
+    () => new Set(entries.map(e => e.action)).size,
+    [entries],
+  )
 
   const handleFilterApply = () => setPage(0)
 
@@ -210,21 +256,78 @@ export function AuditLogPage() {
   )
 
   return (
-    <Layout>
-      <div className="space-y-5">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
-              <h1 className="text-xl font-semibold text-slate-900">{t('admin.auditLog')}</h1>
-              <p className="text-sm text-slate-500">
-                {t('common.total')}: <span className="font-medium text-slate-700">{totalElements}</span>
-              </p>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
+
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">AUDIT.LOG</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">{t('admin.auditLog')}</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : totalElements}
+                  </span>
+                  <span className="dv3-hero-metric-lab">{t('common.total')}</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : todayCount}
+                  </span>
+                  <span className="dv3-hero-metric-lab">сегодня</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
             </div>
           </div>
+
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="AUDIT.TOTAL" id="A01" loading={loading}
+              value={totalElements} label="записей всего"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="TODAY" id="T01" loading={loading}
+              value={todayCount} label="записей сегодня"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ACTORS" id="U01" loading={loading}
+              value={distinctActors} label="на странице"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ACTIONS" id="X01" loading={loading}
+              value={distinctActions} label="типов на странице"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+        <div className="space-y-5">
+        {/* Export */}
+        <div className="flex flex-wrap items-center justify-end gap-3">
           <button
             type="button"
             onClick={handleExport}
@@ -351,7 +454,8 @@ export function AuditLogPage() {
             totalCount={totalElements}
           />
         </TableCard>
+        </div>
       </div>
-    </Layout>
+    </>
   )
 }

@@ -1,11 +1,14 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { adminApi, QuartzJobInfo } from './adminApi'
-import { Layout } from '../../components/Layout'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import { DataTable, type Column } from '../../components/DataTable'
 import { TableCard } from '../../components/TableCard'
 import { Badge, type BadgeTone } from '../../components/Badge'
+
+const PLACEHOLDER = '··'
 
 type HealthStatus = 'up' | 'down' | 'checking'
 
@@ -30,6 +33,8 @@ export function AdminMonitoringPage() {
   const [jobs, setJobs] = useState<QuartzJobInfo[]>([])
   const [errorLines, setErrorLines] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -48,11 +53,44 @@ export function AdminMonitoringPage() {
     )
 
     setLoading(false)
+    setLoadedAt(new Date())
   }, [])
 
   useEffect(() => {
     refresh()
   }, [refresh])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
+
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const totalJobs = jobs.length
+  const healthyJobs = useMemo(() => jobs.filter(j => j.state === 'NORMAL').length, [jobs])
+  const troubledJobs = useMemo(
+    () => jobs.filter(j => j.state === 'ERROR' || j.state === 'BLOCKED' || j.state === 'PAUSED').length,
+    [jobs],
+  )
+  const errorCount = errorLines.filter(l => l.trim().length > 0).length
+  const failed = health === 'down'
+  const healthScore = health === 'up' ? 100 : health === 'down' ? 0 : null
 
   const jobColumns: Column<QuartzJobInfo>[] = [
     {
@@ -88,10 +126,96 @@ export function AdminMonitoringPage() {
   ]
 
   return (
-    <Layout>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
+
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">MONITORING.OPS</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">{t('admin.monitoring')}</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : totalJobs}
+                  </span>
+                  <span className="dv3-hero-metric-lab">задач</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : errorCount}
+                  </span>
+                  <span className="dv3-hero-metric-lab">ошибок в логе</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'API недоступен' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
+
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="BACKEND.HEALTH" id="H01" loading={loading}
+              value={health === 'up' ? 'UP' : health === 'down' ? 'DOWN' : '…'}
+              label={health === 'up' ? 'API доступен' : health === 'down' ? 'API недоступен' : 'проверка'}
+              zoneScore={healthScore}
+              gauge={{
+                pct: health === 'up' ? 1 : 0, variant: 'marker',
+                left: 'DOWN', right: 'UP',
+                current: health === 'up' ? 'UP' : health === 'down' ? 'DOWN' : '—',
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="JOBS.HEALTHY" id="J01" loading={loading}
+              value={healthyJobs} label="задач NORMAL"
+              gauge={{
+                pct: totalJobs > 0 ? healthyJobs / totalJobs : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{totalJobs > 0 ? Math.round((healthyJobs / totalJobs) * 100) : 0}%</strong> всех</>,
+                right: totalJobs,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="JOBS.ALERT" id="A01" loading={loading}
+              value={troubledJobs} label="paused / error / blocked"
+              gauge={{
+                pct: totalJobs > 0 ? troubledJobs / totalJobs : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{totalJobs > 0 ? Math.round((troubledJobs / totalJobs) * 100) : 0}%</strong> всех</>,
+                right: totalJobs,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ERROR.LOG" id="E01" loading={loading}
+              value={errorCount} label="строк в error.log"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
       <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">{t('admin.monitoring')}</h1>
+      <div className="flex items-center justify-end">
         <button
           onClick={refresh}
           disabled={loading}
@@ -155,6 +279,7 @@ export function AdminMonitoringPage() {
         </div>
       </section>
       </div>
-    </Layout>
+      </div>
+    </>
   )
 }

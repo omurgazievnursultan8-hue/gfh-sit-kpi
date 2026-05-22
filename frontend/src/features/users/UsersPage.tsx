@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layout } from '../../components/Layout'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { UserFormModal } from './components/UserFormModal'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
@@ -44,6 +45,9 @@ export function UsersPage() {
 
   const [drawerId, setDrawerId] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   const loadUsers = useCallback(async () => {
     setLoading(true)
@@ -51,12 +55,47 @@ export function UsersPage() {
       // ~100 employees — fetch wide, DataPanel filters/sorts client-side.
       const data = await usersApi.list(0, 500)
       setUsers(data.content)
+      setFailed(false)
+    } catch {
+      setFailed(true)
     } finally {
       setLoading(false)
+      setLoadedAt(new Date())
     }
   }, [])
 
   useEffect(() => { loadUsers() }, [loadUsers])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
+
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const PLACEHOLDER = '··'
+  const total = users.length
+  const activeCount = useMemo(() => users.filter(u => u.isActive).length, [users])
+  const inactiveCount = total - activeCount
+  const privilegedCount = useMemo(
+    () => users.filter(u => ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT'].includes(u.role)).length,
+    [users],
+  )
 
   const drawerUser = drawerId != null ? users.find(u => u.id === drawerId) ?? null : null
 
@@ -220,17 +259,93 @@ export function UsersPage() {
   )
 
   return (
-    <Layout>
-      <div style={{ padding: '8px 0 32px' }}>
-        <div className="mb-5">
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--ink)', margin: 0, letterSpacing: '-0.01em' }}>
-            {t('v2.users.title')}
-          </h1>
-          <p style={{ marginTop: 5, fontSize: 14, color: 'var(--ink-soft)', maxWidth: 600, lineHeight: 1.5 }}>
-            {t('v2.users.subtitle')}
-          </p>
-        </div>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
 
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">USERS.DIRECTORY</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">{t('v2.users.title')}</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : total}
+                  </span>
+                  <span className="dv3-hero-metric-lab">всего</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : activeCount}
+                  </span>
+                  <span className="dv3-hero-metric-lab">активны</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
+
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="USERS.TOTAL" id="U01" loading={loading}
+              value={total} label="сотрудников"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ACTIVE" id="A01" loading={loading}
+              value={activeCount} label="активны"
+              gauge={{
+                pct: total > 0 ? activeCount / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((activeCount / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="PRIVILEGED" id="R01" loading={loading}
+              value={privilegedCount} label="админы / руководители"
+              gauge={{
+                pct: total > 0 ? privilegedCount / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((privilegedCount / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="INACTIVE" id="X01" loading={loading}
+              value={inactiveCount} label="неактивны"
+              gauge={{
+                pct: total > 0 ? inactiveCount / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((inactiveCount / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
         <DataPanel<User>
           mode="client"
           columns={columns}
@@ -274,7 +389,7 @@ export function UsersPage() {
       />
 
       <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} variant="danger" />
-    </Layout>
+    </>
   )
 }
 

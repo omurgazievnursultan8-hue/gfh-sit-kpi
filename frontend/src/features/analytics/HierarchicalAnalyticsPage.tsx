@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
@@ -8,6 +8,10 @@ import api from '../../app/api'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DataTable, type Column } from '../../components/DataTable'
 import { TableCard } from '../../components/TableCard'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+
+const PLACEHOLDER = '··'
 
 type DisplayMode = 'table' | 'bar' | 'tree' | 'heatmap'
 
@@ -105,6 +109,9 @@ export function HierarchicalAnalyticsPage() {
   const [mode, setMode] = useState<DisplayMode>('tree')
   const [loading, setLoading] = useState(true)
   const [drillDown, setDrillDown] = useState<HierarchicalNode | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
     api.get<Array<{ id: number; nameRu: string; nameKg: string; children?: any[] }>>('/org/structure')
@@ -126,11 +133,46 @@ export function HierarchicalAnalyticsPage() {
       periodType,
       startDate: startDate || undefined,
       endDate: endDate || undefined,
-    }).then(setNodes).finally(() => setLoading(false))
+    })
+      .then(data => { setNodes(data); setFailed(false) })
+      .catch(() => setFailed(true))
+      .finally(() => { setLoading(false); setLoadedAt(new Date()) })
   }, [selectedUnit, periodType, startDate, endDate])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
 
   const flat = flattenTree(nodes)
   const flatRows = flattenTreeWithDepth(nodes)
+
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const unitCount = flat.length
+  const totalEmployees = useMemo(() => flat.reduce((s, n) => s + n.employeeCount, 0), [flat])
+  const scoredUnits = useMemo(() => flat.filter(n => n.avgScore !== null), [flat])
+  const orgAvg = scoredUnits.length
+    ? scoredUnits.reduce((s, n) => s + (n.avgScore as number), 0) / scoredUnits.length
+    : null
+  const orgAvgWhole = orgAvg !== null ? Math.round(orgAvg) : null
+  const topUnits = useMemo(() => scoredUnits.filter(n => (n.avgScore as number) >= 80).length, [scoredUnits])
+  const riskUnits = useMemo(() => scoredUnits.filter(n => (n.avgScore as number) < 60).length, [scoredUnits])
 
   const tableColumns: Column<FlatRow>[] = [
     {
@@ -192,9 +234,99 @@ export function HierarchicalAnalyticsPage() {
   ]
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Иерархическая аналитика</h1>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
+
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">ANALYTICS.HIER</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Иерархическая аналитика</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : unitCount}
+                  </span>
+                  <span className="dv3-hero-metric-lab">подразделений</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading || orgAvgWhole === null ? PLACEHOLDER : orgAvgWhole}
+                  </span>
+                  <span className="dv3-hero-metric-lab">ср. балл</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
+
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="ORG.AVG" id="A01" loading={loading}
+              value={orgAvgWhole} unit="/ 100" zoneScore={orgAvgWhole}
+              gauge={{
+                pct: orgAvg !== null ? orgAvg / 100 : 0, variant: 'marker',
+                left: '0', right: '100',
+                current: orgAvgWhole !== null ? orgAvgWhole : '—',
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="UNITS" id="U01" loading={loading}
+              value={unitCount} label="подразделений"
+              gauge={{
+                pct: unitCount > 0 ? scoredUnits.length / unitCount : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{scoredUnits.length}</strong> с оценкой</>,
+                right: unitCount,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="TOP" id="T01" loading={loading}
+              value={topUnits} label="≥ 80 баллов"
+              gauge={{
+                pct: scoredUnits.length > 0 ? topUnits / scoredUnits.length : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{scoredUnits.length > 0 ? Math.round((topUnits / scoredUnits.length) * 100) : 0}%</strong> с оценкой</>,
+                right: scoredUnits.length,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="RISK" id="R01" loading={loading}
+              value={riskUnits} label="< 60 баллов"
+              gauge={{
+                pct: scoredUnits.length > 0 ? riskUnits / scoredUnits.length : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{totalEmployees}</strong> сотрудников</>,
+                right: scoredUnits.length,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+      <div className="flex items-center justify-end mb-6">
         <ExportButtons type="period" />
       </div>
 
@@ -315,6 +447,7 @@ export function HierarchicalAnalyticsPage() {
           )}
         </TableCard>
       )}
+      </div>
 
       {/* Drill-down modal */}
       {drillDown && (
@@ -366,6 +499,6 @@ export function HierarchicalAnalyticsPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Layout } from '../../components/Layout'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import { StatusPill } from '../users/components/usersMeta'
 import { CriteriaFormModal } from './components/CriteriaFormModal'
 import { CriteriaRowMenu, type CriteriaActions } from './components/CriteriaRowMenu'
@@ -11,6 +12,7 @@ import { Criteria, CriteriaType, criteriaApi } from './criteriaApi'
 import { OrgUnit, orgApi } from '../org/orgApi'
 
 const PANEL_KEY = 'gfh_criteria'
+const PLACEHOLDER = '··'
 
 function flattenOrgTree(units: OrgUnit[]): OrgUnit[] {
   return units.flatMap(u => [u, ...flattenOrgTree(u.children || [])])
@@ -45,6 +47,9 @@ export function CriteriaPage() {
   const [criteria, setCriteria] = useState<Criteria[]>([])
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
   const [activeTab, setActiveTab] = useState<CriteriaType>('POSITIVE')
   const [editing, setEditing] = useState<Criteria | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -58,13 +63,51 @@ export function CriteriaPage() {
       // ~dozens of criteria — fetch wide, DataPanel filters/sorts client-side.
       const data = await criteriaApi.list(0, 500)
       setCriteria(data.content)
+      setFailed(false)
+    } catch {
+      setFailed(true)
     } finally {
       setLoading(false)
+      setLoadedAt(new Date())
     }
   }, [])
 
   useEffect(() => { loadCriteria() }, [loadCriteria])
   useEffect(() => { orgApi.getStructure().then(tree => setOrgUnits(flattenOrgTree(tree))) }, [])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
+
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const stats = useMemo(() => {
+    const total = criteria.length
+    const active = criteria.filter(c => c.active).length
+    const global = criteria.filter(c => c.orgUnitId == null).length
+    const positive = criteria.filter(c => c.type === 'POSITIVE').length
+    const antiBonus = criteria.filter(c => c.type === 'ANTI_BONUS').length
+    const totalWeight = criteria
+      .filter(c => c.active && c.type === 'POSITIVE')
+      .reduce((s, c) => s + (Number(c.weight) || 0), 0)
+    return { total, active, global, positive, antiBonus, totalWeight }
+  }, [criteria])
 
   const closeConfirm = () => setConfirmDialog(d => ({ ...d, open: false }))
 
@@ -219,17 +262,99 @@ export function CriteriaPage() {
   const visibleRows = criteria.filter(c => c.type === activeTab)
 
   return (
-    <Layout>
-      <div style={{ padding: '8px 0 32px' }}>
-        <div className="mb-5">
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: 'var(--ink)', margin: 0, letterSpacing: '-0.01em' }}>
-            {t('v2.criteria.title')}
-          </h1>
-          <p style={{ marginTop: 5, fontSize: 14, color: 'var(--ink-soft)', maxWidth: 600, lineHeight: 1.5 }}>
-            {t('v2.criteria.subtitle')}
-          </p>
-        </div>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
 
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">CRITERIA.LIB</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">{t('v2.criteria.title')}</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : stats.total}
+                  </span>
+                  <span className="dv3-hero-metric-lab">критериев</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : stats.active}
+                  </span>
+                  <span className="dv3-hero-metric-lab">активных</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
+
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="CRIT.TOTAL" id="C01" loading={loading}
+              value={stats.total} label="критериев"
+              gauge={{
+                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{stats.active}</strong> активных</>,
+                right: stats.total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ACTIVE" id="A01" loading={loading}
+              value={stats.active} label="активных"
+              gauge={{
+                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</strong> всех</>,
+                right: stats.total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="SCOPE.GLOBAL" id="G01" loading={loading}
+              value={stats.global} label="глобальных"
+              gauge={{
+                pct: stats.total > 0 ? stats.global / stats.total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{stats.total - stats.global}</strong> локальных</>,
+                right: stats.total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="WEIGHT.SUM" id="W01" loading={loading}
+              value={Math.round(stats.totalWeight)} unit="%"
+              zoneScore={Math.round(stats.totalWeight)}
+              gauge={{
+                pct: Math.min(1, stats.totalWeight / 100), variant: 'marker',
+                left: '0', right: '100',
+                current: `${Math.round(stats.totalWeight)}%`,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
         <div className="flex gap-1 mb-4" role="tablist">
           {TABS.map(tab => {
             const on = tab.value === activeTab
@@ -298,7 +423,7 @@ export function CriteriaPage() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
       />
-    </Layout>
+    </>
   )
 }
 

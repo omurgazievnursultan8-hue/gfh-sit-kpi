@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Trophy, TrendingDown, Users, ArrowRight } from 'lucide-react'
-import { evaluationsApi, Evaluation } from '../evaluations/evaluationsApi'
+import { evaluationsApi } from '../evaluations/evaluationsApi'
 import { ExportButtons } from '../../components/ExportButtons'
 import { DataTable, type Column } from '../../components/DataTable'
 import { TableCard } from '../../components/TableCard'
 import { Badge } from '../../components/Badge'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+
+const PLACEHOLDER = '··'
 
 interface SubordinateRow {
   userId: number
@@ -63,6 +67,9 @@ export function ManagerDashboardPage() {
   const [pendingCount, setPendingCount] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
     Promise.all([
@@ -87,8 +94,30 @@ export function ManagerDashboardPage() {
         })
       }
       setSubordinates(Array.from(byEvaluatee.values()))
-    }).finally(() => setLoading(false))
+      setFailed(false)
+    }).catch(() => setFailed(true)).finally(() => { setLoading(false); setLoadedAt(new Date()) })
   }, [])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
 
   const pct = totalCount === 0 ? 0 : Math.round(((totalCount - pendingCount) / totalCount) * 100)
   const withScores = subordinates.filter(s => s.score !== null)
@@ -99,12 +128,103 @@ export function ManagerDashboardPage() {
   const top3 = sorted.slice(0, 3)
   const bottom3 = sorted.length >= 3 ? sorted.slice(-3).reverse() : []
 
-  if (loading) return <div className="text-center py-12 text-gray-400">Загрузка...</div>
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const teamSize = subordinates.length
+  const doneCount = totalCount - pendingCount
+  const avgScore = withScores.length
+    ? withScores.reduce((s, r) => s + (r.score as number), 0) / withScores.length
+    : null
+  const avgWhole = avgScore !== null ? Math.round(avgScore) : null
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Операционный дашборд</h1>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
+
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">MANAGER.OPS</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Операционный дашборд</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : teamSize}
+                  </span>
+                  <span className="dv3-hero-metric-lab">подчинённых</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : pendingCount}
+                  </span>
+                  <span className="dv3-hero-metric-lab">ожидают</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
+
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="TEAM.SIZE" id="T01" loading={loading}
+              value={teamSize} label="подчинённых"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="PROGRESS" id="P01" loading={loading}
+              value={pct} unit="%"
+              gauge={{
+                pct: totalCount > 0 ? doneCount / totalCount : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{doneCount}</strong> из {totalCount}</>,
+                right: totalCount,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="TEAM.AVG" id="A01" loading={loading}
+              value={avgWhole} unit="/ 100" zoneScore={avgWhole}
+              gauge={{
+                pct: avgScore !== null ? avgScore / 100 : 0, variant: 'marker',
+                left: '0', right: '100',
+                current: avgWhole !== null ? avgWhole : '—',
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="PENDING" id="X01" loading={loading}
+              value={pendingCount} label="ожидают оценки"
+              onClick={() => navigate('/my-tasks')}
+              gauge={{
+                pct: totalCount > 0 ? pendingCount / totalCount : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{totalCount > 0 ? Math.round((pendingCount / totalCount) * 100) : 0}%</strong> всех</>,
+                right: totalCount,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+      <div className="flex items-center justify-end mb-6">
         <ExportButtons type="period" />
       </div>
 
@@ -189,6 +309,7 @@ export function ManagerDashboardPage() {
           empty="Нет данных для текущего периода"
         />
       </TableCard>
-    </div>
+      </div>
+    </>
   )
 }
