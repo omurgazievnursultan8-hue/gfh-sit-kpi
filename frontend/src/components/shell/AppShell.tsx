@@ -383,6 +383,7 @@ export function AppShell({ children }: AppShellProps) {
           onSectionHover={handleSectionHover}
           onRailLeave={handlePanelLeave}
           onRailEnter={handlePanelEnter}
+          onOpenPalette={() => setPaletteOpen(true)}
           mobileOpen={mobileOpen}
         />
 
@@ -410,7 +411,6 @@ export function AppShell({ children }: AppShellProps) {
         >
           <Topbar
             onHamburgerClick={() => setMobileOpen(o => !o)}
-            onSearchClick={() => setPaletteOpen(true)}
             mobileNavOpen={mobileOpen}
           />
           <main id="gfh-main" style={{ flex: 1, overflow: 'auto', scrollMarginTop: 'var(--topbar-h)' }} tabIndex={-1}>
