@@ -306,11 +306,9 @@ export function UsersPage() {
               }}
             />
           </div>
-        </div>
-      </div>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
-        <DataPanel<User>
+          <div style={{ marginTop: 24 }}>
+            <DataPanel<User>
           mode="client"
           columns={columns}
           rows={users}
@@ -332,6 +330,8 @@ export function UsersPage() {
           onRowClick={openDrawer}
           toolbarActions={addButton}
         />
+          </div>
+        </div>
       </div>
 
       <UserDetailDrawer

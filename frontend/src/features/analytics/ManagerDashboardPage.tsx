@@ -184,10 +184,7 @@ export function ManagerDashboardPage() {
               }}
             />
           </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
       <div className="flex items-center justify-end mb-6">
         <ExportButtons type="period" />
       </div>
@@ -273,6 +270,8 @@ export function ManagerDashboardPage() {
           empty="Нет данных для текущего периода"
         />
       </TableCard>
+          </div>
+        </div>
       </div>
     </>
   )

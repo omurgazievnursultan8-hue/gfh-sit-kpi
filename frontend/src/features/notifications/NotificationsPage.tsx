@@ -96,11 +96,9 @@ export function NotificationsPage() {
               value={typeCount} label="типов"
             />
           </div>
-        </div>
-      </div>
 
       {/* LIST */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
         <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
           <span
             id="notif-page-title"
@@ -202,6 +200,8 @@ export function NotificationsPage() {
             })}
           </ul>
         )}
+          </div>
+        </div>
       </div>
     </>
   )

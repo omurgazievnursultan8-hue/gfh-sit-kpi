@@ -285,10 +285,7 @@ export function AuditLogPage() {
               value={distinctActions} label="типов на странице"
             />
           </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
         <div className="space-y-5">
         {/* Export */}
         <div className="flex flex-wrap items-center justify-end gap-3">
@@ -418,6 +415,8 @@ export function AuditLogPage() {
             totalCount={totalElements}
           />
         </TableCard>
+        </div>
+          </div>
         </div>
       </div>
     </>

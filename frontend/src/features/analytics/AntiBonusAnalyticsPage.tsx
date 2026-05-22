@@ -170,11 +170,9 @@ export function AntiBonusAnalyticsPage() {
               value={totalEmployees} label="сотрудников в выборке"
             />
           </div>
-        </div>
-      </div>
 
       {/* FILTERS + TABLE + CHARTS */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
         <div className="dp-dash rounded-lg p-4 mb-6 flex gap-4 items-end flex-wrap"
              style={{ background: 'var(--surface)', border: '1px solid var(--line-soft)' }}>
           <div>
@@ -286,6 +284,8 @@ export function AntiBonusAnalyticsPage() {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </>
   )

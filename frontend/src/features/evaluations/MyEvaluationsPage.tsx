@@ -301,11 +301,9 @@ export function MyEvaluationsPage() {
               loading={loading}
             />
           </div>
-        </div>
-      </div>
 
       {/* LIST + DISTRIBUTION */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
         <DataPanel<Evaluation>
           mode="client"
           columns={columns}
@@ -329,6 +327,8 @@ export function MyEvaluationsPage() {
         />
 
         <StatusDistribution counts={counts} total={total} />
+          </div>
+        </div>
       </div>
     </>
   )

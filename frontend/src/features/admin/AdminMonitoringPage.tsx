@@ -174,10 +174,7 @@ export function AdminMonitoringPage() {
               value={errorCount} label="строк в error.log"
             />
           </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
       <div className="space-y-6">
       <div className="flex items-center justify-end">
         <button
@@ -243,6 +240,8 @@ export function AdminMonitoringPage() {
         </div>
       </section>
       </div>
+          </div>
+        </div>
       </div>
     </>
   )

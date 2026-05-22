@@ -168,10 +168,7 @@ export function PeriodsPage() {
               }}
             />
           </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
         <div className="flex items-baseline justify-end mb-6">
           <button
             type="button"
@@ -243,6 +240,8 @@ export function PeriodsPage() {
           onConfirm={handleClose}
           onCancel={() => setCloseTarget(null)}
         />
+          </div>
+        </div>
       </div>
     </>
   )

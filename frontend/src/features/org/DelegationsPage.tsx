@@ -327,11 +327,9 @@ export function DelegationsPage() {
               }}
             />
           </div>
-        </div>
-      </div>
 
       {/* LEDGER */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
         <div>
           <TableCard
             header={
@@ -424,6 +422,8 @@ export function DelegationsPage() {
               }
             />
           </TableCard>
+        </div>
+          </div>
         </div>
       </div>
 

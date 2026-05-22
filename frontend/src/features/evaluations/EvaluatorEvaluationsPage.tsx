@@ -200,11 +200,9 @@ export function EvaluatorEvaluationsPage() {
               }}
             />
           </div>
-        </div>
-      </div>
 
       {/* ── LEDGER + DISTRIBUTION ─────────────────────────────────────────── */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
        <div className="grid gap-3 ee-bottom-grid"
            style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
         <style>{`@media (max-width: 880px) { .ee-bottom-grid { grid-template-columns: 1fr !important } }`}</style>
@@ -277,6 +275,8 @@ export function EvaluatorEvaluationsPage() {
           <StatusDistribution counts={counts} total={all.length} />
         </Card>
        </div>
+          </div>
+        </div>
       </div>
     </>
   )

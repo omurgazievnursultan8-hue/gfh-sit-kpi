@@ -307,10 +307,8 @@ export function MyTasksPage() {
               }}
             />
           </div>
-        </div>
-      </div>
 
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+          <div style={{ marginTop: 24 }}>
       {/* ── QUEUE + APPEALS ───────────────────────────────────────────────── */}
       <div className="grid gap-3 tk-bottom-grid"
            style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
@@ -407,6 +405,8 @@ export function MyTasksPage() {
         onConfirm={handleForceClose}
         onCancel={() => setCloseTarget(null)}
       />
+          </div>
+        </div>
       </div>
     </>
   )
