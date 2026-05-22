@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { useSelector } from 'react-redux'
 import { periodsApi, type Period } from '../features/periods/periodsApi'
+import type { RootState } from '../app/store'
 
 // Sentinel for the "all periods" selector option.
 export const ALL_PERIODS = 'ALL' as const
@@ -36,11 +38,21 @@ const PeriodContext = createContext<PeriodContextValue>({
 
 // Holds the period selection app-wide so the topbar selector scopes every page.
 export function PeriodProvider({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useSelector((s: RootState) => s.auth.isAuthenticated)
   const [periods, setPeriods] = useState<Period[]>([])
   const [selectedPeriod, setSelected] = useState<PeriodSelection>(ALL_PERIODS)
   const [loading, setLoading] = useState(true)
 
+  // /periods needs auth. Provider wraps the login page too, so fetch only once
+  // authenticated and refetch when that flips true (login does not remount us).
   useEffect(() => {
+    if (!isAuthenticated) {
+      setPeriods([])
+      setSelected(ALL_PERIODS)
+      setLoading(false)
+      return
+    }
+    setLoading(true)
     periodsApi.list()
       .then(ps => {
         setPeriods(ps)
@@ -48,7 +60,7 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => { /* selector falls back to ALL */ })
       .finally(() => setLoading(false))
-  }, [])
+  }, [isAuthenticated])
 
   const setSelectedPeriod = useCallback((p: PeriodSelection) => setSelected(p), [])
 
