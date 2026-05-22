@@ -6,13 +6,17 @@ import { evaluationsApi, Evaluation, EvaluationStatus } from './evaluationsApi'
 import { periodsApi, Period, AppealPending } from '../periods/periodsApi'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { usePageTitle } from '../../context/PageContext'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 
 /* ────────────────────────────────────────────────────────────────────────────
  * "Мои задачи" — evaluator queue (merged with manager-tasks).
- * Same aesthetic family as PersonalDashboardPage / MyEvaluationsPage:
- *   deep-green hero, cream paper, JetBrains Mono labels, Source Serif display.
- * Features: list/periods toggle, pending appeals panel, admin force-close.
+ * dv3 terminal aesthetic: meta-bar hero (TASK.QUEUE) + gauge StatCards,
+ * dp-dash-skinned cards below. Features: list/periods toggle, pending
+ * appeals panel, admin force-close.
  * ────────────────────────────────────────────────────────────────────────── */
+
+const PLACEHOLDER = '··'
 
 const STATUS_LABELS: Record<EvaluationStatus, string> = {
   DRAFT: 'Черновик',
@@ -40,21 +44,6 @@ const PERIOD_TYPE_LABEL: Record<string, string> = {
 const PAGE_SIZE = 10
 
 type ViewMode = 'list' | 'periods'
-
-function timeGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Доброе утро'
-  if (h < 18) return 'Добрый день'
-  return 'Добрый вечер'
-}
-
-function todayLine(): string {
-  const now = new Date()
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  return `${datePart} · ${hh}:${mm}`
-}
 
 function fmtDateShort(iso: string | null): string {
   if (!iso) return '—'
@@ -126,6 +115,9 @@ export function MyTasksPage() {
   const [page, setPage] = useState(0)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [closeTarget, setCloseTarget] = useState<number | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   const load = async () => {
     setLoading(true)
@@ -138,12 +130,37 @@ export function MyTasksPage() {
       setTasks(t.content)
       setPeriods(ps)
       setPendingAppeals(ap)
+      setFailed(false)
+    } catch {
+      setFailed(true)
     } finally {
       setLoading(false)
+      setLoadedAt(new Date())
     }
   }
 
   useEffect(() => { load() }, [])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const greeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const today = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
 
   const handleForceClose = async () => {
     if (!closeTarget) return
@@ -224,14 +241,6 @@ export function MyTasksPage() {
   }).length
   const appealsHot = pendingAppeals.filter(a => hoursUntil(a.deadline) <= 24).length
 
-  const nearestDeadlinePeriod = useMemo(() => {
-    const future = periods
-      .filter(p => p.status === 'ACTIVE')
-      .filter(p => tasks.some(t => t.periodId === p.id && t.status === 'DRAFT'))
-      .sort((a, b) => new Date(a.submissionDeadline).getTime() - new Date(b.submissionDeadline).getTime())
-    return future[0] ?? null
-  }, [periods, tasks])
-
   const periodsInTasks = useMemo(() => {
     const ids = Array.from(new Set(tasks.map(t => t.periodId)))
     return ids
@@ -240,168 +249,110 @@ export function MyTasksPage() {
       .sort((a, b) => new Date(a.submissionDeadline).getTime() - new Date(b.submissionDeadline).getTime())
   }, [tasks, periodById])
 
-  /* ── loading ───────────────────────────────────────────────────────────── */
-  if (loading) {
-    return (
-      <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-        <div className="font-mono uppercase tracking-widest animate-pulse"
-             style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-          Загрузка…
-        </div>
-      </div>
-    )
-  }
+  const totalTasks = tasks.length
+  const urgent = hotDeadline + overdue
 
   /* ── render ────────────────────────────────────────────────────────────── */
   return (
-    <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-      <style>{`
-        @keyframes tk-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-        .tk-rise { opacity: 0; animation: tk-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
-        @media (max-width: 640px) { .tk-hero-grid { grid-template-columns: 1fr !important; gap: 20px !important } }
-        @media (max-width: 880px) { .tk-stats-grid { grid-template-columns: 1fr 1fr !important } .tk-bottom-grid { grid-template-columns: 1fr !important } }
-        @media (max-width: 520px) { .tk-stats-grid { grid-template-columns: 1fr !important } }
-      `}</style>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
 
-      {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden rounded-2xl mb-6 tk-rise"
-        style={{
-          background: 'linear-gradient(135deg, #0e2724 0%, #0d4d3f 55%, #1a7558 100%)',
-          color: '#ecf2f0',
-          padding: '28px 32px',
-          border: '1px solid #06120f',
-          boxShadow: 'var(--shadow-md)',
-          animationDelay: '0ms',
-        }}
-      >
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 24px),' +
-            'repeating-linear-gradient(90deg,rgba(255,255,255,.020) 0 1px,transparent 1px 24px)',
-        }} />
-        <div className="absolute pointer-events-none" style={{
-          top: -80, right: -80, width: 320, height: 320,
-          background: 'radial-gradient(circle,rgba(168,133,43,.14),transparent 60%)',
-        }} />
-
-        <div className="relative grid items-center gap-8 tk-hero-grid"
-             style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* left */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block rounded-full animate-pulse"
-                    style={{ width: 6, height: 6, background: 'var(--gold)' }} />
-              <span className="font-mono uppercase tracking-widest"
-                    style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.7)' }}>
-                {todayLine()}
-              </span>
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">TASK.QUEUE</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
             </div>
-
-            <h1 className="font-display mb-1.5"
-                style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.01em', color: '#ecf2f0' }}>
-              Мои <span style={{ color: 'var(--gold)' }}>задачи</span>
-              <span style={{ color: 'rgba(245,236,210,0.55)', fontSize: 18, fontWeight: 400, marginLeft: 10 }}>
-                · очередь оценщика
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {greeting}. <span className="dv3-accent">Мои задачи</span>
+                </h1>
+                <p className="dv3-hero-sub">{today} · очередь оценщика</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : drafts}
+                  </span>
+                  <span className="dv3-hero-metric-lab">к заполнению</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : pendingAppeals.length}
+                  </span>
+                  <span className="dv3-hero-metric-lab">апелляции</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
               </span>
-            </h1>
-
-            <HeroProse
-              timeGreet={timeGreeting()}
-              total={tasks.length}
-              drafts={drafts}
-              overdue={overdue}
-              hot={hotDeadline}
-              appeals={pendingAppeals.length}
-              appealsHot={appealsHot}
-              nearestPeriod={nearestDeadlinePeriod}
-            />
-
-            <div className="flex items-center gap-2 font-mono flex-wrap"
-                 style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.65)' }}>
-              <span className="font-mono font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
-                    style={{
-                      fontSize: 10,
-                      background: 'rgba(120,200,150,0.14)',
-                      color: '#7fd4a3',
-                      border: '1px solid rgba(120,200,150,0.32)',
-                    }}>
-                Очередь
-              </span>
-              <span>{tasks.length} {plural(tasks.length, ['задача', 'задачи', 'задач'])}</span>
-              <span>·</span>
-              <span>{periodsInTasks.length} {plural(periodsInTasks.length, ['период', 'периода', 'периодов'])}</span>
-              {pendingAppeals.length > 0 && (
-                <>
-                  <span>·</span>
-                  <span>{pendingAppeals.length} {plural(pendingAppeals.length, ['апелляция', 'апелляции', 'апелляций'])}</span>
-                </>
-              )}
+              <span>{updatedLabel}</span>
             </div>
           </div>
 
-          {/* right */}
-          <div className="flex flex-col items-end gap-2">
-            <HeroBigBadge big={String(drafts)} cap="к заполнению" accent="#f5ecd2" />
-            {overdue > 0 && (
-              <HeroPill
-                label={`${overdue} ${plural(overdue, ['просрочена', 'просрочены', 'просрочено'])}`}
-                tone="danger"
-              />
-            )}
-            {hotDeadline > 0 && (
-              <HeroPill label={`${hotDeadline} срочн.`} tone="warn" />
-            )}
-            {pendingAppeals.length > 0 && (
-              <HeroPill
-                label={`${pendingAppeals.length} апелл.`}
-                tone={appealsHot > 0 ? 'danger' : 'warn'}
-              />
-            )}
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="TASKS.TOTAL" id="T01" loading={loading}
+              value={totalTasks} label="в очереди"
+              gauge={{
+                pct: totalTasks > 0 ? drafts / totalTasks : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{drafts}</strong> черновиков</>,
+                right: totalTasks,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="APPEALS" id="X01" loading={loading}
+              value={pendingAppeals.length} label="требуют ответа"
+              gauge={{
+                pct: pendingAppeals.length > 0 ? appealsHot / pendingAppeals.length : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{appealsHot}</strong> {'< 24ч'}</>,
+                right: pendingAppeals.length,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="DRAFTS" id="D01" loading={loading}
+              value={drafts} label="статус DRAFT"
+              gauge={{
+                pct: totalTasks > 0 ? (totalTasks - drafts) / totalTasks : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{totalTasks - drafts}</strong> отправлено</>,
+                right: totalTasks,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="URGENT" id="U01" loading={loading}
+              value={urgent} label="дедлайн под угрозой"
+              gauge={{
+                pct: totalTasks > 0 ? urgent / totalTasks : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{overdue}</strong> просрочено</>,
+                right: totalTasks,
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ── STATS ──────────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 mb-5 tk-stats-grid tk-rise"
-           style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', animationDelay: '90ms' }}>
-        <StatCard
-          label="Всего задач"
-          mainText={String(tasks.length)}
-          mainColor="var(--ink)"
-          stripe="var(--accent-2)"
-          delta={{ txt: `${periodsInTasks.length} пер.`, tone: 'flat' }}
-          footer="в очереди"
-        />
-        <StatCard
-          label="Черновики"
-          mainText={String(drafts)}
-          mainColor={drafts > 0 ? '#9c7416' : 'var(--ink-faint)'}
-          stripe="var(--warn, #c89628)"
-          delta={{ txt: drafts > 0 ? 'заполните' : 'ок', tone: drafts > 0 ? 'down' : 'up' }}
-          footer="статус DRAFT"
-        />
-        <StatCard
-          label="Апелляции"
-          mainText={String(pendingAppeals.length)}
-          mainColor={pendingAppeals.length > 0 ? 'var(--danger)' : 'var(--ink-faint)'}
-          stripe={pendingAppeals.length > 0 ? 'var(--danger)' : 'var(--line-strong)'}
-          delta={{ txt: appealsHot > 0 ? `${appealsHot} <24ч` : pendingAppeals.length > 0 ? 'ждут' : '—', tone: appealsHot > 0 ? 'down' : 'flat' }}
-          footer="требуют ответа"
-        />
-        <StatCard
-          label="Срочно"
-          mainText={String(hotDeadline + overdue)}
-          mainColor={(hotDeadline + overdue) > 0 ? 'var(--danger)' : 'var(--ink-faint)'}
-          stripe={(hotDeadline + overdue) > 0 ? 'var(--danger)' : 'var(--line-strong)'}
-          delta={{ txt: overdue > 0 ? `${overdue} проср.` : '≤ 3д', tone: overdue > 0 ? 'down' : 'flat' }}
-          footer="дедлайн под угрозой"
-        />
-      </div>
-
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
       {/* ── QUEUE + APPEALS ───────────────────────────────────────────────── */}
-      <div className="grid gap-3 tk-bottom-grid tk-rise"
-           style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', animationDelay: '180ms' }}>
+      <div className="grid gap-3 tk-bottom-grid"
+           style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
+        <style>{`
+          @media (max-width: 880px) { .tk-bottom-grid { grid-template-columns: 1fr !important } }
+        `}</style>
 
         <Card title="Очередь задач"
               pill="К работе"
@@ -492,136 +443,17 @@ export function MyTasksPage() {
         onConfirm={handleForceClose}
         onCancel={() => setCloseTarget(null)}
       />
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Hero subcomponents
- * ────────────────────────────────────────────────────────────────────────── */
-
-function HeroProse({ timeGreet, total, drafts, overdue, hot, appeals, appealsHot, nearestPeriod }: {
-  timeGreet: string
-  total: number
-  drafts: number
-  overdue: number
-  hot: number
-  appeals: number
-  appealsHot: number
-  nearestPeriod: Period | null
-}) {
-  const emphasis = { color: '#f5ecd2', fontWeight: 600 } as const
-
-  if (total === 0 && appeals === 0) {
-    return (
-      <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-        <p style={{ margin: 0 }}>{timeGreet}. Очередь пуста — новых задач и апелляций нет.</p>
       </div>
-    )
-  }
-
-  const taskWord = plural(total, ['задача', 'задачи', 'задач'])
-  const draftWord = plural(drafts, ['черновик', 'черновика', 'черновиков'])
-
-  return (
-    <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-      <p style={{ margin: 0 }}>
-        {timeGreet}. В очереди <strong style={emphasis}>{total} {taskWord}</strong>
-        {drafts > 0 && (
-          <> · <strong style={emphasis}>{drafts} {draftWord}</strong> к заполнению</>
-        )}
-        .
-      </p>
-      {nearestPeriod && (
-        <p style={{ margin: 0, marginTop: 2 }}>
-          Ближайший дедлайн ·{' '}
-          <strong style={emphasis}>{periodShortLabel(nearestPeriod)}</strong>
-          {' '}через{' '}
-          <strong style={{
-            color: daysUntil(nearestPeriod.submissionDeadline) <= 3 ? '#f0a4a4' : '#f5ecd2',
-            fontWeight: 600,
-          }}>
-            {Math.max(0, daysUntil(nearestPeriod.submissionDeadline))}{' '}
-            {plural(Math.max(0, daysUntil(nearestPeriod.submissionDeadline)), ['день', 'дня', 'дней'])}
-          </strong>.
-        </p>
-      )}
-      {(overdue > 0 || hot > 0) && (
-        <p style={{ margin: 0, marginTop: 2 }}>
-          {overdue > 0 && (
-            <>Просрочено{' '}
-              <strong style={{ color: '#f0a4a4', fontWeight: 600 }}>{overdue}</strong>
-              {hot > 0 ? ', ' : '. '}
-            </>
-          )}
-          {hot > 0 && (
-            <>срочных ≤ 3д{' '}
-              <strong style={{ color: '#f0caa4', fontWeight: 600 }}>{hot}</strong>.
-            </>
-          )}
-        </p>
-      )}
-      {appeals > 0 && (
-        <p style={{ margin: 0, marginTop: 2 }}>
-          Апелляций ожидает ·{' '}
-          <strong style={{ color: appealsHot > 0 ? '#f0a4a4' : '#f0caa4', fontWeight: 600 }}>
-            {appeals} {plural(appeals, ['апелляция', 'апелляции', 'апелляций'])}
-          </strong>
-          {appealsHot > 0 && (
-            <>, из них <strong style={{ color: '#f0a4a4', fontWeight: 600 }}>{appealsHot} срочн.</strong></>
-          )}.
-        </p>
-      )}
-    </div>
-  )
-}
-
-function HeroBigBadge({ big, cap, accent }: { big: string; cap: string; accent: string }) {
-  return (
-    <div
-      className="rounded-lg flex flex-col items-center"
-      style={{
-        padding: '14px 22px',
-        background: 'rgba(0,0,0,0.18)',
-        border: '1px solid rgba(245,236,210,0.18)',
-        boxShadow: 'inset 0 0 0 1px rgba(168,133,43,0.10)',
-        minWidth: 120,
-      }}
-    >
-      <span className="font-display tabular-nums"
-            style={{ fontSize: 44, fontWeight: 600, color: accent, lineHeight: 1, letterSpacing: '-0.02em' }}>
-        {big}
-      </span>
-      <span className="font-mono uppercase tracking-widest mt-1"
-            style={{ fontSize: 10, color: 'rgba(245,236,210,0.6)' }}>
-        {cap}
-      </span>
-    </div>
-  )
-}
-
-function HeroPill({ label, tone }: { label: string; tone: 'warn' | 'danger' }) {
-  const spec = tone === 'warn'
-    ? { bg: 'rgba(200,150,40,0.22)', fg: '#f0caa4', border: 'rgba(200,150,40,0.45)' }
-    : { bg: 'rgba(200,80,60,0.22)', fg: '#f0a4a4', border: 'rgba(200,80,60,0.45)' }
-  return (
-    <span className="font-mono font-semibold uppercase tracking-widest px-2 py-1 rounded"
-          style={{
-            fontSize: 10,
-            background: spec.bg,
-            color: spec.fg,
-            border: `1px solid ${spec.border}`,
-          }}>
-      {label}
-    </span>
+    </>
   )
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Card shell
+ * Card shell — dv3 surface
  * ────────────────────────────────────────────────────────────────────────── */
 
 interface PillSpec { bg: string; fg: string; border: string }
+
 
 function Card({
   title, pill, pillSpec, stripe, rightMetric, children, className = '',
@@ -636,25 +468,26 @@ function Card({
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-lg ${className}`}
+      className={`dp-dash relative overflow-hidden ${className}`}
       style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
+        background: 'var(--dv3-bg2)',
+        border: '1px solid var(--dv3-border)',
+        borderRadius: 0,
         padding: '16px 18px',
-        boxShadow: 'var(--shadow-sm)',
+        fontFamily: "'Geist Mono', ui-monospace, monospace",
       }}
     >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
+      <div className="absolute top-0 left-0 right-0" style={{ height: 2, background: stripe }} />
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-display truncate"
-                style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
+          <span className="font-mono uppercase tracking-widest truncate"
+                style={{ fontSize: 12, fontWeight: 600, color: 'var(--dv3-text)', letterSpacing: '0.08em' }}>
             {title}
           </span>
           {pill && pillSpec && (
             <span className="font-mono font-semibold uppercase tracking-widest"
                   style={{
-                    fontSize: 9.5, padding: '2px 7px', borderRadius: 4,
+                    fontSize: 9.5, padding: '2px 7px', borderRadius: 0,
                     background: pillSpec.bg, color: pillSpec.fg,
                     border: `1px solid ${pillSpec.border}`,
                   }}>
@@ -664,62 +497,12 @@ function Card({
         </div>
         {rightMetric && (
           <span className="font-mono font-semibold"
-                style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+                style={{ fontSize: 11, color: 'var(--dv3-text3)' }}>
             {rightMetric}
           </span>
         )}
       </div>
       {children}
-    </div>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * StatCard
- * ────────────────────────────────────────────────────────────────────────── */
-
-function StatCard({
-  label, mainText, mainColor, stripe, delta, footer,
-}: {
-  label: string
-  mainText: string
-  mainColor: string
-  stripe: string
-  delta: { txt: string; tone: 'up' | 'down' | 'flat' }
-  footer: string
-}) {
-  const deltaColor =
-    delta.tone === 'up' ? 'var(--accent-2)' :
-    delta.tone === 'down' ? 'var(--danger)' :
-    'var(--ink-faint)'
-  return (
-    <div
-      className="relative overflow-hidden rounded-lg"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '14px 16px',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="font-mono uppercase tracking-widest mb-2"
-           style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="font-display tabular-nums"
-              style={{ fontSize: 30, fontWeight: 600, color: mainColor, lineHeight: 1, letterSpacing: '-0.01em' }}>
-          {mainText}
-        </span>
-        <span className="font-mono tabular-nums" style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-          {delta.txt}
-        </span>
-      </div>
-      <div className="font-mono mt-2"
-           style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-        {footer}
-      </div>
     </div>
   )
 }

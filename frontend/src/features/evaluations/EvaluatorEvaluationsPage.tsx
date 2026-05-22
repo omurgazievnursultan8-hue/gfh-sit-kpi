@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { evaluationsApi, Evaluation, EvaluationStatus } from './evaluationsApi'
 import { periodsApi, Period } from '../periods/periodsApi'
 import { usePageTitle } from '../../context/PageContext'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+
+const PLACEHOLDER = '··'
 
 /* ────────────────────────────────────────────────────────────────────────────
  * "Оценки" — full evaluator history across all statuses.
@@ -31,30 +35,10 @@ const STATUS_VISUALS: Record<EvaluationStatus, StatusVisual> = {
 const STATUS_ORDER: EvaluationStatus[] = ['DRAFT', 'SUBMITTED', 'APPEALED', 'ACKNOWLEDGED', 'CLOSED']
 const PAGE_SIZE = 12
 
-function timeGreeting(): string {
-  const h = new Date().getHours()
-  if (h < 12) return 'Доброе утро'
-  if (h < 18) return 'Добрый день'
-  return 'Добрый вечер'
-}
-
-function todayLine(): string {
-  const now = new Date()
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  return `${datePart} · ${hh}:${mm}`
-}
-
 function fmtDateShort(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })
-}
-
-function fmt(n: number | null | undefined, digits = 1): string {
-  if (n === null || n === undefined || Number.isNaN(Number(n))) return '—'
-  return Number(n).toFixed(digits)
 }
 
 function plural(n: number, forms: [string, string, string]): string {
@@ -81,6 +65,9 @@ export function EvaluatorEvaluationsPage() {
   const [all, setAll] = useState<Evaluation[]>([])
   const [periods, setPeriods] = useState<Period[]>([])
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
   const [statusFilter, setStatusFilter] = useState<EvaluationStatus | 'ALL'>('ALL')
   const [periodFilter, setPeriodFilter] = useState<number | 'ALL'>('ALL')
   const [page, setPage] = useState(0)
@@ -89,8 +76,31 @@ export function EvaluatorEvaluationsPage() {
     Promise.allSettled([
       evaluationsApi.asEvaluator(0, 500).then(r => setAll(r.content)),
       periodsApi.list().then(setPeriods),
-    ]).finally(() => setLoading(false))
+    ]).then(results => {
+      if (results.some(r => r.status === 'rejected')) setFailed(true)
+    }).finally(() => { setLoading(false); setLoadedAt(new Date()) })
   }, [])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const greeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayStr = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
 
   const periodById = useMemo(() => {
     const m = new Map<number, Period>()
@@ -138,159 +148,102 @@ export function EvaluatorEvaluationsPage() {
       .sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime())
   }, [all, periodById])
 
-  /* ── loading ───────────────────────────────────────────────────────────── */
-  if (loading) {
-    return (
-      <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-        <div className="font-mono uppercase tracking-widest animate-pulse"
-             style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-          Загрузка…
-        </div>
-      </div>
-    )
-  }
+  const total = all.length
+  const open = counts.DRAFT + counts.SUBMITTED
+  const avgWhole = avgGiven !== null ? Math.round(avgGiven) : null
 
   /* ── render ────────────────────────────────────────────────────────────── */
   return (
-    <div style={{ padding: '28px 32px 48px', maxWidth: 1280, margin: '0 auto' }}>
-      <style>{`
-        @keyframes ee-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-        .ee-rise { opacity: 0; animation: ee-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
-        @media (max-width: 640px) { .ee-hero-grid { grid-template-columns: 1fr !important; gap: 20px !important } }
-        @media (max-width: 880px) { .ee-stats-grid { grid-template-columns: 1fr 1fr !important } .ee-bottom-grid { grid-template-columns: 1fr !important } }
-        @media (max-width: 520px) { .ee-stats-grid { grid-template-columns: 1fr !important } }
-      `}</style>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
 
-      {/* ── HERO ───────────────────────────────────────────────────────────── */}
-      <div
-        className="relative overflow-hidden rounded-2xl mb-6 ee-rise"
-        style={{
-          background: 'linear-gradient(135deg, #0e2724 0%, #0d4d3f 55%, #1a7558 100%)',
-          color: '#ecf2f0',
-          padding: '28px 32px',
-          border: '1px solid #06120f',
-          boxShadow: 'var(--shadow-md)',
-          animationDelay: '0ms',
-        }}
-      >
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 24px),' +
-            'repeating-linear-gradient(90deg,rgba(255,255,255,.020) 0 1px,transparent 1px 24px)',
-        }} />
-        <div className="absolute pointer-events-none" style={{
-          top: -80, right: -80, width: 320, height: 320,
-          background: 'radial-gradient(circle,rgba(168,133,43,.14),transparent 60%)',
-        }} />
-
-        <div className="relative grid items-center gap-8 ee-hero-grid"
-             style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* left */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="inline-block rounded-full animate-pulse"
-                    style={{ width: 6, height: 6, background: 'var(--gold)' }} />
-              <span className="font-mono uppercase tracking-widest"
-                    style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.7)' }}>
-                {todayLine()}
-              </span>
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">EVAL.QUEUE</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
             </div>
-
-            <h1 className="font-display mb-1.5"
-                style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.01em', color: '#ecf2f0' }}>
-              <span style={{ color: 'var(--gold)' }}>Оценки</span>
-              <span style={{ color: 'rgba(245,236,210,0.55)', fontSize: 18, fontWeight: 400, marginLeft: 10 }}>
-                · проведённые мной
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {greeting}. <span className="dv3-accent">Оценки</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayStr} · проведённые мной</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : total}
+                  </span>
+                  <span className="dv3-hero-metric-lab">всего</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : open}
+                  </span>
+                  <span className="dv3-hero-metric-lab">в работе</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
               </span>
-            </h1>
-
-            <HeroProse
-              timeGreet={timeGreeting()}
-              total={all.length}
-              evaluatees={uniqueEvaluatees}
-              drafts={counts.DRAFT}
-              appealed={counts.APPEALED}
-              avgGiven={avgGiven}
-            />
-
-            <div className="flex items-center gap-2 font-mono flex-wrap"
-                 style={{ fontSize: 10.5, color: 'rgba(245,236,210,0.65)' }}>
-              <span className="font-mono font-semibold uppercase tracking-widest px-2 py-0.5 rounded"
-                    style={{
-                      fontSize: 10,
-                      background: 'rgba(120,200,150,0.14)',
-                      color: '#7fd4a3',
-                      border: '1px solid rgba(120,200,150,0.32)',
-                    }}>
-                Журнал оценщика
-              </span>
-              <span>{all.length} {plural(all.length, ['оценка', 'оценки', 'оценок'])}</span>
-              <span>·</span>
-              <span>{periodsInData.length} {plural(periodsInData.length, ['период', 'периода', 'периодов'])}</span>
-              <span>·</span>
-              <span>{uniqueEvaluatees} {plural(uniqueEvaluatees, ['сотрудник', 'сотрудника', 'сотрудников'])}</span>
+              <span>{updatedLabel}</span>
             </div>
           </div>
 
-          {/* right */}
-          <div className="flex flex-col items-end gap-2">
-            <HeroBigBadge big={String(all.length)} cap="всего" accent="#f5ecd2" />
-            {counts.DRAFT > 0 && (
-              <HeroPill
-                label={`${counts.DRAFT} ${plural(counts.DRAFT, ['черновик', 'черновика', 'черновиков'])}`}
-                tone="warn"
-              />
-            )}
-            {counts.APPEALED > 0 && (
-              <HeroPill
-                label={`${counts.APPEALED} ${plural(counts.APPEALED, ['апелляция', 'апелляции', 'апелляций'])}`}
-                tone="danger"
-              />
-            )}
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="EVAL.TOTAL" id="T01" loading={loading}
+              value={total} label="оценок проведено"
+              gauge={{
+                pct: 1, variant: 'meta',
+                left: '0',
+                center: <><strong>{periodsInData.length}</strong> {plural(periodsInData.length, ['период', 'периода', 'периодов'])}</>,
+                right: total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="EVALUATEES" id="E01" loading={loading}
+              value={uniqueEvaluatees} label="сотрудников оценено"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="AVG.GIVEN" id="A01" loading={loading}
+              value={avgWhole} unit="/ 100" zoneScore={avgWhole}
+              gauge={{
+                pct: avgGiven !== null ? avgGiven / 100 : 0, variant: 'marker',
+                left: '0', right: '100',
+                current: avgWhole !== null ? avgWhole : '—',
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="OPEN" id="O01" loading={loading}
+              value={open} label="draft + submitted"
+              gauge={{
+                pct: total > 0 ? open / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{counts.DRAFT}</strong> {plural(counts.DRAFT, ['черновик', 'черновика', 'черновиков'])}</>,
+                right: total,
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* ── STATS ──────────────────────────────────────────────────────────── */}
-      <div className="grid gap-3 mb-5 ee-stats-grid ee-rise"
-           style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', animationDelay: '90ms' }}>
-        <StatCard
-          label="Всего проведено"
-          mainText={String(all.length)}
-          mainColor="var(--ink)"
-          stripe="var(--accent-2)"
-          delta={{ txt: `${periodsInData.length} пер.`, tone: 'flat' }}
-          footer="по всем периодам"
-        />
-        <StatCard
-          label="Сотрудников"
-          mainText={String(uniqueEvaluatees)}
-          mainColor="var(--ink)"
-          stripe="var(--info)"
-          delta={{ txt: '—', tone: 'flat' }}
-          footer="уникальных оценено"
-        />
-        <StatCard
-          label="Средний балл"
-          mainText={fmt(avgGiven)}
-          mainColor="var(--ink)"
-          stripe="var(--gold)"
-          delta={{ txt: `${scored.length}`, tone: 'flat' }}
-          footer={`по ${scored.length} ${plural(scored.length, ['оценке', 'оценкам', 'оценкам'])} с баллом`}
-        />
-        <StatCard
-          label="Открыто"
-          mainText={String(counts.DRAFT + counts.SUBMITTED)}
-          mainColor={(counts.DRAFT + counts.SUBMITTED) > 0 ? '#9c7416' : 'var(--ink-faint)'}
-          stripe="var(--warn, #c89628)"
-          delta={{ txt: `${counts.DRAFT} черн.`, tone: counts.DRAFT > 0 ? 'down' : 'flat' }}
-          footer="draft + submitted"
-        />
-      </div>
-
       {/* ── LEDGER + DISTRIBUTION ─────────────────────────────────────────── */}
-      <div className="grid gap-3 ee-bottom-grid ee-rise"
-           style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', animationDelay: '180ms' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+       <div className="grid gap-3 ee-bottom-grid"
+           style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)' }}>
+        <style>{`@media (max-width: 880px) { .ee-bottom-grid { grid-template-columns: 1fr !important } }`}</style>
 
         <Card title="Проведённые оценки"
               pill="История"
@@ -359,109 +312,14 @@ export function EvaluatorEvaluationsPage() {
               rightMetric={`${all.length} ${plural(all.length, ['запись', 'записи', 'записей'])}`}>
           <StatusDistribution counts={counts} total={all.length} />
         </Card>
+       </div>
       </div>
-    </div>
+    </>
   )
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
- * Hero subcomponents
- * ────────────────────────────────────────────────────────────────────────── */
-
-function HeroProse({ timeGreet, total, evaluatees, drafts, appealed, avgGiven }: {
-  timeGreet: string
-  total: number
-  evaluatees: number
-  drafts: number
-  appealed: number
-  avgGiven: number | null
-}) {
-  const emphasis = { color: '#f5ecd2', fontWeight: 600 } as const
-
-  if (total === 0) {
-    return (
-      <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-        <p style={{ margin: 0 }}>{timeGreet}. Вы ещё не проводили оценок.</p>
-      </div>
-    )
-  }
-
-  const totalWord = plural(total, ['оценку', 'оценки', 'оценок'])
-  const empWord = plural(evaluatees, ['сотрудника', 'сотрудников', 'сотрудников'])
-
-  return (
-    <div className="mb-3" style={{ fontSize: 13, color: 'rgba(236,242,240,0.82)', maxWidth: 620, lineHeight: 1.55 }}>
-      <p style={{ margin: 0 }}>
-        {timeGreet}. Вы провели <strong style={emphasis}>{total} {totalWord}</strong>
-        {' '}для <strong style={emphasis}>{evaluatees} {empWord}</strong>
-        {avgGiven !== null && (
-          <> · средний выставленный балл{' '}
-            <strong style={emphasis}>{avgGiven.toFixed(1)}</strong></>
-        )}
-        .
-      </p>
-      {(drafts > 0 || appealed > 0) && (
-        <p style={{ margin: 0, marginTop: 2 }}>
-          {drafts > 0 && (
-            <>В работе{' '}
-              <strong style={{ color: '#f0caa4', fontWeight: 600 }}>{drafts}</strong>
-              {appealed > 0 ? ', ' : '. '}
-            </>
-          )}
-          {appealed > 0 && (
-            <>в апелляции{' '}
-              <strong style={{ color: '#f0a4a4', fontWeight: 600 }}>{appealed}</strong>.
-            </>
-          )}
-        </p>
-      )}
-    </div>
-  )
-}
-
-function HeroBigBadge({ big, cap, accent }: { big: string; cap: string; accent: string }) {
-  return (
-    <div
-      className="rounded-lg flex flex-col items-center"
-      style={{
-        padding: '14px 22px',
-        background: 'rgba(0,0,0,0.18)',
-        border: '1px solid rgba(245,236,210,0.18)',
-        boxShadow: 'inset 0 0 0 1px rgba(168,133,43,0.10)',
-        minWidth: 120,
-      }}
-    >
-      <span className="font-display tabular-nums"
-            style={{ fontSize: 44, fontWeight: 600, color: accent, lineHeight: 1, letterSpacing: '-0.02em' }}>
-        {big}
-      </span>
-      <span className="font-mono uppercase tracking-widest mt-1"
-            style={{ fontSize: 10, color: 'rgba(245,236,210,0.6)' }}>
-        {cap}
-      </span>
-    </div>
-  )
-}
-
-function HeroPill({ label, tone }: { label: string; tone: 'warn' | 'danger' }) {
-  const spec = tone === 'warn'
-    ? { bg: 'rgba(200,150,40,0.22)', fg: '#f0caa4', border: 'rgba(200,150,40,0.45)' }
-    : { bg: 'rgba(200,80,60,0.22)', fg: '#f0a4a4', border: 'rgba(200,80,60,0.45)' }
-  return (
-    <span className="font-mono font-semibold uppercase tracking-widest px-2 py-1 rounded"
-          style={{
-            fontSize: 10,
-            background: spec.bg,
-            color: spec.fg,
-            border: `1px solid ${spec.border}`,
-          }}>
-      {label}
-    </span>
-  )
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * Card shell + StatCard (same contract as MyEvaluationsPage)
+ * Card shell
  * ────────────────────────────────────────────────────────────────────────── */
 
 interface PillSpec { bg: string; fg: string; border: string }
@@ -513,52 +371,6 @@ function Card({
         )}
       </div>
       {children}
-    </div>
-  )
-}
-
-function StatCard({
-  label, mainText, mainColor, stripe, delta, footer,
-}: {
-  label: string
-  mainText: string
-  mainColor: string
-  stripe: string
-  delta: { txt: string; tone: 'up' | 'down' | 'flat' }
-  footer: string
-}) {
-  const deltaColor =
-    delta.tone === 'up' ? 'var(--accent-2)' :
-    delta.tone === 'down' ? 'var(--danger)' :
-    'var(--ink-faint)'
-  return (
-    <div
-      className="relative overflow-hidden rounded-lg"
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '14px 16px',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="font-mono uppercase tracking-widest mb-2"
-           style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="font-display tabular-nums"
-              style={{ fontSize: 30, fontWeight: 600, color: mainColor, lineHeight: 1, letterSpacing: '-0.01em' }}>
-          {mainText}
-        </span>
-        <span className="font-mono tabular-nums" style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-          {delta.txt}
-        </span>
-      </div>
-      <div className="font-mono mt-2"
-           style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-        {footer}
-      </div>
     </div>
   )
 }

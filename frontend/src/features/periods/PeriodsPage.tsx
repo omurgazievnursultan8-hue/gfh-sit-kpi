@@ -1,10 +1,14 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Plus } from 'lucide-react'
 import { periodsApi, Period, PeriodStatus, PeriodProgress } from './periodsApi'
 import { PeriodCard } from './components/PeriodCard'
 import { PeriodFormModal, PeriodFormData } from './components/PeriodFormModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { usePageTitle } from '../../context/PageContext'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+
+const PLACEHOLDER = '··'
 
 const SECTIONS: { status: PeriodStatus; label: string }[] = [
   { status: 'ACTIVE', label: 'Активные' },
@@ -23,6 +27,8 @@ export function PeriodsPage() {
   const [closeTarget, setCloseTarget] = useState<number | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -45,10 +51,38 @@ export function PeriodsPage() {
       setLoadError('Не удалось загрузить периоды')
     } finally {
       setLoading(false)
+      setLoadedAt(new Date())
     }
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
+
+  /* ── derived stats ─────────────────────────────────────────────────────── */
+  const total = periods.length
+  const activeCount = useMemo(() => periods.filter(p => p.status === 'ACTIVE').length, [periods])
+  const draftCount = useMemo(() => periods.filter(p => p.status === 'DRAFT').length, [periods])
+  const closedCount = useMemo(() => periods.filter(p => p.status === 'CLOSED').length, [periods])
 
   const handleCreate = async (data: PeriodFormData) => {
     await periodsApi.create(data)
@@ -84,82 +118,168 @@ export function PeriodsPage() {
     }
   }
 
+  const failed = loadError !== null
+
   return (
-    <div style={{ maxWidth: 780, margin: '0 auto', padding: '24px 20px' }}>
-      <div className="flex items-baseline justify-between mb-6">
-        <h1 className="font-display" style={{ fontSize: 24, fontWeight: 600, color: 'var(--ink)' }}>
-          Периоды оценки
-        </h1>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-1.5 font-mono uppercase tracking-widest"
-          style={{ fontSize: 10.5, fontWeight: 600, padding: '8px 14px', borderRadius: 6, background: 'var(--accent-2,#2f9e6d)', color: '#fff' }}
-        >
-          <Plus size={14} /> Создать период
-        </button>
-      </div>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
 
-      {actionError && (
-        <div className="font-mono" style={{ fontSize: 12, color: 'var(--danger)' }}>{actionError}</div>
-      )}
-
-      {loading && (
-        <div className="font-mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>Загрузка…</div>
-      )}
-
-      {loadError && !loading && (
-        <div className="font-mono" style={{ fontSize: 12, color: 'var(--danger)' }}>{loadError}</div>
-      )}
-
-      {!loading && !loadError && periods.length === 0 && (
-        <div className="font-mono" style={{ fontSize: 12, color: 'var(--ink-faint)' }}>
-          Периодов пока нет. Создайте первый.
-        </div>
-      )}
-
-      {!loading && !loadError && SECTIONS.map(section => {
-        const items = periods.filter(p => p.status === section.status)
-        if (items.length === 0) return null
-        return (
-          <div key={section.status} className="mb-7">
-            <div className="flex items-baseline gap-2 mb-3">
-              <span className="font-mono uppercase font-semibold tracking-widest" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-                {section.label}
-              </span>
-              <span className="font-mono" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{items.length}</span>
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">PERIODS.CYCLE</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
             </div>
-            <div className="grid gap-3">
-              {items.map(p => (
-                <PeriodCard
-                  key={p.id}
-                  period={p}
-                  progress={progress[p.id]}
-                  busy={busyId === p.id}
-                  onActivate={handleActivate}
-                  onClose={id => setCloseTarget(id)}
-                />
-              ))}
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Периоды оценки</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : total}
+                  </span>
+                  <span className="dv3-hero-metric-lab">всего</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : activeCount}
+                  </span>
+                  <span className="dv3-hero-metric-lab">активны</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
             </div>
           </div>
-        )
-      })}
 
-      <PeriodFormModal
-        open={modalOpen}
-        onSave={handleCreate}
-        onClose={() => setModalOpen(false)}
-      />
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="PERIODS.TOTAL" id="P01" loading={loading}
+              value={total} label="периодов"
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ACTIVE" id="A01" loading={loading}
+              value={activeCount} label="активны"
+              gauge={{
+                pct: total > 0 ? activeCount / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((activeCount / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="DRAFT" id="D01" loading={loading}
+              value={draftCount} label="черновики"
+              gauge={{
+                pct: total > 0 ? draftCount / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((draftCount / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="CLOSED" id="C01" loading={loading}
+              value={closedCount} label="завершены"
+              gauge={{
+                pct: total > 0 ? closedCount / total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{total > 0 ? Math.round((closedCount / total) * 100) : 0}%</strong> всех</>,
+                right: total,
+              }}
+            />
+          </div>
+        </div>
+      </div>
 
-      <ConfirmDialog
-        open={closeTarget !== null}
-        title="Закрыть период?"
-        description="После закрытия период нельзя будет редактировать или активировать заново."
-        variant="danger"
-        confirmLabel="Закрыть"
-        onConfirm={handleClose}
-        onCancel={() => setCloseTarget(null)}
-      />
-    </div>
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+        <div className="flex items-baseline justify-end mb-6">
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="flex items-center gap-1.5 font-mono uppercase tracking-widest"
+            style={{ fontSize: 10.5, fontWeight: 600, padding: '8px 14px', borderRadius: 6, background: 'var(--dv3-accent)', color: '#fff' }}
+          >
+            <Plus size={14} /> Создать период
+          </button>
+        </div>
+
+        {actionError && (
+          <div className="font-mono" style={{ fontSize: 12, color: 'var(--dv3-zone-down)' }}>{actionError}</div>
+        )}
+
+        {loading && (
+          <div className="font-mono" style={{ fontSize: 12, color: 'var(--dv3-text3)' }}>Загрузка…</div>
+        )}
+
+        {loadError && !loading && (
+          <div className="font-mono" style={{ fontSize: 12, color: 'var(--dv3-zone-down)' }}>{loadError}</div>
+        )}
+
+        {!loading && !loadError && periods.length === 0 && (
+          <div className="font-mono" style={{ fontSize: 12, color: 'var(--dv3-text3)' }}>
+            Периодов пока нет. Создайте первый.
+          </div>
+        )}
+
+        {!loading && !loadError && SECTIONS.map(section => {
+          const items = periods.filter(p => p.status === section.status)
+          if (items.length === 0) return null
+          return (
+            <div key={section.status} className="mb-7">
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="font-mono uppercase font-semibold tracking-widest" style={{ fontSize: 10.5, color: 'var(--dv3-text3)' }}>
+                  {section.label}
+                </span>
+                <span className="font-mono" style={{ fontSize: 11, color: 'var(--dv3-text3)' }}>{items.length}</span>
+              </div>
+              <div className="grid gap-3">
+                {items.map(p => (
+                  <PeriodCard
+                    key={p.id}
+                    period={p}
+                    progress={progress[p.id]}
+                    busy={busyId === p.id}
+                    onActivate={handleActivate}
+                    onClose={id => setCloseTarget(id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )
+        })}
+
+        <PeriodFormModal
+          open={modalOpen}
+          onSave={handleCreate}
+          onClose={() => setModalOpen(false)}
+        />
+
+        <ConfirmDialog
+          open={closeTarget !== null}
+          title="Закрыть период?"
+          description="После закрытия период нельзя будет редактировать или активировать заново."
+          variant="danger"
+          confirmLabel="Закрыть"
+          onConfirm={handleClose}
+          onCancel={() => setCloseTarget(null)}
+        />
+      </div>
+    </>
   )
 }

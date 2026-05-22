@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { delegationsApi, Delegation, DelegationRequest } from './delegationsApi'
 import { DelegationFormModal } from './components/DelegationFormModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
-import { Layout } from '../../components/Layout'
 import api from '../../app/api'
 import { DataTable, type Column } from '../../components/DataTable'
 import { TableCard } from '../../components/TableCard'
 import { Badge, type BadgeTone } from '../../components/Badge'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 
 /* ────────────────────────────────────────────────────────────────────────────
- * "Делегирования оценки" — admin ledger.
- * Cream surface + 3px stripe cards, JetBrains Mono labels, Source Serif display,
- * green accent. Filter chips + search + ledger rows.
+ * "Делегирования оценки" — admin ledger, dv3 terminal skin.
+ * dv3 hero (DELEG.CHAIN) + 4 gauge StatCards + dp-dash TableCard ledger.
  * ────────────────────────────────────────────────────────────────────────── */
+
+const PLACEHOLDER = '··'
 
 interface User {
   id: number
@@ -64,6 +66,9 @@ export function DelegationsPage() {
   const [filter, setFilter] = useState<FilterKey>('ALL')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
+  const [failed, setFailed] = useState(false)
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [now, setNow] = useState(new Date())
 
   const loadDelegations = useCallback(async () => {
     setLoading(true)
@@ -71,12 +76,37 @@ export function DelegationsPage() {
       // pull full set; client-side filter/search/paginate (admin-only, ~100 emp)
       const data = await delegationsApi.list(0, 500)
       setAll(data.content)
+      setFailed(false)
+    } catch {
+      setFailed(true)
     } finally {
       setLoading(false)
+      setLoadedAt(new Date())
     }
   }, [])
 
   useEffect(() => { loadDelegations() }, [loadDelegations])
+
+  // Live tick — refresh clock + relative time each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
+
+  let updatedLabel = ''
+  if (loadedAt) {
+    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
+    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
+  }
 
   useEffect(() => {
     api.get<UsersPage>('/users', { params: { size: 200 } })
@@ -206,7 +236,7 @@ export function DelegationsPage() {
             onClick={() => setDeactivateTarget(d)}
             className="font-mono uppercase tracking-widest transition-colors"
             style={{
-              fontSize: 9.5, padding: '4px 10px', borderRadius: 4, fontWeight: 700,
+              fontSize: 9.5, padding: '4px 10px', borderRadius: 0, fontWeight: 700,
               cursor: 'pointer', background: 'transparent', color: 'var(--danger)',
               border: '1px solid var(--danger-soft)',
             }}
@@ -221,132 +251,151 @@ export function DelegationsPage() {
     },
   ]
 
+  const addButton = (
+    <button
+      onClick={() => setModalOpen(true)}
+      className="font-mono uppercase tracking-widest transition-colors"
+      style={{
+        fontSize: 11, fontWeight: 700, height: 38, padding: '0 16px',
+        borderRadius: 0,
+        background: 'var(--dv3-accent, var(--accent))',
+        color: 'var(--dv3-bg, var(--surface))',
+        border: '1px solid var(--dv3-accent, var(--accent-ink))',
+        cursor: 'pointer',
+        letterSpacing: '0.08em',
+      }}
+    >
+      + Новое делегирование
+    </button>
+  )
+
   /* ── render ────────────────────────────────────────────────────────────── */
   return (
-    <Layout>
-      <style>{`
-        @keyframes dl-rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-        .dl-rise { opacity: 0; animation: dl-rise 620ms cubic-bezier(.22,.61,.36,1) forwards }
-        @media (max-width: 880px) { .dl-stats-grid { grid-template-columns: 1fr 1fr !important } }
-        @media (max-width: 520px) { .dl-stats-grid { grid-template-columns: 1fr !important } .dl-strip { flex-direction: column; align-items: flex-start !important } }
-        .dl-inactive { opacity: .65 }
-      `}</style>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
+        <style>{`
+          .dl-inactive { opacity: .65 }
+        `}</style>
 
-      <div style={{ padding: '8px 0 32px' }}>
-        {/* ── HEADER STRIP ──────────────────────────────────────────────── */}
-        <div className="dl-strip dl-rise flex items-end justify-between gap-4 mb-6 flex-wrap"
-             style={{ animationDelay: '0ms' }}>
-          <div>
-            <div className="font-mono uppercase tracking-widest mb-1"
-                 style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}>
-              Админ · Делегирование
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">DELEG.CHAIN</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
             </div>
-            <h1 className="font-display"
-                style={{
-                  fontSize: 30, fontWeight: 600, color: 'var(--ink)',
-                  lineHeight: 1.1, margin: 0, letterSpacing: '-0.01em',
-                }}>
-              Делегирования<span style={{ color: 'var(--gold)' }}>.</span>
-            </h1>
-            <p style={{ marginTop: 6, fontSize: 13.5, color: 'var(--ink-soft)', maxWidth: 620, lineHeight: 1.5 }}>
-              Передача права оценивать на ограниченный период.
-              {stats.active > 0 && (
-                <>
-                  {' '}Сейчас активно{' '}
-                  <strong style={{ color: 'var(--ink)' }}>
-                    {stats.active} {plural(stats.active, ['делегирование', 'делегирования', 'делегирований'])}
-                  </strong>
-                  {stats.overdue > 0 && (
-                    <>, из них{' '}
-                      <strong style={{ color: 'var(--danger)' }}>{stats.overdue} истекл.</strong>
-                    </>
-                  )}.
-                </>
-              )}
-            </p>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Делегирования</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : stats.active}
+                  </span>
+                  <span className="dv3-hero-metric-lab">активны</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : stats.overdue}
+                  </span>
+                  <span className="dv3-hero-metric-lab">просрочено</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
+                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
+              </span>
+              <span>{updatedLabel}</span>
+            </div>
           </div>
 
-          <button
-            onClick={() => setModalOpen(true)}
-            className="font-mono uppercase tracking-widest transition-all hover:-translate-y-px"
-            style={{
-              fontSize: 11, fontWeight: 700, padding: '10px 18px',
-              borderRadius: 6,
-              background: 'var(--accent)',
-              color: 'var(--surface)',
-              border: '1px solid var(--accent-ink)',
-              boxShadow: 'var(--shadow-sm)',
-              cursor: 'pointer',
-              letterSpacing: '0.08em',
-            }}
-          >
-            + Новое делегирование
-          </button>
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-3"
+              title="DELEG.TOTAL" id="D01" loading={loading}
+              value={stats.total} label="в реестре"
+              gauge={{
+                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{stats.delegatees}</strong> {plural(stats.delegatees, ['чел.', 'чел.', 'чел.'])}</>,
+                right: stats.total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="ACTIVE" id="A01" loading={loading}
+              value={stats.active} label="сейчас в силе"
+              gauge={{
+                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</strong> всех</>,
+                right: stats.total,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="EXPIRING" id="E01" loading={loading}
+              value={stats.expiring} label="скоро закончатся"
+              gauge={{
+                pct: stats.active > 0 ? stats.expiring / stats.active : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>≤ 7д</strong> до конца</>,
+                right: stats.active,
+              }}
+            />
+            <StatCard
+              className="dv3-col-3"
+              title="OVERDUE" id="X01" loading={loading}
+              value={stats.overdue} label="окно прошло"
+              gauge={{
+                pct: stats.active > 0 ? stats.overdue / stats.active : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{stats.overdue > 0 ? 'продлить' : 'ок'}</strong></>,
+                right: stats.active,
+              }}
+            />
+          </div>
         </div>
+      </div>
 
-        {/* ── STATS ──────────────────────────────────────────────────────── */}
-        <div className="grid gap-3 mb-5 dl-stats-grid dl-rise"
-             style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', animationDelay: '90ms' }}>
-          <StatCard
-            label="Всего"
-            mainText={String(stats.total)}
-            mainColor="var(--ink)"
-            stripe="var(--accent-2)"
-            delta={{ txt: `${stats.delegatees} ${plural(stats.delegatees, ['чел.', 'чел.', 'чел.'])}`, tone: 'flat' }}
-            footer="в реестре"
-          />
-          <StatCard
-            label="Активные"
-            mainText={String(stats.active)}
-            mainColor={stats.active > 0 ? 'var(--accent-2)' : 'var(--ink-faint)'}
-            stripe="var(--accent-2)"
-            delta={{ txt: stats.active > 0 ? 'действуют' : '—', tone: 'flat' }}
-            footer="сейчас в силе"
-          />
-          <StatCard
-            label="Истекают"
-            mainText={String(stats.expiring)}
-            mainColor={stats.expiring > 0 ? '#9c7416' : 'var(--ink-faint)'}
-            stripe={stats.expiring > 0 ? 'var(--warn, #c89628)' : 'var(--line-strong)'}
-            delta={{ txt: stats.expiring > 0 ? '≤ 7д' : 'ок', tone: stats.expiring > 0 ? 'down' : 'up' }}
-            footer="скоро закончатся"
-          />
-          <StatCard
-            label="Просрочено"
-            mainText={String(stats.overdue)}
-            mainColor={stats.overdue > 0 ? 'var(--danger)' : 'var(--ink-faint)'}
-            stripe={stats.overdue > 0 ? 'var(--danger)' : 'var(--line-strong)'}
-            delta={{ txt: stats.overdue > 0 ? 'продлить' : '—', tone: stats.overdue > 0 ? 'down' : 'flat' }}
-            footer="окно прошло"
-          />
-        </div>
-
-        {/* ── LEDGER ─────────────────────────────────────────────────────── */}
-        <div className="dl-rise" style={{ animationDelay: '180ms' }}>
+      {/* LEDGER */}
+      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }}>
+        <div>
           <TableCard
             header={
               <>
                 {/* card header */}
                 <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-display"
-                          style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
+                    <span className="font-mono uppercase tracking-widest"
+                          style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>
                       Реестр делегирований
                     </span>
                     <span className="font-mono font-semibold uppercase tracking-widest"
                           style={{
-                            fontSize: 9.5, padding: '2px 7px', borderRadius: 4,
-                            background: 'rgba(26,117,88,0.10)',
-                            color: 'var(--accent-2)',
-                            border: '1px solid rgba(26,117,88,0.24)',
+                            fontSize: 9.5, padding: '2px 7px', borderRadius: 0,
+                            background: 'transparent',
+                            color: 'var(--accent)',
+                            border: '1px solid var(--line)',
                           }}>
                       Журнал
                     </span>
                   </div>
-                  <span className="font-mono font-semibold"
-                        style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-                    {filtered.length}/{stats.total}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-semibold"
+                          style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+                      {filtered.length}/{stats.total}
+                    </span>
+                    {addButton}
+                  </div>
                 </div>
 
                 {/* filter chips + search */}
@@ -372,7 +421,7 @@ export function DelegationsPage() {
                         fontSize: 12,
                         padding: '6px 10px',
                         minWidth: 220,
-                        borderRadius: 4,
+                        borderRadius: 0,
                         border: '1px solid var(--line)',
                         background: 'var(--surface-mute)',
                         color: 'var(--ink)',
@@ -424,57 +473,13 @@ export function DelegationsPage() {
         onConfirm={handleDeactivate}
         onCancel={() => setDeactivateTarget(null)}
       />
-    </Layout>
+    </>
   )
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
  * Helpers / subcomponents
  * ────────────────────────────────────────────────────────────────────────── */
-
-function StatCard({
-  label, mainText, mainColor, stripe, delta, footer,
-}: {
-  label: string
-  mainText: string
-  mainColor: string
-  stripe: string
-  delta: { txt: string; tone: 'up' | 'down' | 'flat' }
-  footer: string
-}) {
-  const deltaColor =
-    delta.tone === 'up' ? 'var(--accent-2)' :
-    delta.tone === 'down' ? 'var(--danger)' :
-    'var(--ink-faint)'
-  return (
-    <div className="relative overflow-hidden rounded-lg"
-         style={{
-           background: 'var(--surface)',
-           border: '1px solid var(--line-soft)',
-           padding: '14px 16px',
-           boxShadow: 'var(--shadow-sm)',
-         }}>
-      <div className="absolute top-0 left-0 right-0" style={{ height: 3, background: stripe }} />
-      <div className="font-mono uppercase tracking-widest mb-2"
-           style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}>
-        {label}
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span className="font-display tabular-nums"
-              style={{ fontSize: 30, fontWeight: 600, color: mainColor, lineHeight: 1, letterSpacing: '-0.01em' }}>
-          {mainText}
-        </span>
-        <span className="font-mono tabular-nums"
-              style={{ fontSize: 11, color: deltaColor, fontWeight: 600 }}>
-          {delta.txt}
-        </span>
-      </div>
-      <div className="font-mono mt-2" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-        {footer}
-      </div>
-    </div>
-  )
-}
 
 function FilterChips({ value, onChange, counts }: {
   value: FilterKey
@@ -498,7 +503,7 @@ function FilterChips({ value, onChange, counts }: {
             onClick={() => onChange(it.key)}
             className="font-mono uppercase tracking-widest transition-all"
             style={{
-              fontSize: 10, padding: '4px 9px', borderRadius: 4, fontWeight: 600,
+              fontSize: 10, padding: '4px 9px', borderRadius: 0, fontWeight: 600,
               cursor: 'pointer',
               background: active ? 'var(--ink)' : 'transparent',
               color: active ? 'var(--bg)' : 'var(--ink-soft)',
@@ -522,7 +527,7 @@ function PersonChip({ name, tone }: { name: string; tone: 'from' | 'to' }) {
     <div className="flex items-center gap-2 min-w-0">
       <span className="font-mono shrink-0"
             style={{
-              width: 24, height: 24, borderRadius: '50%',
+              width: 24, height: 24, borderRadius: 0,
               background: spec.bg, color: spec.fg,
               border: `1px solid ${spec.border}`,
               fontSize: 9.5, fontWeight: 700,
@@ -553,7 +558,7 @@ function Pagination({ page, totalPages, onChange }: {
           onClick={() => onChange(i)}
           className="font-mono tabular-nums transition-all"
           style={{
-            width: 30, height: 28, borderRadius: 4,
+            width: 30, height: 28, borderRadius: 0,
             fontSize: 11, fontWeight: 600,
             cursor: 'pointer',
             background: i === page ? 'var(--ink)' : 'transparent',
