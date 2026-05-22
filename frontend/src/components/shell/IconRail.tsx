@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate, NavLink } from 'react-router-dom'
-import { LogOut, Lock } from 'lucide-react'
+import { LogOut, Lock, Bell, Search } from 'lucide-react'
 import { NAV_SECTIONS, SectionKey, Role } from './navConfig'
 import { RootState, AppDispatch } from '../../app/store'
 import { logoutAction } from '../../features/auth/authSlice'
+import { fetchNotifications } from '../../features/notifications/notificationsSlice'
 import { useTheme } from '../../hooks/useTheme'
 import { useDensity } from '../../hooks/useDensity'
 import { useTranslation } from 'react-i18next'
 import { getInitials } from './shellUtils'
 import { useUserCounters } from './useUserCounters'
+import { NotificationsMenu } from './NotificationsMenu'
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '')
+const SEARCH_KBD = IS_MAC ? '⌘K' : 'Ctrl+K'
 
 const ROLE_KEY: Record<string, string> = {
   ADMIN: 'nav.roleAdmin',
@@ -27,13 +32,15 @@ interface IconRailProps {
   onSectionHover: (section: SectionKey) => void
   onRailEnter: () => void
   onRailLeave: () => void
+  onOpenPalette: () => void
   mobileOpen: boolean
 }
 
-export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover, onRailEnter, onRailLeave, mobileOpen }: IconRailProps) {
+export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover, onRailEnter, onRailLeave, onOpenPalette, mobileOpen }: IconRailProps) {
   const railRef = useRef<HTMLElement>(null)
   const { t, i18n } = useTranslation()
   const { role, email, fullName } = useSelector((s: RootState) => s.auth)
+  const { unreadCount } = useSelector((s: RootState) => s.notifications)
   const counters = useUserCounters()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -108,6 +115,39 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
       if (raf) cancelAnimationFrame(raf)
     }
   }, [menuOpen])
+
+  // Notifications bell (moved from topbar). Click-toggle — hover is reserved
+  // for the rail's nav-panel peek, so the bell must not also hover-open.
+  const [bellOpen, setBellOpen] = useState(false)
+  const bellWrapRef = useRef<HTMLDivElement>(null)
+  const bellBtnRef = useRef<HTMLButtonElement>(null)
+  const FETCH_THROTTLE_MS = 5_000
+  const lastFetchRef = useRef(0)
+  const fetchNotificationsThrottled = () => {
+    const now = Date.now()
+    if (now - lastFetchRef.current < FETCH_THROTTLE_MS) return
+    lastFetchRef.current = now
+    dispatch(fetchNotifications())
+  }
+  useEffect(() => {
+    if (!bellOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (!bellWrapRef.current?.contains(e.target as Node)) setBellOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setBellOpen(false); bellBtnRef.current?.focus() }
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [bellOpen])
+  const toggleBell = () => {
+    if (!bellOpen) fetchNotificationsThrottled()
+    setBellOpen(o => !o)
+  }
 
   const visibleSections = useMemo(
     () => NAV_SECTIONS.filter(s => role && s.roles.includes(role as Role)),
@@ -188,6 +228,45 @@ export function IconRail({ activeSection, pinned, onSectionClick, onSectionHover
       })}
 
       <div className="rail-spacer" />
+
+      <button
+        className="rail-icon"
+        type="button"
+        onClick={onOpenPalette}
+        aria-keyshortcuts={IS_MAC ? 'Meta+K' : 'Control+K'}
+        aria-label={`${t('palette.placeholder', 'Поиск разделов…')} (${SEARCH_KBD})`}
+      >
+        <Search aria-hidden="true" />
+        <span className="rail-label">{t('nav.search', 'Поиск')}</span>
+        <div className="rail-tooltip" aria-hidden="true">{t('palette.placeholder', 'Поиск разделов…')} · {SEARCH_KBD}</div>
+      </button>
+
+      <div className="rail-notif-wrap" ref={bellWrapRef}>
+        <button
+          ref={bellBtnRef}
+          className={`rail-icon${bellOpen ? ' active' : ''}`}
+          type="button"
+          onClick={toggleBell}
+          aria-haspopup="dialog"
+          aria-expanded={bellOpen}
+          aria-controls="gfh-notif-menu"
+          aria-label={
+            (unreadCount > 0
+              ? t('nav.notificationsWithCount', { count: unreadCount, defaultValue: 'Уведомления ({{count}} непрочитанных)' })
+              : t('nav.notifications', 'Уведомления')) as string
+          }
+        >
+          <Bell aria-hidden="true" />
+          {unreadCount > 0 && (
+            <span className="rail-count rail-count--warn" role="status"
+              aria-label={t('nav.badgeCount', '{{count}} новых', { count: unreadCount }) as string}
+            >{unreadCount > 99 ? '99+' : unreadCount}</span>
+          )}
+          <span className="rail-label">{t('nav.notifications', 'Уведомления')}</span>
+          {!bellOpen && <div className="rail-tooltip" aria-hidden="true">{t('nav.notifications', 'Уведомления')}</div>}
+        </button>
+        {bellOpen && <NotificationsMenu onClose={() => setBellOpen(false)} />}
+      </div>
 
       <button
         ref={avatarRef}
