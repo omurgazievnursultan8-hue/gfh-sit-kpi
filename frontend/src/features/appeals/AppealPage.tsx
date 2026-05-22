@@ -1,7 +1,9 @@
-import { useState, FormEvent } from 'react'
+import { useEffect, useState, FormEvent } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { AlertTriangle } from 'lucide-react'
 import api from '../../app/api'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
 
 export function AppealPage() {
   const [searchParams] = useSearchParams()
@@ -11,6 +13,22 @@ export function AppealPage() {
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [now, setNow] = useState(new Date())
+
+  // Live tick — refresh clock each minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -29,50 +47,72 @@ export function AppealPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="flex items-center gap-3 mb-6">
-        <AlertTriangle size={24} className="text-orange-500" />
-        <h1 className="text-2xl font-bold text-gray-900">Подать апелляцию</h1>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{DV3_FORM_CSS}</style>
+
+        <div className="dv3-terminal">
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">APPEAL.FILE</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Подать апелляцию</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-        <p className="text-sm text-orange-800">
-          Вы не согласны с результатами оценки. Укажите причину — оценщик получит уведомление
-          и должен ответить в установленные сроки.
-        </p>
+      {/* FORM */}
+      <div style={{ maxWidth: 760, margin: '0 auto', padding: '0 32px 48px' }}>
+        <div className="dv3-banner dv3-banner--warn">
+          <AlertTriangle size={18} />
+          <span>
+            Вы не согласны с результатами оценки. Укажите причину — оценщик получит уведомление
+            и должен ответить в установленные сроки.
+          </span>
+        </div>
+
+        <div className="dv3-panel">
+          <form onSubmit={handleSubmit} className="dv3-form">
+            <div className="dv3-field">
+              <label className="dv3-label">
+                Причина апелляции <span className="dv3-req">*</span>
+              </label>
+              <textarea
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                required
+                rows={6}
+                placeholder="Опишите, с чем именно вы не согласны и почему..."
+                className="dv3-textarea"
+              />
+              <p className="dv3-help">{reason.length} символов</p>
+            </div>
+
+            {error && (
+              <div className="dv3-banner dv3-banner--error">{error}</div>
+            )}
+
+            <div className="dv3-btn-row">
+              <button type="button" onClick={() => navigate(-1)} className="dv3-btn">
+                Отмена
+              </button>
+              <button type="submit" disabled={loading || !reason.trim()} className="dv3-btn dv3-btn--primary">
+                {loading ? 'Отправка...' : 'Подать апелляцию'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Причина апелляции <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={reason}
-            onChange={e => setReason(e.target.value)}
-            required
-            rows={6}
-            placeholder="Опишите, с чем именно вы не согласны и почему..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary"
-          />
-          <p className="text-xs text-gray-400 mt-1">{reason.length} символов</p>
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-600">{error}</p>
-        )}
-
-        <div className="flex gap-3 pt-2">
-          <button type="button" onClick={() => navigate(-1)}
-            className="flex-1 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-            Отмена
-          </button>
-          <button type="submit" disabled={loading || !reason.trim()}
-            className="flex-1 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50">
-            {loading ? 'Отправка...' : 'Подать апелляцию'}
-          </button>
-        </div>
-      </form>
-    </div>
+    </>
   )
 }

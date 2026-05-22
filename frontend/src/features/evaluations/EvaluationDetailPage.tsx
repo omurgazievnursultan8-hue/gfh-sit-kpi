@@ -3,6 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react'
 import { evaluationsApi, Evaluation } from './evaluationsApi'
 import api from '../../app/api'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
+import { EvaluationStatusBadge } from './components/evaluationStatus'
 
 interface ScoreHistory {
   criteriaId: number
@@ -24,6 +28,7 @@ export function EvaluationDetailPage() {
   const [reacting, setReacting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [comment, setComment] = useState('')
+  const [now, setNow] = useState(new Date())
 
   useEffect(() => {
     Promise.all([
@@ -34,6 +39,12 @@ export function EvaluationDetailPage() {
       setScores(hist.data)
     }).finally(() => setLoading(false))
   }, [evaluationId])
+
+  // Live tick — refresh clock each minute.
+  useEffect(() => {
+    const tid = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(tid)
+  }, [])
 
   const react = async (reaction: 'AGREE' | 'DISAGREE') => {
     setReacting(true)
@@ -51,99 +62,205 @@ export function EvaluationDetailPage() {
     }
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-400">Загрузка...</div>
-  if (!evaluation) return <div className="text-center py-12 text-red-500">Оценка не найдена</div>
+  /* ── time / clock ──────────────────────────────────────────────────────── */
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const clockKgt = `${hh}:${mm}`
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const todayLine = `${datePart} · ${hh}:${mm}`
+
+  const PLACEHOLDER = '··'
+
+  if (loading) {
+    return (
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <div className="dv3-terminal">
+          <div className="text-center py-12" style={{ color: 'var(--dv3-text3)' }}>Загрузка...</div>
+        </div>
+      </div>
+    )
+  }
+  if (!evaluation) {
+    return (
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <div className="dv3-terminal">
+          <div className="text-center py-12" style={{ color: 'var(--dv3-zone-down)' }}>Оценка не найдена</div>
+        </div>
+      </div>
+    )
+  }
 
   const positiveScores = scores.filter(s => s.type === 'POSITIVE')
   const antiBonusScores = scores.filter(s => s.type === 'ANTI_BONUS')
 
+  const finalScore = evaluation.finalScore
+  const scoreWhole = finalScore !== null ? Math.round(finalScore) : null
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Детали оценки</h1>
-        <p className="text-gray-500 mt-1">Оценщик: {evaluation.evaluatorName}</p>
-      </div>
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{STAT_CARD_CSS}</style>
+        <style>{DV3_FORM_CSS}</style>
 
-      {positiveScores.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">Положительные критерии</h2>
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-            {positiveScores.map(s => (
-              <div key={s.criteriaId} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-gray-900 text-sm">{s.nameRu}</span>
-                  <span className="text-xs text-gray-400 ml-2">({s.weightSnapshot}%)</span>
+        <div className="dv3-terminal" style={{ maxWidth: 960 }}>
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">EVAL.DETAIL</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Детали оценки</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className="dv3-hero-metric-num">
+                    {finalScore !== null ? finalScore.toFixed(1) : '—'}
+                  </span>
+                  <span className="dv3-hero-metric-lab">итог</span>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-mono text-gray-800">{s.rawValue.toFixed(2)}</div>
-                  <div className="text-xs text-gray-400">взвеш: {s.weightedValue.toFixed(2)}</div>
+                <div className="dv3-hero-metric">
+                  <span className="dv3-hero-metric-num">{scores.length}</span>
+                  <span className="dv3-hero-metric-lab">критериев</span>
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="dv3-hero-foot">
+              <span className="dv3-hero-foot-ok">STATUS · ок</span>
+              <span>Оценщик: {evaluation.evaluatorName}</span>
+            </div>
           </div>
-        </div>
-      )}
 
-      {antiBonusScores.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3">Антибонусы</h2>
-          <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
-            {antiBonusScores.map(s => (
-              <div key={s.criteriaId} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-gray-900 text-sm">{s.nameRu}</span>
-                  <span className="text-xs text-gray-400 ml-2">({s.weightSnapshot}%)</span>
-                </div>
-                <div className="text-right text-red-600">
-                  <div className="text-sm font-mono">{s.rawValue.toFixed(2)}</div>
-                  <div className="text-xs text-red-400">взвеш: -{s.weightedValue.toFixed(2)}</div>
-                </div>
-              </div>
-            ))}
+          {/* STAT GRID */}
+          <div className="dv3-grid">
+            <StatCard
+              className="dv3-col-6"
+              title="EVAL.SCORE" id="S01" loading={loading}
+              value={scoreWhole} unit="/ 100" zoneScore={scoreWhole}
+              emptyValue="—"
+              gauge={{
+                pct: finalScore !== null ? finalScore / 100 : 0, variant: 'marker',
+                left: '0', right: '100',
+                current: scoreWhole !== null ? scoreWhole : '—',
+              }}
+            />
+            <StatCard
+              className="dv3-col-6"
+              title="CRITERIA" id="C01" loading={loading}
+              value={scores.length} label="критериев"
+              gauge={{
+                pct: scores.length > 0 ? positiveScores.length / scores.length : 0, variant: 'meta',
+                left: '0',
+                center: <><strong>{positiveScores.length}</strong> положит. · <strong>{antiBonusScores.length}</strong> антибонус</>,
+                right: scores.length,
+              }}
+            />
           </div>
-        </div>
-      )}
-
-      <div className="bg-gray-50 rounded-lg p-4 mb-6 text-center">
-        <div className="text-sm text-gray-500 mb-1">Итоговый рейтинг</div>
-        <div className="text-4xl font-bold text-gray-900">
-          {evaluation.finalScore?.toFixed(2) ?? '—'}
         </div>
       </div>
 
-      {evaluation.status === 'SUBMITTED' && (
-        <div className="bg-white rounded-lg border border-blue-200 p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle size={16} className="text-blue-600" />
-            <h3 className="font-semibold text-gray-900">Ваша реакция</h3>
-          </div>
-          <textarea
-            value={comment}
-            onChange={e => setComment(e.target.value)}
-            placeholder="Комментарий (необязательно)"
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary mb-4"
-          />
-          <div className="flex gap-3">
-            <button
-              onClick={() => react('AGREE')}
-              disabled={reacting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-            >
-              <ThumbsUp size={16} />
-              Согласен
-            </button>
-            <button
-              onClick={() => react('DISAGREE')}
-              disabled={reacting}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-            >
-              <ThumbsDown size={16} />
-              Не согласен
-            </button>
+      {/* DETAIL / BREAKDOWN PANELS */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 32px 48px' }}>
+        <div className="dv3-root">
+          <style>{DV3_FORM_CSS}</style>
+          <div className="dv3-form">
+            {positiveScores.length > 0 && (
+              <div className="dv3-panel">
+                <div className="dv3-section-head">
+                  <span>Положительные критерии</span>
+                  <EvaluationStatusBadge status={evaluation.status} />
+                </div>
+                {positiveScores.map(s => (
+                  <ScoreRow key={s.criteriaId} s={s} />
+                ))}
+              </div>
+            )}
+
+            {antiBonusScores.length > 0 && (
+              <div className="dv3-panel">
+                <div className="dv3-section-head">
+                  <span>Антибонусы</span>
+                </div>
+                {antiBonusScores.map(s => (
+                  <ScoreRow key={s.criteriaId} s={s} negative />
+                ))}
+              </div>
+            )}
+
+            {evaluation.status === 'SUBMITTED' && (
+              <div className="dv3-panel dv3-panel--accent">
+                <div className="dv3-section-head">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <AlertCircle size={14} />
+                    Ваша реакция
+                  </span>
+                </div>
+                <div className="dv3-field">
+                  <label className="dv3-label">Комментарий</label>
+                  <textarea
+                    value={comment}
+                    onChange={e => setComment(e.target.value)}
+                    placeholder="Комментарий (необязательно)"
+                    rows={3}
+                    className="dv3-textarea"
+                  />
+                </div>
+                <div className="dv3-btn-row" style={{ marginTop: 16 }}>
+                  <button
+                    onClick={() => react('AGREE')}
+                    disabled={reacting}
+                    className="dv3-btn dv3-btn--primary"
+                    style={{ flex: 1 }}
+                  >
+                    <ThumbsUp size={16} />
+                    Согласен
+                  </button>
+                  <button
+                    onClick={() => react('DISAGREE')}
+                    disabled={reacting}
+                    className="dv3-btn dv3-btn--danger"
+                    style={{ flex: 1 }}
+                  >
+                    <ThumbsDown size={16} />
+                    Не согласен
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
+    </>
+  )
+}
+
+function ScoreRow({ s, negative = false }: { s: ScoreHistory; negative?: boolean }) {
+  return (
+    <div
+      className="dv3-setrow"
+      style={{ fontFamily: "'Geist Mono', ui-monospace, Menlo, monospace" }}
+    >
+      <div className="dv3-setrow-main">
+        <span className="dv3-setrow-title">
+          {s.nameRu}
+          <span style={{ color: 'var(--dv3-text4)', marginLeft: 8, fontSize: 11 }}>({s.weightSnapshot}%)</span>
+        </span>
+      </div>
+      <div style={{ textAlign: 'right', color: negative ? 'var(--dv3-zone-down)' : 'var(--dv3-text)' }}>
+        <div style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{s.rawValue.toFixed(2)}</div>
+        <div style={{ fontSize: 11, color: negative ? 'var(--dv3-zone-down)' : 'var(--dv3-text3)' }}>
+          взвеш: {negative ? '-' : ''}{s.weightedValue.toFixed(2)}
+        </div>
+      </div>
     </div>
   )
 }

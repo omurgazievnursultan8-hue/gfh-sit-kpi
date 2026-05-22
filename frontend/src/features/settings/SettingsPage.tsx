@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Check, X, Pencil, ShieldCheck, ClipboardCheck, FileText, Settings2,
-  RotateCcw, AlertCircle, Clock,
+  RotateCcw, AlertCircle,
 } from 'lucide-react'
 import { SystemSetting, settingsApi } from './settingsApi'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
+
+const PLACEHOLDER = '··'
 
 /* ── Setting metadata ─────────────────────────────────────────────── */
 
@@ -96,6 +100,12 @@ export function SettingsPage() {
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
 
   const loadSettings = async () => {
     setLoading(true)
@@ -152,368 +162,189 @@ export function SettingsPage() {
     return stamps.length ? new Date(stamps[stamps.length - 1]) : null
   }, [settings])
 
-  return (
-    <div className="set-root">
-      <style>{CSS}</style>
+  /* ── time / clock ──────────────────────────────────────────────────── */
+  const hours = now.getHours()
+  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
+  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const todayLine = `${datePart} · ${hh}:${mm}`
+  const clockKgt = `${hh}:${mm}`
 
-      {/* HEAD */}
-      <header className="set-head">
-        <nav className="set-crumb" aria-label="Хлебные крошки">
-          <a href="/">Главная</a>
-          <span aria-hidden="true">/</span>
-          <a href="/admin">Админ-панель</a>
-          <span aria-hidden="true">/</span>
-          <span aria-current="page">Настройки</span>
-        </nav>
-        <h1>Системные настройки</h1>
-        <div className="set-meta">
-          <span>Параметров: <strong>{settings.length}</strong></span>
-          {lastUpdated && (
-            <>
-              <span aria-hidden="true">·</span>
-              <span className="set-meta-time" title={lastUpdated.toISOString()}>
-                <Clock size={12} strokeWidth={2} aria-hidden="true" />
-                Изменено {lastUpdated.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
-              </span>
-            </>
-          )}
-          <button className="set-refresh" onClick={loadSettings} disabled={loading} title="Обновить">
+  const updatedLabel = lastUpdated
+    ? `изменено ${lastUpdated.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`
+    : ''
+
+  const visibleCats = CATS.filter(c => (grouped.get(c.key)?.length ?? 0) > 0)
+
+  return (
+    <>
+      <div className="dv3-root">
+        <style>{DASHBOARD_CSS}</style>
+        <style>{DV3_FORM_CSS}</style>
+
+        <div className="dv3-terminal" style={{ maxWidth: 960 }}>
+          {/* HERO */}
+          <div className="dv3-hero">
+            <div className="dv3-hero-meta">
+              <span className="dv3-hero-meta-l">SETTINGS.SYS</span>
+              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
+            </div>
+            <div className="dv3-hero-main">
+              <div>
+                <h1 className="dv3-hero-title">
+                  {timeGreeting}. <span className="dv3-accent">Системные настройки</span>
+                </h1>
+                <p className="dv3-hero-sub">{todayLine}</p>
+              </div>
+              <div className="dv3-hero-metrics">
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : settings.length}
+                  </span>
+                  <span className="dv3-hero-metric-lab">параметров</span>
+                </div>
+                <div className="dv3-hero-metric">
+                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                    {loading ? PLACEHOLDER : visibleCats.length}
+                  </span>
+                  <span className="dv3-hero-metric-lab">категорий</span>
+                </div>
+              </div>
+            </div>
+            <div className="dv3-hero-foot">
+              <span className="dv3-hero-foot-ok">STATUS · ок</span>
+              <span>{updatedLabel}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SETTINGS PANELS */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 32px 48px' }}>
+        <div className="dv3-banner" style={{ marginBottom: 18 }}>
+          Глобальные параметры платформы. Изменения вступают в силу немедленно и
+          применяются ко всем пользователям.
+          <button
+            className="dv3-btn"
+            onClick={loadSettings}
+            disabled={loading}
+            title="Обновить"
+            style={{ float: 'right', marginTop: -4 }}
+          >
             <RotateCcw size={13} strokeWidth={2} aria-hidden="true" />
             Обновить
           </button>
         </div>
-        <p className="set-subtitle">
-          Глобальные параметры платформы. Изменения вступают в силу немедленно и
-          применяются ко всем пользователям.
-        </p>
-      </header>
 
-      {loading ? (
-        <div className="set-cards">
-          {[0, 1, 2].map(i => (
-            <div className="set-card set-skeleton" key={i} aria-hidden="true">
-              <div className="set-sk-bar set-sk-head" />
-              <div className="set-sk-bar" />
-              <div className="set-sk-bar" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="set-cards">
+        <div className="dv3-form">
           {CATS.map(({ key, title, caption, Icon }) => {
             const items = grouped.get(key)
             if (!items || items.length === 0) return null
             return (
-              <section className={`set-card cat-${key}`} key={key}>
-                <div className="set-card-head">
-                  <span className="set-card-icon" aria-hidden="true">
-                    <Icon size={17} strokeWidth={2} />
+              <section className="dv3-panel dv3-panel--accent" key={key}>
+                <div className="dv3-section-head">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <Icon size={14} strokeWidth={2} aria-hidden="true" />
+                    {title} · {caption}
                   </span>
-                  <div>
-                    <h2>{title}</h2>
-                    <span className="set-card-caption">{caption}</span>
-                  </div>
-                  <span className="set-card-count">{items.length}</span>
+                  <span>{items.length}</span>
                 </div>
 
-                <ul className="set-list">
-                  {items.map(s => {
-                    const m = metaFor(s.key)
-                    const editing = editingKey === s.key
-                    return (
-                      <li className={`set-row ${editing ? 'is-editing' : ''}`} key={s.key}>
-                        <div className="set-row-info">
-                          <div className="set-row-label">{m.label}</div>
-                          {(m.hint || s.description) && (
-                            <div className="set-row-hint">{m.hint || s.description}</div>
-                          )}
-                          <code className="set-row-key">{s.key}</code>
-                        </div>
-
-                        <div className="set-row-control">
-                          {editing ? (
-                            <div className="set-edit">
-                              <div className="set-edit-field">
-                                {m.type === 'select' ? (
-                                  <select
-                                    value={editValue}
-                                    onChange={e => setEditValue(e.target.value)}
-                                    autoFocus
-                                    className="set-input"
-                                    aria-label={m.label}
-                                  >
-                                    {m.options!.map(o => (
-                                      <option key={o.value} value={o.value}>{o.label}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <>
-                                    <input
-                                      type={m.type === 'number' ? 'number' : 'text'}
-                                      value={editValue}
-                                      min={m.min}
-                                      max={m.max}
-                                      onChange={e => setEditValue(e.target.value)}
-                                      onKeyDown={e => {
-                                        if (e.key === 'Enter') saveEdit(s.key)
-                                        if (e.key === 'Escape') cancelEdit()
-                                      }}
-                                      autoFocus
-                                      className="set-input"
-                                      aria-label={m.label}
-                                    />
-                                    {m.unit && <span className="set-input-unit">{m.unit}</span>}
-                                  </>
-                                )}
-                              </div>
-                              <div className="set-edit-actions">
-                                <button
-                                  onClick={() => saveEdit(s.key)}
-                                  disabled={saving}
-                                  className="set-btn set-btn-save"
-                                  title="Сохранить"
-                                >
-                                  <Check size={15} strokeWidth={2.4} aria-hidden="true" />
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  disabled={saving}
-                                  className="set-btn set-btn-cancel"
-                                  title="Отмена"
-                                >
-                                  <X size={15} strokeWidth={2.4} aria-hidden="true" />
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <>
-                              <span className="set-value">{displayValue(s)}</span>
-                              <button
-                                onClick={() => startEdit(s)}
-                                className="set-btn set-btn-edit"
-                                aria-label={`Изменить «${m.label}»`}
-                              >
-                                <Pencil size={13} strokeWidth={2} aria-hidden="true" />
-                                Изменить
-                              </button>
-                            </>
-                          )}
-                        </div>
-
+                {items.map(s => {
+                  const m = metaFor(s.key)
+                  const editing = editingKey === s.key
+                  return (
+                    <div className="dv3-setrow" key={s.key}>
+                      <div className="dv3-setrow-main">
+                        <span className="dv3-setrow-title">{m.label}</span>
+                        {(m.hint || s.description) && (
+                          <span className="dv3-setrow-desc">{m.hint || s.description}</span>
+                        )}
+                        <span className="dv3-help" style={{ marginTop: 2 }}>{s.key}</span>
                         {editing && error && (
-                          <div className="set-row-error" role="alert">
+                          <span
+                            className="dv3-banner dv3-banner--error"
+                            role="alert"
+                            style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                          >
                             <AlertCircle size={13} strokeWidth={2} aria-hidden="true" />
                             {error}
-                          </div>
+                          </span>
                         )}
-                      </li>
-                    )
-                  })}
-                </ul>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {editing ? (
+                          <>
+                            {m.type === 'select' ? (
+                              <select
+                                value={editValue}
+                                onChange={e => setEditValue(e.target.value)}
+                                autoFocus
+                                className="dv3-select"
+                                aria-label={m.label}
+                              >
+                                {m.options!.map(o => (
+                                  <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type={m.type === 'number' ? 'number' : 'text'}
+                                value={editValue}
+                                min={m.min}
+                                max={m.max}
+                                onChange={e => setEditValue(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') saveEdit(s.key)
+                                  if (e.key === 'Escape') cancelEdit()
+                                }}
+                                autoFocus
+                                className={`dv3-input${m.type === 'number' ? ' dv3-input--num' : ''}`}
+                                aria-label={m.label}
+                              />
+                            )}
+                            {m.unit && <span className="dv3-help">{m.unit}</span>}
+                            <button
+                              onClick={() => saveEdit(s.key)}
+                              disabled={saving}
+                              className="dv3-btn dv3-btn--primary"
+                              title="Сохранить"
+                            >
+                              <Check size={15} strokeWidth={2.4} aria-hidden="true" />
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              disabled={saving}
+                              className="dv3-btn dv3-btn--danger"
+                              title="Отмена"
+                            >
+                              <X size={15} strokeWidth={2.4} aria-hidden="true" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span className="dv3-help" style={{ fontSize: 13 }}>{displayValue(s)}</span>
+                            <button
+                              onClick={() => startEdit(s)}
+                              className="dv3-btn"
+                              aria-label={`Изменить «${m.label}»`}
+                            >
+                              <Pencil size={13} strokeWidth={2} aria-hidden="true" />
+                              Изменить
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </section>
             )
           })}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }
-
-/* ── Scoped styles ────────────────────────────────────────────────── */
-
-const CSS = `
-.set-root {
-  --ink: #14213d;
-  --muted: #64748b;
-  --line: #e7e9ef;
-  --paper: #ffffff;
-  max-width: 880px;
-  margin: 0 auto;
-  padding-bottom: 64px;
-  color: var(--ink);
-}
-
-/* HEAD */
-.set-head { margin-bottom: 28px; }
-.set-crumb {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 12px; color: var(--muted); margin-bottom: 12px;
-}
-.set-crumb a { color: var(--muted); text-decoration: none; }
-.set-crumb a:hover { color: #1e40af; text-decoration: underline; }
-.set-crumb span[aria-current] { color: var(--ink); font-weight: 600; }
-.set-head h1 {
-  font-family: "Source Serif Pro", Georgia, serif;
-  font-size: 30px; font-weight: 600; line-height: 1.1;
-  letter-spacing: -0.015em; margin: 0;
-}
-.set-meta {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 13px; color: var(--muted); margin-top: 10px;
-}
-.set-meta strong { color: var(--ink); font-weight: 700; }
-.set-meta-time { display: inline-flex; align-items: center; gap: 5px; }
-.set-refresh {
-  display: inline-flex; align-items: center; gap: 5px;
-  margin-left: auto;
-  font-size: 12px; font-weight: 600; color: var(--muted);
-  background: transparent; border: 1px solid var(--line);
-  border-radius: 7px; padding: 5px 10px; cursor: pointer;
-  transition: all .15s ease;
-}
-.set-refresh:hover:not(:disabled) { border-color: #1e40af; color: #1e40af; }
-.set-refresh:disabled { opacity: .5; cursor: default; }
-.set-subtitle {
-  margin: 14px 0 0; max-width: 60ch;
-  font-size: 13.5px; line-height: 1.6; color: var(--muted);
-}
-
-/* CARDS */
-.set-cards { display: flex; flex-direction: column; gap: 18px; }
-.set-card {
-  position: relative;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 2px rgba(20,33,61,.04);
-}
-.set-card::before {
-  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
-  width: 3px; background: var(--accent);
-}
-.cat-security   { --accent: #b45309; --accent-soft: #fef3e2; }
-.cat-evaluation { --accent: #1e40af; --accent-soft: #e8edfb; }
-.cat-compliance { --accent: #15803d; --accent-soft: #e6f4ea; }
-.cat-other      { --accent: #64748b; --accent-soft: #eef1f5; }
-
-.set-card-head {
-  display: flex; align-items: center; gap: 12px;
-  padding: 16px 20px; border-bottom: 1px solid var(--line);
-}
-.set-card-icon {
-  display: grid; place-items: center;
-  width: 34px; height: 34px; flex-shrink: 0;
-  border-radius: 9px;
-  background: var(--accent-soft); color: var(--accent);
-}
-.set-card-head h2 {
-  font-family: "Source Serif Pro", Georgia, serif;
-  font-size: 17px; font-weight: 600; margin: 0; line-height: 1.2;
-}
-.set-card-caption { font-size: 12px; color: var(--muted); }
-.set-card-count {
-  margin-left: auto;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px; font-weight: 600;
-  color: var(--accent); background: var(--accent-soft);
-  border-radius: 999px; padding: 3px 9px;
-}
-
-/* ROWS */
-.set-list { list-style: none; margin: 0; padding: 0; }
-.set-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 16px 24px;
-  align-items: center;
-  padding: 15px 20px;
-  border-bottom: 1px solid var(--line);
-  transition: background .12s ease;
-}
-.set-row:last-child { border-bottom: none; }
-.set-row:hover { background: #fafbfd; }
-.set-row.is-editing { background: var(--accent-soft); }
-
-.set-row-info { min-width: 0; }
-.set-row-label {
-  font-size: 14px; font-weight: 600; color: var(--ink);
-}
-.set-row-hint {
-  font-size: 12.5px; line-height: 1.5; color: var(--muted);
-  margin-top: 3px; max-width: 48ch;
-}
-.set-row-key {
-  display: inline-block; margin-top: 6px;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10.5px; color: #94a3b8;
-  background: #f4f5f8; border-radius: 4px; padding: 1px 6px;
-}
-
-/* CONTROL */
-.set-row-control {
-  display: flex; align-items: center; gap: 10px;
-  justify-content: flex-end;
-}
-.set-value {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 13px; font-weight: 600; color: var(--ink);
-  background: #f4f5f8; border: 1px solid var(--line);
-  border-radius: 7px; padding: 5px 11px;
-  white-space: nowrap;
-}
-
-.set-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  border: 1px solid var(--line); border-radius: 7px;
-  background: var(--paper); cursor: pointer;
-  font-size: 12px; font-weight: 600;
-  transition: all .14s ease;
-}
-.set-btn-edit { padding: 6px 11px; color: var(--muted); }
-.set-btn-edit:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-.set-btn-save, .set-btn-cancel {
-  width: 32px; height: 32px; justify-content: center; padding: 0;
-}
-.set-btn-save { background: #15803d; border-color: #15803d; color: #fff; }
-.set-btn-save:hover:not(:disabled) { background: #166534; }
-.set-btn-cancel { color: var(--muted); }
-.set-btn-cancel:hover:not(:disabled) { border-color: #dc2626; color: #dc2626; background: #fef2f2; }
-.set-btn:disabled { opacity: .55; cursor: default; }
-
-/* EDIT */
-.set-edit { display: flex; align-items: center; gap: 8px; }
-.set-edit-field { position: relative; display: flex; align-items: center; }
-.set-input {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 13px; color: var(--ink);
-  border: 1.5px solid var(--accent); border-radius: 7px;
-  padding: 6px 10px; width: 168px;
-  background: var(--paper);
-}
-.set-input:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
-.set-edit-field:has(.set-input-unit) .set-input { padding-right: 42px; }
-.set-input-unit {
-  position: absolute; right: 10px;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px; font-weight: 600; color: var(--muted);
-  pointer-events: none;
-}
-.set-edit-actions { display: flex; gap: 6px; }
-
-.set-row-error {
-  grid-column: 1 / -1;
-  display: flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 500; color: #dc2626;
-  background: #fef2f2; border: 1px solid #fecaca;
-  border-radius: 7px; padding: 6px 10px;
-}
-
-/* SKELETON */
-.set-skeleton { padding: 20px; }
-.set-sk-bar {
-  height: 14px; border-radius: 6px; margin-bottom: 14px;
-  background: linear-gradient(90deg,#eef0f4 25%,#f6f7f9 50%,#eef0f4 75%);
-  background-size: 200% 100%;
-  animation: set-shimmer 1.3s infinite linear;
-}
-.set-sk-bar:last-child { margin-bottom: 0; width: 70%; }
-.set-sk-head { width: 40%; height: 20px; }
-@keyframes set-shimmer { to { background-position: -200% 0; } }
-
-@media (max-width: 560px) {
-  .set-row { grid-template-columns: 1fr; }
-  .set-row-control { justify-content: flex-start; }
-  .set-input { width: 140px; }
-}
-`

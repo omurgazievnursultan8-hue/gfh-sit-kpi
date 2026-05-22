@@ -6,6 +6,9 @@ import {
 import { RootState } from '../../app/store'
 import { DataTable, type Column } from '../../components/DataTable'
 import { CalendarDay, DayType, calendarApi } from './calendarApi'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
 
 const MONTHS_RU = [
   'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
@@ -101,10 +104,11 @@ function DayModal({
           </button>
         </div>
 
-        <div className="pc-modal-body">
-          <label className="pc-field">
-            <span>Дата</span>
+        <div className="pc-modal-body dv3-form">
+          <label className="dv3-field">
+            <span className="dv3-label">Дата</span>
             <input
+              className="dv3-input"
               type="date"
               value={d.day}
               disabled={d.existing}
@@ -112,9 +116,10 @@ function DayModal({
             />
           </label>
 
-          <label className="pc-field">
-            <span>Тип дня</span>
+          <label className="dv3-field">
+            <span className="dv3-label">Тип дня</span>
             <select
+              className="dv3-select"
               value={d.dayType}
               onChange={e => setD({ ...d, dayType: e.target.value as DayType })}
             >
@@ -124,9 +129,10 @@ function DayModal({
             </select>
           </label>
 
-          <label className="pc-field">
-            <span>Описание (RU)</span>
+          <label className="dv3-field">
+            <span className="dv3-label">Описание (RU)</span>
             <input
+              className="dv3-input"
               type="text"
               value={d.descriptionRu}
               placeholder="Напр. День Конституции"
@@ -134,9 +140,10 @@ function DayModal({
             />
           </label>
 
-          <label className="pc-field">
-            <span>Описание (KG)</span>
+          <label className="dv3-field">
+            <span className="dv3-label">Описание (KG)</span>
             <input
+              className="dv3-input"
               type="text"
               value={d.descriptionKg}
               placeholder="Мис. Конституция күнү"
@@ -148,7 +155,8 @@ function DayModal({
         <div className="pc-modal-foot">
           {d.existing && (
             <button
-              className="pc-btn pc-btn-danger"
+              className="dv3-btn dv3-btn--danger"
+              style={{ marginRight: 'auto' }}
               onClick={() => onDelete(d.day)}
               disabled={saving}
             >
@@ -157,11 +165,11 @@ function DayModal({
             </button>
           )}
           <div className="pc-modal-foot-main">
-            <button className="pc-btn pc-btn-ghost" onClick={onClose} disabled={saving}>
+            <button className="dv3-btn" onClick={onClose} disabled={saving}>
               Отмена
             </button>
             <button
-              className="pc-btn pc-btn-primary"
+              className="dv3-btn dv3-btn--primary"
               onClick={() => onSave(d)}
               disabled={saving || !d.day}
             >
@@ -228,6 +236,33 @@ export function CalendarPage() {
     () => [...days].sort((a, b) => a.day.localeCompare(b.day)),
     [days],
   )
+
+  // Year-wide totals for the hero / StatCards.
+  const yearStats = useMemo(() => {
+    let working = 0, holidays = 0
+    for (let month = 1; month <= 12; month++) {
+      const dim = new Date(year, month, 0).getDate()
+      for (let day = 1; day <= dim; day++) {
+        const date = new Date(year, month - 1, day)
+        const entry = entryMap.get(dayKey(date))
+        if (isWorkingDay(date, entry)) working++
+        if (entry?.dayType === 'HOLIDAY') holidays++
+      }
+    }
+    return { working, holidays, special: days.length }
+  }, [year, entryMap, days.length])
+
+  // Live clock for the hero meta-bar.
+  const [now, setNow] = useState(new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+  const hh = pad(now.getHours())
+  const mm = pad(now.getMinutes())
+  const datePart = now.toLocaleDateString('ru-RU', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
 
   const specialColumns = useMemo<Column<CalendarDay>[]>(() => {
     const cols: Column<CalendarDay>[] = [
@@ -354,54 +389,95 @@ export function CalendarPage() {
   const visibleMonths = [focus - 1, focus, focus + 1]
 
   return (
-    <div className="pc-root">
+    <div className="dv3-root pc-root">
+      <style>{DASHBOARD_CSS}</style>
+      <style>{STAT_CARD_CSS}</style>
+      <style>{DV3_FORM_CSS}</style>
       <style>{CSS}</style>
 
-      {/* HEAD */}
-      <header className="pc-head">
-        <div className="pc-head-main">
-          <nav className="pc-crumb" aria-label="Хлебные крошки">
-            <a href="/">Главная</a>
-            <span aria-hidden="true">/</span>
-            <a href="/admin">Админ-панель</a>
-            <span aria-hidden="true">/</span>
-            <span aria-current="page">Календарь</span>
-          </nav>
-          <h1>Производственный календарь</h1>
-          <p className="pc-subtitle">
-            Государственные праздники и переносы рабочих дней Кыргызской Республики.
-            Используется при расчёте нормы рабочих дней и периодов оценки KPI.
-          </p>
-        </div>
-
-        <div className="pc-head-actions">
-          <div className="pc-years" role="group" aria-label="Год">
-            {yearTabs.map(y => (
-              <button
-                key={y}
-                className={y === year ? 'is-active' : ''}
-                onClick={() => setYear(y)}
-                aria-pressed={y === year}
-              >
-                {y}
-              </button>
-            ))}
+      <div className="dv3-terminal">
+        {/* HERO */}
+        <div className="dv3-hero">
+          <div className="dv3-hero-meta">
+            <span className="dv3-hero-meta-l">CALENDAR.OPS</span>
+            <span className="dv3-hero-meta-r">KGT {hh}:{mm}</span>
           </div>
-          {isAdmin && (
-            <>
-              <button className="pc-btn pc-btn-ghost" onClick={runImport} disabled={importing || loading}>
-                <Download size={15} strokeWidth={2} aria-hidden="true" />
-                {importing ? 'Импорт…' : 'Импорт'}
-              </button>
-              <button className="pc-btn pc-btn-primary" onClick={openNew}>
-                <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
-                Добавить день
-              </button>
-            </>
-          )}
+          <div className="dv3-hero-main">
+            <div>
+              <h1 className="dv3-hero-title">
+                <span className="dv3-accent">Производственный календарь</span>
+              </h1>
+              <p className="dv3-hero-sub">
+                Государственные праздники и переносы рабочих дней КР · {datePart}
+              </p>
+            </div>
+            <div className="dv3-hero-metrics">
+              <div className="dv3-hero-metric">
+                <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                  {loading ? '··' : yearStats.working}
+                </span>
+                <span className="dv3-hero-metric-lab">раб. дней {year}</span>
+              </div>
+              <div className="dv3-hero-metric">
+                <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
+                  {loading ? '··' : yearStats.holidays}
+                </span>
+                <span className="dv3-hero-metric-lab">праздников</span>
+              </div>
+            </div>
+          </div>
+          <div className="dv3-hero-foot">
+            <span className="dv3-hero-foot-ok">STATUS · {loading ? 'загрузка' : 'ок'}</span>
+            <span className="pc-head-actions">
+              <span className="pc-years" role="group" aria-label="Год">
+                {yearTabs.map(y => (
+                  <button
+                    key={y}
+                    className={y === year ? 'is-active' : ''}
+                    onClick={() => setYear(y)}
+                    aria-pressed={y === year}
+                  >
+                    {y}
+                  </button>
+                ))}
+              </span>
+              {isAdmin && (
+                <>
+                  <button className="dv3-btn" onClick={runImport} disabled={importing || loading}>
+                    <Download size={15} strokeWidth={2} aria-hidden="true" />
+                    {importing ? 'Импорт…' : 'Импорт'}
+                  </button>
+                  <button className="dv3-btn dv3-btn--primary" onClick={openNew}>
+                    <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
+                    Добавить день
+                  </button>
+                </>
+              )}
+            </span>
+          </div>
         </div>
-      </header>
 
+        {/* STAT GRID */}
+        <div className="dv3-grid">
+          <StatCard
+            className="dv3-col-4"
+            title="WORKING.DAYS" id="W01" loading={loading}
+            value={yearStats.working} label={`раб. ${plural(yearStats.working, ['день', 'дня', 'дней'])} ${year}`}
+          />
+          <StatCard
+            className="dv3-col-4"
+            title="HOLIDAYS" id="H01" loading={loading}
+            value={yearStats.holidays} label="праздников"
+          />
+          <StatCard
+            className="dv3-col-4"
+            title="SPECIAL.DAYS" id="S01" loading={loading}
+            value={yearStats.special} label="особых дней"
+          />
+        </div>
+      </div>
+
+      <div className="pc-below">
       {/* LEGEND */}
       <div className="pc-legend">
         <span className="pc-leg"><i className="sw workday" />Рабочий день</span>
@@ -508,6 +584,7 @@ export function CalendarPage() {
           totalCount={specialDays.length}
         />
       </section>
+      </div>
 
       {draft && (
         <DayModal
@@ -526,102 +603,56 @@ export function CalendarPage() {
 
 const CSS = `
 .pc-root {
-  --ink: #14213d;
-  --muted: #64748b;
-  --line: #e7e9ef;
-  --brand: #1e40af;
-  --brand-soft: #e8edfb;
-  --workday: #efe9df;
-  --weekend: #dce7f4;
-  --holiday: #f6dade;
-  --shift: #f5e7c8;
-  color: var(--ink);
-  padding-bottom: 64px;
+  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+  color: var(--dv3-text);
 }
+.pc-below { max-width: 1280px; margin: 0 auto; padding: 0 32px 48px; }
+@media (max-width: 640px) { .pc-below { padding: 0 12px 24px; } }
 
-/* HEAD */
-.pc-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 24px; flex-wrap: wrap; margin-bottom: 18px;
-}
-.pc-crumb {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 11px; letter-spacing: .04em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 12px;
-}
-.pc-crumb a { color: var(--muted); text-decoration: none; }
-.pc-crumb a:hover { color: var(--brand); }
-.pc-crumb span[aria-current] { color: var(--ink); font-weight: 600; }
-.pc-head h1 {
-  font-family: "Source Serif Pro", Georgia, serif;
-  font-size: 30px; font-weight: 600; line-height: 1.1;
-  letter-spacing: -0.015em; margin: 0;
-}
-.pc-subtitle {
-  margin: 10px 0 0; max-width: 60ch;
-  font-size: 13.5px; line-height: 1.6; color: var(--muted);
-}
-.pc-head-actions {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-
-/* YEAR TABS */
+/* YEAR TABS (in hero foot) */
+.pc-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pc-years {
   display: flex; gap: 2px;
-  background: #fff; border: 1px solid var(--line);
-  border-radius: 9px; padding: 3px;
+  background: var(--dv3-bg3); border: 1px solid var(--dv3-border2);
+  padding: 2px;
 }
 .pc-years button {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 12.5px; font-weight: 600; color: var(--muted);
+  font-family: inherit;
+  font-size: 11px; font-weight: 600; color: var(--dv3-text3);
   border: none; background: transparent; cursor: pointer;
-  padding: 6px 11px; border-radius: 6px;
-  transition: all .14s ease;
+  padding: 5px 10px; letter-spacing: 0.04em;
+  transition: color .14s ease, background .14s ease;
 }
-.pc-years button:hover { color: var(--brand); }
-.pc-years button.is-active { background: var(--brand); color: #fff; }
-
-/* BUTTONS */
-.pc-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 13px; font-weight: 600;
-  border-radius: 9px; padding: 8px 14px; cursor: pointer;
-  border: 1px solid transparent; transition: all .14s ease;
-}
-.pc-btn:disabled { opacity: .55; cursor: default; }
-.pc-btn-primary { background: var(--brand); color: #fff; border-color: var(--brand); }
-.pc-btn-primary:hover:not(:disabled) { background: #1b39a0; }
-.pc-btn-ghost { background: #fff; color: var(--ink); border-color: var(--line); }
-.pc-btn-ghost:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
-.pc-btn-danger { background: #fff; color: #dc2626; border-color: #fecaca; margin-right: auto; }
-.pc-btn-danger:hover:not(:disabled) { background: #fef2f2; }
+.pc-years button:hover { color: var(--dv3-text); }
+.pc-years button.is-active { background: var(--dv3-accent); color: var(--dv3-bg); }
 
 /* LEGEND */
 .pc-legend {
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin: 24px 0 16px;
+  font-size: 11px; letter-spacing: 0.04em;
 }
 .pc-leg {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 12px; color: var(--muted);
+  font-size: 11px; color: var(--dv3-text3); text-transform: uppercase;
 }
 .pc-leg .sw {
-  width: 13px; height: 13px; border-radius: 4px;
-  border: 1px solid rgba(20,33,61,.1);
+  width: 12px; height: 12px;
+  border: 1px solid var(--dv3-border2);
 }
-.sw.workday { background: var(--workday); }
-.sw.weekend { background: var(--weekend); }
-.sw.holiday { background: var(--holiday); }
-.sw.shift   { background: var(--shift); }
+.sw.workday { background: var(--dv3-bg3); }
+.sw.weekend { background: var(--dv3-bg2); border-color: var(--dv3-border-hi); }
+.sw.holiday { background: color-mix(in srgb, var(--dv3-zone-down) 22%, var(--dv3-bg2)); border-color: var(--dv3-zone-down); }
+.sw.shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 22%, var(--dv3-bg2)); border-color: var(--dv3-zone-warn); }
 .pc-monthnav { display: flex; gap: 3px; margin-left: auto; }
 .pc-monthnav button {
   display: grid; place-items: center;
   width: 30px; height: 30px;
-  border: 1px solid var(--line); border-radius: 7px;
-  background: #fff; color: var(--muted); cursor: pointer;
-  transition: all .14s ease;
+  border: 1px solid var(--dv3-border2);
+  background: var(--dv3-bg3); color: var(--dv3-text3); cursor: pointer;
+  transition: border-color .14s ease, color .14s ease;
 }
-.pc-monthnav button:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+.pc-monthnav button:hover:not(:disabled) { border-color: var(--dv3-border-hi); color: var(--dv3-text); }
 .pc-monthnav button:disabled { opacity: .4; cursor: default; }
 
 /* MONTH STRIP */
@@ -630,17 +661,13 @@ const CSS = `
   margin-bottom: 24px;
 }
 .pc-month {
-  background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; padding: 16px 16px 18px;
-  box-shadow: 0 1px 2px rgba(20,33,61,.04);
+  background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
+  padding: 16px 16px 18px;
 }
-.pc-month.is-focus {
-  border-color: var(--brand);
-  box-shadow: 0 6px 22px rgba(30,64,175,.13);
-}
+.pc-month.is-focus { border-color: var(--dv3-accent); }
 .pc-skeleton {
   min-height: 360px;
-  background: linear-gradient(90deg,#f1f2f5 25%,#f8f9fb 50%,#f1f2f5 75%);
+  background: linear-gradient(90deg, var(--dv3-bg2) 25%, var(--dv3-bg3) 50%, var(--dv3-bg2) 75%);
   background-size: 200% 100%;
   animation: pc-shimmer 1.3s infinite linear;
 }
@@ -652,17 +679,19 @@ const CSS = `
 }
 .pc-month-title { display: flex; align-items: center; gap: 8px; }
 .pc-month-head h2 {
-  font-family: "Source Serif Pro", Georgia, serif;
-  font-size: 18px; font-weight: 600; margin: 0; line-height: 1.1;
+  font-family: inherit;
+  font-size: 13px; font-weight: 600; margin: 0; line-height: 1.1;
+  letter-spacing: 0.04em; text-transform: uppercase; color: var(--dv3-text);
 }
 .pc-tag {
   font-size: 9px; font-weight: 700; letter-spacing: .07em;
-  text-transform: uppercase; color: var(--brand);
-  background: var(--brand-soft); border-radius: 5px; padding: 3px 6px;
+  text-transform: uppercase; color: var(--dv3-accent);
+  background: var(--dv3-accent-bg); border: 1px solid var(--dv3-accent);
+  padding: 2px 6px;
 }
 .pc-month-stat {
-  font-size: 11px; color: var(--muted); text-align: right;
-  white-space: nowrap; padding-top: 3px;
+  font-size: 10px; color: var(--dv3-text3); text-align: right;
+  white-space: nowrap; padding-top: 3px; letter-spacing: 0.03em;
 }
 
 /* DAY GRID */
@@ -670,175 +699,149 @@ const CSS = `
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
 }
 .pc-wd {
-  font-size: 10px; font-weight: 700; letter-spacing: .04em;
-  text-transform: uppercase; color: #aab1bd;
+  font-size: 9px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dv3-text4);
   text-align: center; padding-bottom: 5px;
 }
-.pc-wd.is-wknd { color: #c5995e; }
+.pc-wd.is-wknd { color: var(--dv3-text3); }
 
 .pc-day {
   position: relative;
   aspect-ratio: 1 / 1;
   display: flex; flex-direction: column;
-  border: 1px solid transparent; border-radius: 8px;
+  border: 1px solid var(--dv3-border);
   padding: 5px 6px; cursor: default;
-  background: var(--workday);
+  background: var(--dv3-bg3);
   text-align: left; font: inherit;
-  transition: transform .1s ease, box-shadow .12s ease, outline-color .12s ease;
+  transition: border-color .12s ease, background .12s ease;
   overflow: hidden;
 }
-.pc-day.st-workday { background: var(--workday); }
-.pc-day.st-weekend { background: var(--weekend); }
-.pc-day.st-holiday { background: var(--holiday); }
-.pc-day.st-shift   { background: var(--shift); }
-.pc-day.is-out { background: transparent; opacity: .38; }
+.pc-day.st-workday { background: var(--dv3-bg3); }
+.pc-day.st-weekend { background: var(--dv3-bg2); }
+.pc-day.st-holiday { background: color-mix(in srgb, var(--dv3-zone-down) 16%, var(--dv3-bg2)); border-color: color-mix(in srgb, var(--dv3-zone-down) 45%, var(--dv3-border)); }
+.pc-day.st-shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 16%, var(--dv3-bg2)); border-color: color-mix(in srgb, var(--dv3-zone-warn) 45%, var(--dv3-border)); }
+.pc-day.is-out { background: transparent; border-color: transparent; opacity: .38; }
 .pc-day.is-clickable:not(.is-out) { cursor: pointer; }
 .pc-day.is-clickable:not(.is-out):hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(20,33,61,.16);
+  border-color: var(--dv3-border-hi);
   z-index: 2;
 }
 .pc-day.is-today {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--dv3-accent);
   outline-offset: -2px;
+  border-color: var(--dv3-accent);
 }
 .pc-day-num {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 12.5px; font-weight: 600; color: var(--ink);
+  font-family: inherit;
+  font-size: 12px; font-weight: 600; color: var(--dv3-text);
+  font-variant-numeric: tabular-nums;
 }
-.pc-day.st-holiday .pc-day-num { color: #b03a4a; }
-.pc-day.st-weekend .pc-day-num { color: #3f6a9e; }
-.pc-day.is-out .pc-day-num { color: var(--muted); }
+.pc-day.st-holiday .pc-day-num { color: var(--dv3-zone-down); }
+.pc-day.st-weekend .pc-day-num { color: var(--dv3-text3); }
+.pc-day.is-out .pc-day-num { color: var(--dv3-text4); }
 .pc-day-today {
-  font-size: 8px; font-weight: 700; letter-spacing: .03em;
-  text-transform: uppercase; color: var(--brand);
+  font-size: 8px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--dv3-accent);
   margin-top: auto;
 }
 .pc-day-label {
-  font-size: 8.5px; line-height: 1.2; color: #9a4452;
+  font-size: 8.5px; line-height: 1.2; color: var(--dv3-zone-down);
   margin-top: 2px;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.pc-day.st-shift .pc-day-label { color: #9a7223; }
+.pc-day.st-shift .pc-day-label { color: var(--dv3-zone-warn); }
 
 /* SPECIAL DAYS TABLE */
 .pc-special {
-  background: #fff; border: 1px solid var(--line);
-  border-radius: 14px; overflow: hidden;
-  box-shadow: 0 1px 2px rgba(20,33,61,.04);
+  background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
+  overflow: hidden;
 }
 .pc-special-head {
   display: flex; align-items: center; gap: 10px;
-  padding: 15px 20px; border-bottom: 1px solid var(--line);
+  padding: 13px 18px; border-bottom: 1px solid var(--dv3-border);
+  background: var(--dv3-bg3);
 }
 .pc-special-head h2 {
-  font-family: "Source Serif Pro", Georgia, serif;
-  font-size: 17px; font-weight: 600; margin: 0;
+  font-family: inherit;
+  font-size: 11px; font-weight: 600; margin: 0;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dv3-text);
 }
 .pc-special-count {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 11px; font-weight: 600; color: var(--brand);
-  background: var(--brand-soft); border-radius: 999px; padding: 3px 9px;
+  font-family: inherit;
+  font-size: 11px; font-weight: 600; color: var(--dv3-accent);
+  background: var(--dv3-accent-bg); border: 1px solid var(--dv3-accent);
+  padding: 2px 8px; font-variant-numeric: tabular-nums;
 }
 .pc-special-empty {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 40px 20px; color: var(--muted); font-size: 13px;
+  padding: 40px 20px; color: var(--dv3-text3); font-size: 13px;
 }
-.pc-table { width: 100%; border-collapse: collapse; }
-.pc-table th {
-  text-align: left;
-  font-size: 10px; font-weight: 700; letter-spacing: .05em;
-  text-transform: uppercase; color: #9aa3b0;
-  padding: 10px 16px; background: #fafbfc;
-  border-bottom: 1px solid var(--line);
-}
-.pc-table td {
-  padding: 11px 16px; font-size: 13px;
-  border-bottom: 1px solid #f1f2f5;
-}
-.pc-table tr:last-child td { border-bottom: none; }
-.pc-table tbody tr:hover { background: #fafbfd; }
-.pc-td-date { font-family: "JetBrains Mono", monospace; font-weight: 600; }
-.pc-td-wd { color: var(--muted); }
-.pc-dash { color: #c5cad2; }
-.pc-td-act { width: 48px; text-align: right; }
+.pc-dash { color: var(--dv3-text4); }
 .pc-icon-btn {
   display: inline-grid; place-items: center;
   width: 28px; height: 28px;
-  border: 1px solid var(--line); border-radius: 7px;
-  background: #fff; color: var(--muted); cursor: pointer;
-  transition: all .14s ease;
+  border: 1px solid var(--dv3-border2);
+  background: var(--dv3-bg3); color: var(--dv3-text3); cursor: pointer;
+  transition: border-color .14s ease, color .14s ease;
 }
-.pc-icon-btn:hover { border-color: var(--brand); color: var(--brand); }
+.pc-icon-btn:hover { border-color: var(--dv3-border-hi); color: var(--dv3-text); }
 
 .pc-chip {
   display: inline-block;
-  font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  font-size: 10px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase;
-  border-radius: 5px; padding: 3px 8px;
+  border: 1px solid var(--dv3-border2);
+  padding: 2px 8px;
 }
-.pc-chip.holiday { background: var(--holiday); color: #b03a4a; }
-.pc-chip.shift   { background: var(--shift); color: #9a7223; }
-.pc-chip.dayoff  { background: var(--weekend); color: #3f6a9e; }
+.pc-chip.holiday { background: color-mix(in srgb, var(--dv3-zone-down) 16%, var(--dv3-bg2)); color: var(--dv3-zone-down); border-color: color-mix(in srgb, var(--dv3-zone-down) 45%, var(--dv3-border)); }
+.pc-chip.shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 16%, var(--dv3-bg2)); color: var(--dv3-zone-warn); border-color: color-mix(in srgb, var(--dv3-zone-warn) 45%, var(--dv3-border)); }
+.pc-chip.dayoff  { background: var(--dv3-bg3); color: var(--dv3-text3); }
 
 /* MODAL */
 .pc-modal-scrim {
   position: fixed; inset: 0; z-index: 60;
-  background: rgba(20,33,61,.42);
+  background: rgba(0,0,0,.55);
   display: grid; place-items: center; padding: 20px;
   animation: pc-fade .14s ease;
 }
 @keyframes pc-fade { from { opacity: 0; } }
 .pc-modal {
-  width: 100%; max-width: 420px;
-  background: #fff; border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(20,33,61,.3);
+  width: 100%; max-width: 440px;
+  background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
+  border-top: 2px solid var(--dv3-zone-info);
+  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+  color: var(--dv3-text);
   animation: pc-pop .16s cubic-bezier(.2,.7,.3,1.2);
 }
 @keyframes pc-pop { from { transform: scale(.96); opacity: 0; } }
 .pc-modal-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 20px 14px;
+  padding: 16px 20px 14px; border-bottom: 1px solid var(--dv3-border);
 }
 .pc-modal-head h3 {
-  font-family: "Source Serif Pro", Georgia, serif;
-  font-size: 18px; font-weight: 600; margin: 0;
+  font-family: inherit;
+  font-size: 12px; font-weight: 600; margin: 0;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--dv3-text);
 }
 .pc-modal-x {
   display: grid; place-items: center;
-  width: 30px; height: 30px; border-radius: 8px;
-  border: none; background: #f4f5f8; color: var(--muted); cursor: pointer;
+  width: 30px; height: 30px;
+  border: 1px solid var(--dv3-border2); background: var(--dv3-bg3);
+  color: var(--dv3-text3); cursor: pointer;
 }
-.pc-modal-x:hover { background: #e9ebf0; color: var(--ink); }
+.pc-modal-x:hover { border-color: var(--dv3-border-hi); color: var(--dv3-text); }
 .pc-modal-body {
-  display: flex; flex-direction: column; gap: 13px;
-  padding: 4px 20px 18px;
+  padding: 18px 20px;
 }
-.pc-field { display: flex; flex-direction: column; gap: 5px; }
-.pc-field span {
-  font-size: 11px; font-weight: 700; letter-spacing: .03em;
-  text-transform: uppercase; color: var(--muted);
-}
-.pc-field input, .pc-field select {
-  font: inherit; font-size: 13.5px; color: var(--ink);
-  border: 1px solid var(--line); border-radius: 9px;
-  padding: 9px 11px; background: #fff;
-}
-.pc-field input:focus, .pc-field select:focus {
-  outline: none; border-color: var(--brand);
-  box-shadow: 0 0 0 3px var(--brand-soft);
-}
-.pc-field input:disabled { background: #f4f5f8; color: var(--muted); }
 .pc-modal-foot {
   display: flex; align-items: center; gap: 8px;
-  padding: 14px 20px 18px; border-top: 1px solid var(--line);
+  padding: 14px 20px 18px; border-top: 1px solid var(--dv3-border);
 }
 .pc-modal-foot-main { display: flex; gap: 8px; margin-left: auto; }
 
 @media (max-width: 900px) {
   .pc-strip { grid-template-columns: 1fr; }
   .pc-month:not(.is-focus) { display: none; }
-  .pc-table th:nth-child(5), .pc-table td:nth-child(5) { display: none; }
 }
 `

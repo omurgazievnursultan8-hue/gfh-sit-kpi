@@ -5,6 +5,8 @@ import { evaluationsApi, Evaluation, EvaluationScore } from './evaluationsApi'
 import { criteriaApi, Criteria } from '../criteria/criteriaApi'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { FileUploadSection } from './components/FileUploadSection'
+import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
+import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
 import api from '../../app/api'
 
 interface ScoreMap { [criteriaId: number]: { value: string; note: string } }
@@ -101,37 +103,52 @@ export function EvaluationFormPage() {
     }
   }
 
-  if (loading) return <div className="text-center py-12 text-gray-400">Загрузка...</div>
-  if (!evaluation) return <div className="text-center py-12 text-red-500">Оценка не найдена</div>
+  /* ── early-return shells (dv3-skinned) ──────────────────────────────────── */
+  const shell = (body: React.ReactNode) => (
+    <div className="dv3-root">
+      <style>{DASHBOARD_CSS}</style>
+      <style>{DV3_FORM_CSS}</style>
+      <div className="dv3-terminal" style={{ maxWidth: 860 }}>{body}</div>
+    </div>
+  )
+
+  if (loading) {
+    return shell(
+      <div className="dv3-banner" style={{ textAlign: 'center' }}>Загрузка...</div>
+    )
+  }
+  if (!evaluation) {
+    return shell(
+      <div className="dv3-banner dv3-banner--error" style={{ textAlign: 'center' }}>Оценка не найдена</div>
+    )
+  }
   if (evaluation.status !== 'DRAFT') {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">Эта оценка уже отправлена (статус: {evaluation.status})</p>
+    return shell(
+      <div className="dv3-banner dv3-banner--warn" style={{ textAlign: 'center' }}>
+        Эта оценка уже отправлена (статус: {evaluation.status})
       </div>
     )
   }
 
   const renderSection = (sectionCriteria: Criteria[], title: string) => (
-    <div className="mb-8">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">{title}</h2>
+    <div style={{ marginBottom: 28 }}>
+      <div className="dv3-section-head">{title}</div>
       {sectionCriteria.length === 0 ? (
-        <p className="text-sm text-gray-400">Нет критериев для этого раздела</p>
+        <p className="dv3-help">Нет критериев для этого раздела</p>
       ) : (
-        <div className="space-y-4">
+        <div className="dv3-form">
           {sectionCriteria.map(c => {
             const score = scores[c.id] ?? { value: '', note: '' }
             return (
-              <div key={c.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <span className="font-medium text-gray-900">{c.nameRu}</span>
-                    <span className="ml-2 text-xs text-gray-400">({c.weight}%)</span>
-                    {c.autoCalculated && (
-                      <span className="ml-2 text-xs text-blue-500">авто</span>
-                    )}
-                  </div>
+              <div key={c.id} className="dv3-panel">
+                <div style={{ marginBottom: 12, display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dv3-text)' }}>{c.nameRu}</span>
+                  <span style={{ fontSize: 11, color: 'var(--dv3-text3)' }}>({c.weight}%)</span>
+                  {c.autoCalculated && (
+                    <span style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--dv3-zone-info)' }}>авто</span>
+                  )}
                 </div>
-                <div className="flex gap-3">
+                <div style={{ display: 'flex', gap: 12 }}>
                   <input
                     type="number"
                     step="0.01"
@@ -139,14 +156,15 @@ export function EvaluationFormPage() {
                     placeholder="Значение"
                     value={score.value}
                     onChange={e => handleScoreChange(c.id, 'value', e.target.value)}
-                    className="w-32 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary"
+                    className="dv3-input dv3-input--num"
                   />
                   <input
                     type="text"
                     placeholder="Примечание (необязательно)"
                     value={score.note}
                     onChange={e => handleScoreChange(c.id, 'note', e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary"
+                    className="dv3-input"
+                    style={{ flex: 1 }}
                   />
                 </div>
               </div>
@@ -158,41 +176,57 @@ export function EvaluationFormPage() {
   )
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Оценка сотрудника</h1>
-          <p className="text-gray-500 mt-1">{evaluation.evaluateeName}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          {previewScore !== null && (
-            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md">
-              <Eye size={14} />
-              <span>Итог: <strong>{previewScore.toFixed(2)}</strong></span>
+    <div className="dv3-root">
+      <style>{DASHBOARD_CSS}</style>
+      <style>{DV3_FORM_CSS}</style>
+
+      <div className="dv3-terminal" style={{ maxWidth: 860 }}>
+        {/* HERO */}
+        <div className="dv3-hero">
+          <div className="dv3-hero-meta">
+            <span className="dv3-hero-meta-l">EVAL.SCORE</span>
+            <span className="dv3-hero-meta-r">{lastSaved ? `Сохранено ${lastSaved.toLocaleTimeString('ru-RU')}` : ''}</span>
+          </div>
+          <div className="dv3-hero-main">
+            <div>
+              <h1 className="dv3-hero-title">
+                <span className="dv3-accent">Оценка сотрудника</span>
+              </h1>
+              <p className="dv3-hero-sub">{evaluation.evaluateeName}</p>
             </div>
-          )}
-          {lastSaved && (
-            <span className="text-xs text-gray-400">
-              Сохранено {lastSaved.toLocaleTimeString('ru-RU')}
-            </span>
-          )}
-          <button onClick={save} disabled={saving}
-            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-            <Save size={14} />
-            {saving ? 'Сохранение...' : 'Сохранить'}
-          </button>
-          <button onClick={() => setSubmitOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-700">
-            <Send size={14} />
-            Отправить
-          </button>
+            <div className="dv3-hero-metrics">
+              <div className="dv3-hero-metric">
+                <span className="dv3-hero-metric-num">
+                  {previewScore !== null ? previewScore.toFixed(2) : '··'}
+                </span>
+                <span className="dv3-hero-metric-lab">итог (preview)</span>
+              </div>
+            </div>
+          </div>
+          <div className="dv3-hero-foot">
+            <div className="dv3-btn-row">
+              <button onClick={save} disabled={saving} className="dv3-btn">
+                <Save size={14} />
+                {saving ? 'Сохранение...' : 'Сохранить'}
+              </button>
+              <button onClick={() => setSubmitOpen(true)} className="dv3-btn dv3-btn--primary">
+                <Send size={14} />
+                Отправить
+              </button>
+            </div>
+            {previewScore !== null && (
+              <span className="dv3-hero-foot-ok" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Eye size={13} /> Итог: {previewScore.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
+
+        {renderSection(positiveCriteria, 'Положительные критерии')}
+        {renderSection(antiBonusCriteria, 'Антибонусы')}
+
+        <FileUploadSection evaluationId={evaluationId} />
       </div>
-
-      {renderSection(positiveCriteria, 'Положительные критерии')}
-      {renderSection(antiBonusCriteria, 'Антибонусы')}
-
-      <FileUploadSection evaluationId={evaluationId} />
 
       <ConfirmDialog
         open={submitOpen}
