@@ -22,6 +22,7 @@ export interface StatCardGauge {
   right: ReactNode
   center?: ReactNode             // 'meta' variant only
   current?: ReactNode            // 'marker' variant pin value
+  ariaLabel?: string             // SR description; defaults to "<pct>%"
 }
 
 export interface StatCardDelta {
@@ -85,8 +86,14 @@ export function StatCard({
       <span className="dv3-card-tag">[ {id} ]</span>
       <div className="dv3-card-head">
         <span className="dv3-card-title"><strong>{title}</strong></span>
-        <span className="dv3-card-status" aria-hidden="true">
-          <i className={`dv3-dot${zone.tagClass ? ` dv3-dot--${zone.tagClass}` : ''}`} />
+        <span className="dv3-card-status">
+          <i
+            className={`dv3-dot${zone.tagClass ? ` dv3-dot--${zone.tagClass}` : ''}`}
+            aria-hidden="true"
+          />
+          {!loading && zone.labelKey && (
+            <span className="dv3-sr-only">{t(zone.labelKey)}</span>
+          )}
         </span>
       </div>
       <div className="dv3-card-body">
@@ -115,20 +122,30 @@ export function StatCard({
                 </span>
               )}
               {!loading && delta && deltaDir && (
-                <span className={`dv3-delta dv3-delta--${deltaDir}`}>
+                <span
+                  className={`dv3-delta dv3-delta--${deltaDir}`}
+                  aria-label={
+                    `${delta.value > 0 ? '+' : ''}${delta.value}` +
+                    `${delta.unit ?? ''}${delta.label ? ` ${delta.label}` : ''}`
+                  }
+                >
                   <span className="dv3-delta-glyph" aria-hidden="true">{deltaGlyph}</span>
-                  <span className="dv3-delta-val">
+                  <span className="dv3-delta-val" aria-hidden="true">
                     {delta.value > 0 ? '+' : ''}{delta.value}
                     {delta.unit && <span className="dv3-delta-unit">{delta.unit}</span>}
                   </span>
-                  {delta.label && <span className="dv3-delta-lab">{delta.label}</span>}
+                  {delta.label && <span className="dv3-delta-lab" aria-hidden="true">{delta.label}</span>}
                 </span>
               )}
             </div>
           </div>
         )}
         {gauge && !showEmptyNote && (
-          <div className={`dv3-gauge dv3-gauge--${gauge.variant}`}>
+          <div
+            className={`dv3-gauge dv3-gauge--${gauge.variant}`}
+            role="img"
+            aria-label={gauge.ariaLabel ?? `${gaugeWidthPct}%`}
+          >
             <svg
               className="dv3-gauge-svg"
               viewBox="0 0 100 4"
@@ -181,7 +198,7 @@ export function StatCard({
         className={`${rootCls} dv3-card-btn`}
         role="button"
         tabIndex={0}
-        aria-expanded={active}
+        aria-expanded={active !== undefined ? active : undefined}
         onClick={onClick}
         onMouseEnter={onHover}
         onFocus={onHover}
@@ -201,6 +218,13 @@ export function StatCard({
 
 // ── styles ──────────────────────────────────────────────────────────────────
 export const STAT_CARD_CSS = `
+/* screen-reader-only utility */
+.dv3-sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
 /* CARD */
 .dv3-card {
   --dv3-card-zone: var(--dv3-accent);
@@ -274,7 +298,8 @@ export const STAT_CARD_CSS = `
 }
 .dv3-card-head strong { color: var(--dv3-text); font-weight: 600; letter-spacing: 0.14em; }
 .dv3-card-title { position: relative; padding-left: 0; }
-.dv3-card-btn:hover .dv3-card-title strong::after {
+.dv3-card-btn:hover .dv3-card-title strong::after,
+.dv3-card-btn:focus-visible .dv3-card-title strong::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px;
   background: var(--dv3-card-zone); opacity: 0.8;
   animation: dv3-underline 320ms ease-out;
