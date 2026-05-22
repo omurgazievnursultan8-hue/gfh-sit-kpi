@@ -1,35 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePageTitle } from '../../context/PageContext'
+import { usePeriod } from '../../context/PeriodContext'
 import { analyticsApi } from '../analytics/analyticsApi'
 import type { PersonalAnalytics, ScorecardResponse } from '../analytics/analyticsApi'
 import { delegationsApi } from '../org/delegationsApi'
 import type { Delegation } from '../org/delegationsApi'
 import { evaluationsApi, type Evaluation } from '../evaluations/evaluationsApi'
 import { appealsApi, type AppealSummary } from '../appeals/appealsApi'
-import { periodsApi, type Period } from '../periods/periodsApi'
-import { formatPeriodRange } from '../evaluations/components/periodFormat'
 import { DASHBOARD_CSS } from './dashboardStyles'
 import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
 import { RatingPanel } from './RatingPanel'
 import { EvalCyclePanel } from './EvalCyclePanel'
 import { AppealsPanel } from './AppealsPanel'
 import { DelegationsPanel } from './DelegationsPanel'
-
-// Sentinel for the "all periods" selector option.
-const ALL_PERIODS = 'ALL' as const
-type PeriodSelection = number | typeof ALL_PERIODS
-
-// Nearest period: the ACTIVE one if any, else the most recent period that has
-// already started, else the most recent of all. Returns ALL when empty.
-function pickNearestPeriod(periods: Period[]): PeriodSelection {
-  if (periods.length === 0) return ALL_PERIODS
-  const active = periods.find(p => p.status === 'ACTIVE')
-  if (active) return active.id
-  const today = new Date().toISOString().slice(0, 10)
-  const byStartDesc = [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate))
-  return (byStartDesc.find(p => p.startDate <= today) ?? byStartDesc[0]).id
-}
 
 // ── page ────────────────────────────────────────────────────────────────────
 export function DashboardPage() {
@@ -38,7 +22,6 @@ export function DashboardPage() {
 
   const [analytics, setAnalytics] = useState<PersonalAnalytics | null>(null)
   const [delegations, setDelegations] = useState<Delegation[]>([])
-  const [periods, setPeriods] = useState<Period[]>([])
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
   // Evaluations OF the current user (as evaluatee) — drives the SELF.RATING
   // empty states: "pending" (eval exists, no score yet) vs "none" (no eval).
@@ -49,10 +32,9 @@ export function DashboardPage() {
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
   const [now, setNow] = useState(new Date())
 
-  // Selected period scopes every card + panel. Defaults to the nearest period
-  // once the periods list arrives.
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodSelection>(ALL_PERIODS)
-  const isAllPeriods = selectedPeriod === ALL_PERIODS
+  // Selected period scopes every card + panel — sourced from the app-wide
+  // topbar selector (PeriodContext).
+  const { selectedPeriod, isAllPeriods, periodById } = usePeriod()
 
   // Rating-calculation panel — opens below the grid when R01 card is clicked.
   // Active by default so the rating tables show on initial load.
@@ -109,10 +91,6 @@ export function DashboardPage() {
     const tasks = [
       analyticsApi.personal().then(setAnalytics),
       loadDelegations,
-      periodsApi.list().then(ps => {
-        setPeriods(ps)
-        setSelectedPeriod(pickNearestPeriod(ps))
-      }),
       evaluationsApi.asEvaluator(0, 200).then(r => setEvaluations(r.content)),
       evaluationsApi.myHistory(0, 50).then(r => setMyEvaluations(r.content)),
       appealsApi.mine().then(setAppeals),
@@ -129,7 +107,7 @@ export function DashboardPage() {
   useEffect(() => {
     if (!ratingPanelOpen) return
     setScorecardLoading(true)
-    analyticsApi.scorecard(isAllPeriods ? undefined : selectedPeriod)
+    analyticsApi.scorecard(selectedPeriod === 'ALL' ? undefined : selectedPeriod)
       .then(setScorecard)
       .finally(() => setScorecardLoading(false))
   }, [ratingPanelOpen, selectedPeriod, isAllPeriods])
@@ -171,9 +149,6 @@ export function DashboardPage() {
   }
 
   // ── period scoping ──────────────────────────────────────────────────────────
-  const periodById = useMemo(
-    () => new Map(periods.map(p => [p.id, p])), [periods],
-  )
   // evaluationId → periodId, so appeals (which carry no periodId) can be scoped.
   const evalPeriodById = useMemo(
     () => new Map(evaluations.map(e => [e.id, e.periodId])), [evaluations],
@@ -223,17 +198,6 @@ export function DashboardPage() {
   // Neutral placeholder while loading; genuine zeros still render as 0.
   const PLACEHOLDER = '··'
 
-  // ── period selector options (newest first) ──────────────────────────────────
-  const periodOptions = useMemo(
-    () => [...periods].sort((a, b) => b.startDate.localeCompare(a.startDate)),
-    [periods],
-  )
-
-  const onPeriodChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const v = e.target.value
-    setSelectedPeriod(v === ALL_PERIODS ? ALL_PERIODS : Number(v))
-  }
-
   // ── hero ───────────────────────────────────────────────────────────────────
   // Russian ФИО is "Surname Name Patronymic"; greet by Name + Patronymic.
   const nameParts = analytics?.fullName?.trim().split(/\s+/) ?? []
@@ -252,67 +216,7 @@ export function DashboardPage() {
           {partialFailure ? t('dashboard.partialFailureSr') : ''}
         </div>
 
-        {/* ── HERO ── temporarily hidden to preview headerless layout */}
-        {false && <div className="dv3-hero">
-          <div className="dv3-hero-meta">
-            <span className="dv3-hero-meta-l">{t('dashboard.heroMeta')}</span>
-            <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
-          </div>
-          <div className="dv3-hero-main">
-            <div>
-              <h1 className="dv3-hero-title">
-                {timeGreeting}, <span className="dv3-accent">{greetingName || '—'}.</span>
-              </h1>
-              <p className="dv3-hero-sub">{todayLine}</p>
-            </div>
-            <div className="dv3-hero-metrics">
-              <div className="dv3-hero-metric">
-                <span
-                  className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}${
-                    !loading && zone.numClass ? ` dv3-hero-metric-num--${zone.numClass}` : ''
-                  }`}
-                >
-                  {loading ? PLACEHOLDER : (scoreWhole !== null ? scoreWhole : '—')}
-                </span>
-                <span className="dv3-hero-metric-lab">{t('dashboard.kpiOf100')}</span>
-              </div>
-              <div className="dv3-hero-metric">
-                <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                  {loading ? PLACEHOLDER : openTasks}
-                </span>
-                <span className="dv3-hero-metric-lab">{t('dashboard.openTasks')}</span>
-              </div>
-            </div>
-          </div>
-          <div className="dv3-hero-foot">
-            <span className={partialFailure ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
-              STATUS · {partialFailure ? t('dashboard.statusPartial') : t('dashboard.statusOk')}
-            </span>
-            <span>{updatedLabel}</span>
-          </div>
-        </div>}
-
-        {/* ── PERIOD SELECTOR ── */}
-        <div className="dv3-periodbar">
-          <label className="dv3-periodbar-label" htmlFor="dv3-period">
-            {t('dashboard.periodLabel')}
-          </label>
-          <select
-            id="dv3-period"
-            className="dv3-period-select"
-            value={String(selectedPeriod)}
-            onChange={onPeriodChange}
-            disabled={loading}
-          >
-            <option value={ALL_PERIODS}>{t('dashboard.allPeriods')}</option>
-            {periodOptions.map(p => (
-              <option key={p.id} value={p.id}>
-                {formatPeriodRange(p, p.id)}
-                {p.status === 'ACTIVE' ? ` · ${t('dashboard.periodActive')}` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* ── PERIOD SELECTOR ── app-wide, rendered in the topbar (PeriodContext) */}
 
         {/* ── GRID ── */}
         <div className="dv3-grid">

@@ -77,6 +77,18 @@ export const DV3_FORM_CSS = `
 .dv3-btn--danger:hover { border-color: var(--dv3-zone-down); }
 .dv3-btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* FORM ACTION BAR — Save/Submit row at the foot of a form */
+.dv3-form-actions {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-top: 20px; padding-top: 16px;
+  border-top: 1px solid var(--dv3-border);
+}
+.dv3-form-actions-spacer { flex: 1 1 auto; }
+.dv3-form-actions-saved {
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--dv3-text3);
+}
+
 /* BANNER / CALLOUT */
 .dv3-banner {
   border: 1px solid var(--dv3-border);

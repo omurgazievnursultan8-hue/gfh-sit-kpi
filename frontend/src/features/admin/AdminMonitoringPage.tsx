@@ -132,42 +132,6 @@ export function AdminMonitoringPage() {
         <style>{STAT_CARD_CSS}</style>
 
         <div className="dv3-terminal">
-          {/* HERO */}
-          <div className="dv3-hero">
-            <div className="dv3-hero-meta">
-              <span className="dv3-hero-meta-l">MONITORING.OPS</span>
-              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
-            </div>
-            <div className="dv3-hero-main">
-              <div>
-                <h1 className="dv3-hero-title">
-                  {timeGreeting}. <span className="dv3-accent">{t('admin.monitoring')}</span>
-                </h1>
-                <p className="dv3-hero-sub">{todayLine}</p>
-              </div>
-              <div className="dv3-hero-metrics">
-                <div className="dv3-hero-metric">
-                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                    {loading ? PLACEHOLDER : totalJobs}
-                  </span>
-                  <span className="dv3-hero-metric-lab">задач</span>
-                </div>
-                <div className="dv3-hero-metric">
-                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                    {loading ? PLACEHOLDER : errorCount}
-                  </span>
-                  <span className="dv3-hero-metric-lab">ошибок в логе</span>
-                </div>
-              </div>
-            </div>
-            <div className="dv3-hero-foot">
-              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
-                STATUS · {failed ? 'API недоступен' : 'ок'}
-              </span>
-              <span>{updatedLabel}</span>
-            </div>
-          </div>
-
           {/* STAT GRID */}
           <div className="dv3-grid">
             <StatCard

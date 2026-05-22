@@ -53,21 +53,6 @@ export function AppealPage() {
         <style>{DV3_FORM_CSS}</style>
 
         <div className="dv3-terminal">
-          {/* HERO */}
-          <div className="dv3-hero">
-            <div className="dv3-hero-meta">
-              <span className="dv3-hero-meta-l">APPEAL.FILE</span>
-              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
-            </div>
-            <div className="dv3-hero-main">
-              <div>
-                <h1 className="dv3-hero-title">
-                  {timeGreeting}. <span className="dv3-accent">Подать апелляцию</span>
-                </h1>
-                <p className="dv3-hero-sub">{todayLine}</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 

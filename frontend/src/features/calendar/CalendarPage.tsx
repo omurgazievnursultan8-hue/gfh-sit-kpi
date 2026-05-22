@@ -396,65 +396,33 @@ export function CalendarPage() {
       <style>{CSS}</style>
 
       <div className="dv3-terminal">
-        {/* HERO */}
-        <div className="dv3-hero">
-          <div className="dv3-hero-meta">
-            <span className="dv3-hero-meta-l">CALENDAR.OPS</span>
-            <span className="dv3-hero-meta-r">KGT {hh}:{mm}</span>
-          </div>
-          <div className="dv3-hero-main">
-            <div>
-              <h1 className="dv3-hero-title">
-                <span className="dv3-accent">Производственный календарь</span>
-              </h1>
-              <p className="dv3-hero-sub">
-                Государственные праздники и переносы рабочих дней КР · {datePart}
-              </p>
-            </div>
-            <div className="dv3-hero-metrics">
-              <div className="dv3-hero-metric">
-                <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                  {loading ? '··' : yearStats.working}
-                </span>
-                <span className="dv3-hero-metric-lab">раб. дней {year}</span>
-              </div>
-              <div className="dv3-hero-metric">
-                <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                  {loading ? '··' : yearStats.holidays}
-                </span>
-                <span className="dv3-hero-metric-lab">праздников</span>
-              </div>
-            </div>
-          </div>
-          <div className="dv3-hero-foot">
-            <span className="dv3-hero-foot-ok">STATUS · {loading ? 'загрузка' : 'ок'}</span>
+
+        {/* TOOLBAR — year switcher + admin actions (formerly in the header card) */}
+        <div className="pc-toolbar">
+          <span className="pc-years" role="group" aria-label="Год">
+            {yearTabs.map(y => (
+              <button
+                key={y}
+                className={y === year ? 'is-active' : ''}
+                onClick={() => setYear(y)}
+                aria-pressed={y === year}
+              >
+                {y}
+              </button>
+            ))}
+          </span>
+          {isAdmin && (
             <span className="pc-head-actions">
-              <span className="pc-years" role="group" aria-label="Год">
-                {yearTabs.map(y => (
-                  <button
-                    key={y}
-                    className={y === year ? 'is-active' : ''}
-                    onClick={() => setYear(y)}
-                    aria-pressed={y === year}
-                  >
-                    {y}
-                  </button>
-                ))}
-              </span>
-              {isAdmin && (
-                <>
-                  <button className="dv3-btn" onClick={runImport} disabled={importing || loading}>
-                    <Download size={15} strokeWidth={2} aria-hidden="true" />
-                    {importing ? 'Импорт…' : 'Импорт'}
-                  </button>
-                  <button className="dv3-btn dv3-btn--primary" onClick={openNew}>
-                    <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
-                    Добавить день
-                  </button>
-                </>
-              )}
+              <button className="dv3-btn" onClick={runImport} disabled={importing || loading}>
+                <Download size={15} strokeWidth={2} aria-hidden="true" />
+                {importing ? 'Импорт…' : 'Импорт'}
+              </button>
+              <button className="dv3-btn dv3-btn--primary" onClick={openNew}>
+                <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
+                Добавить день
+              </button>
             </span>
-          </div>
+          )}
         </div>
 
         {/* STAT GRID */}
@@ -609,7 +577,12 @@ const CSS = `
 .pc-below { max-width: 1280px; margin: 0 auto; padding: 0 32px 48px; }
 @media (max-width: 640px) { .pc-below { padding: 0 12px 24px; } }
 
-/* YEAR TABS (in hero foot) */
+/* TOOLBAR — year switcher + admin actions */
+.pc-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.pc-toolbar .pc-head-actions { margin-left: auto; }
 .pc-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .pc-years {
   display: flex; gap: 2px;

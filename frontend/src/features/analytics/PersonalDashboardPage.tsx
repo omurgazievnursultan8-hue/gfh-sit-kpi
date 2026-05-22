@@ -134,48 +134,6 @@ export function PersonalDashboardPage() {
 
       <div className="dv3-terminal">
 
-        {/* ── HERO ── */}
-        <div className="dv3-hero">
-          <div className="dv3-hero-meta">
-            <span className="dv3-hero-meta-l">MY.KPI · {periodLabel || t('dashboard.heroMeta')}</span>
-            <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
-          </div>
-          <div className="dv3-hero-main">
-            <div>
-              <h1 className="dv3-hero-title">
-                {timeGreeting}, <span className="dv3-accent">{greetingName || '—'}.</span>
-              </h1>
-              <p className="dv3-hero-sub">{todayLine}</p>
-              <div className="mk-hero-chips">
-                <span className="mk-chip">GRADE · <strong>{grade}</strong></span>
-                {rank !== null && (
-                  <span className="mk-chip">RANK · <strong>№{rank}</strong></span>
-                )}
-                <span className="mk-chip mk-chip--muted">
-                  {sortedHistory.length} {t('dashboard.periodsInHistory', { defaultValue: 'periods' })}
-                </span>
-              </div>
-              <div className="mk-hero-export"><ExportButtons type="personal" /></div>
-            </div>
-            <div className="dv3-hero-metrics">
-              <div className="dv3-hero-metric">
-                <span
-                  className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}${
-                    !loading && zone.numClass ? ` dv3-hero-metric-num--${zone.numClass}` : ''
-                  }`}
-                >
-                  {loading ? '··' : (scoreWhole !== null ? scoreWhole : '—')}
-                </span>
-                <span className="dv3-hero-metric-lab">{t('dashboard.kpiOf100')}</span>
-              </div>
-            </div>
-          </div>
-          <div className="dv3-hero-foot">
-            <span className="dv3-hero-foot-ok">STATUS · {t('dashboard.statusOk')}</span>
-            <span>{updatedLabel}</span>
-          </div>
-        </div>
-
         {/* ── STAT GRID ── */}
         <div className="dv3-grid">
           <StatCard

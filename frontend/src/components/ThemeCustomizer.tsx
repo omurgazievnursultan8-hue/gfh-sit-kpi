@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { applyDv3Palette, dv3PaletteOptions, DV3_PALETTE_EVENT } from '../lib/dashboardPalettes'
+import { applyDv3Palette, setDv3Palette, dv3PaletteOptions, DV3_PALETTE_EVENT } from '../lib/dashboardPalettes'
 
 type Option = { label: string; value: string }
 type Setting = {
@@ -626,11 +626,11 @@ export function ThemeCustomizer() {
         <>
           <div
             onClick={() => setOpen(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 9998 }}
+            style={{ position: 'fixed', inset: 0, background: 'transparent', zIndex: 9998 }}
           />
           <aside
             style={{
-              position: 'fixed', top: 0, right: 0, bottom: 0, width: 380, maxWidth: '95vw',
+              position: 'fixed', top: 0, right: 0, bottom: 0, width: 280, maxWidth: '90vw',
               background: 'var(--surface, #fff)', color: 'var(--ink, #111)',
               borderLeft: '1px solid var(--line, #ddd)', zIndex: 9999,
               boxShadow: '-12px 0 40px rgba(0,0,0,0.18)',
@@ -640,7 +640,7 @@ export function ThemeCustomizer() {
             <header style={{ padding: '14px 16px', borderBottom: '1px solid var(--line, #ddd)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>UI Customizer</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-faint, #666)' }}>{settings.length} options · saved automatically</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-faint, #666)' }}>saved automatically</div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={reset} style={btnStyle}>Reset</button>
@@ -648,79 +648,22 @@ export function ThemeCustomizer() {
               </div>
             </header>
 
-            <div style={{ overflow: 'auto', padding: '8px 16px 24px', flex: 1 }}>
-              {['Core 9', 'Navigation', 'Dashboard'].map(grp => {
-                const items = TOKEN_KEYS.filter(t => t.group === grp)
-                if (!items.length) return null
-                const grpHasOverride = items.some(t => tokenOverrides[t.cssVar])
-                return (
-                  <section key={grp} style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-faint, #666)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{grp} swatches</span>
-                      {grpHasOverride && (
-                        <button
-                          onClick={() => setTokenOverrides(prev => {
-                            const next = { ...prev }
-                            for (const t of items) delete next[t.cssVar]
-                            return next
-                          })}
-                          style={{ ...btnStyle, padding: '2px 6px', fontSize: 10 }}
-                        >Clear group</button>
-                      )}
-                    </div>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      {items.map(({ cssVar, label }) => {
-                        const overridden = !!tokenOverrides[cssVar]
-                        return (
-                          <label key={cssVar} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                            <span style={{ color: 'var(--ink-soft, #333)' }}>
-                              {label}
-                              <code style={{ marginLeft: 6, fontSize: 10, color: 'var(--ink-faint, #888)' }}>{cssVar}</code>
-                            </span>
-                            <input
-                              type="color"
-                              value={currentTokenColor(cssVar)}
-                              onChange={(e) => setToken(cssVar, e.target.value)}
-                              style={{ width: 34, height: 24, padding: 0, border: '1px solid var(--line, #ccc)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}
-                            />
-                            <button
-                              onClick={() => clearToken(cssVar)}
-                              disabled={!overridden}
-                              title={overridden ? 'Reset to preset' : 'No override'}
-                              style={{ ...btnStyle, padding: '2px 6px', fontSize: 10, opacity: overridden ? 1 : 0.35, cursor: overridden ? 'pointer' : 'default' }}
-                            >↺</button>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </section>
-                )
-              })}
-
-              {Object.entries(groups).map(([group, items]) => (
-                <section key={group} style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-faint, #666)', marginBottom: 8 }}>{group}</div>
-                  <div style={{ display: 'grid', gap: 8 }}>
-                    {items.map(s => (
-                      <label key={s.key} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                        <span style={{ color: 'var(--ink-soft, #333)' }}>{s.label}</span>
-                        <select
-                          value={values[s.key]}
-                          onChange={(e) => setVal(s.key, e.target.value)}
-                          style={{
-                            padding: '6px 8px',
-                            border: '1px solid var(--line, #ccc)',
-                            borderRadius: 6, background: 'var(--surface-mute, #fafafa)',
-                            color: 'var(--ink, #111)', fontSize: 13,
-                          }}
-                        >
-                          {s.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </label>
-                    ))}
-                  </div>
-                </section>
-              ))}
+            <div style={{ overflow: 'auto', padding: '16px', flex: 1 }}>
+              <label style={{ display: 'grid', gap: 8, fontSize: 13 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-faint, #666)' }}>Theme</span>
+                <select
+                  value={values.dashboardPalette}
+                  onChange={(e) => setDv3Palette(e.target.value)}
+                  style={{
+                    padding: '8px 10px',
+                    border: '1px solid var(--line, #ccc)',
+                    borderRadius: 6, background: 'var(--surface-mute, #fafafa)',
+                    color: 'var(--ink, #111)', fontSize: 13,
+                  }}
+                >
+                  {dv3PaletteOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </label>
             </div>
           </aside>
         </>

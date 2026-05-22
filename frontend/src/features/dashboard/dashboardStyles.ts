@@ -36,7 +36,7 @@ export const DASHBOARD_CSS = `
 }
 .dv3-root * { box-sizing: border-box; }
 
-.dv3-terminal { max-width: 1280px; margin: 0 auto; padding: 28px 32px 48px; }
+.dv3-terminal { max-width: var(--content-max, 1280px); margin: 0 auto; padding: 28px 32px 48px; }
 @media (max-width: 640px) { .dv3-terminal { padding: 12px; } }
 
 /* LOADING */
