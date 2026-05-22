@@ -108,38 +108,6 @@ export function EvaluationDetailPage() {
         <style>{DV3_FORM_CSS}</style>
 
         <div className="dv3-terminal" style={{ maxWidth: 960 }}>
-          {/* HERO */}
-          <div className="dv3-hero">
-            <div className="dv3-hero-meta">
-              <span className="dv3-hero-meta-l">EVAL.DETAIL</span>
-              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
-            </div>
-            <div className="dv3-hero-main">
-              <div>
-                <h1 className="dv3-hero-title">
-                  {timeGreeting}. <span className="dv3-accent">Детали оценки</span>
-                </h1>
-                <p className="dv3-hero-sub">{todayLine}</p>
-              </div>
-              <div className="dv3-hero-metrics">
-                <div className="dv3-hero-metric">
-                  <span className="dv3-hero-metric-num">
-                    {finalScore !== null ? finalScore.toFixed(1) : '—'}
-                  </span>
-                  <span className="dv3-hero-metric-lab">итог</span>
-                </div>
-                <div className="dv3-hero-metric">
-                  <span className="dv3-hero-metric-num">{scores.length}</span>
-                  <span className="dv3-hero-metric-lab">критериев</span>
-                </div>
-              </div>
-            </div>
-            <div className="dv3-hero-foot">
-              <span className="dv3-hero-foot-ok">STATUS · ок</span>
-              <span>Оценщик: {evaluation.evaluatorName}</span>
-            </div>
-          </div>
-
           {/* STAT GRID */}
           <div className="dv3-grid">
             <StatCard

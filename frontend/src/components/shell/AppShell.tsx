@@ -8,6 +8,7 @@ import { NavPanel } from './NavPanel'
 import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
 import { PageTitleProvider, usePageTitleKey } from '../../context/PageContext'
+import { PeriodProvider } from '../../context/PeriodContext'
 import { NAV_SECTIONS, type SectionKey, type Role } from './navConfig'
 import { pushRecent } from './navMemory'
 
@@ -360,7 +361,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => { announceMountedRef.current = true }, [])
 
   if (!showShell) {
-    return <PageTitleProvider>{children}</PageTitleProvider>
+    return <PageTitleProvider><PeriodProvider>{children}</PeriodProvider></PageTitleProvider>
   }
 
   const activeAccent = activeSection
@@ -369,6 +370,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <PageTitleProvider>
+     <PeriodProvider>
       <div
         className={`app-shell${panelOpen ? ' app-shell--panel-open' : ''}${pinned ? ' app-shell--pinned' : ''}`}
         style={activeAccent ? ({ '--section-accent': activeAccent } as React.CSSProperties) : undefined}
@@ -437,6 +439,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         )}
       </div>
+     </PeriodProvider>
     </PageTitleProvider>
   )
 }

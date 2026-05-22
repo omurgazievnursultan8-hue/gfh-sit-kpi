@@ -268,42 +268,6 @@ export function CriteriaPage() {
         <style>{STAT_CARD_CSS}</style>
 
         <div className="dv3-terminal">
-          {/* HERO */}
-          <div className="dv3-hero">
-            <div className="dv3-hero-meta">
-              <span className="dv3-hero-meta-l">CRITERIA.LIB</span>
-              <span className="dv3-hero-meta-r">KGT {clockKgt}</span>
-            </div>
-            <div className="dv3-hero-main">
-              <div>
-                <h1 className="dv3-hero-title">
-                  {timeGreeting}. <span className="dv3-accent">{t('v2.criteria.title')}</span>
-                </h1>
-                <p className="dv3-hero-sub">{todayLine}</p>
-              </div>
-              <div className="dv3-hero-metrics">
-                <div className="dv3-hero-metric">
-                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                    {loading ? PLACEHOLDER : stats.total}
-                  </span>
-                  <span className="dv3-hero-metric-lab">критериев</span>
-                </div>
-                <div className="dv3-hero-metric">
-                  <span className={`dv3-hero-metric-num${loading ? ' dv3-loading' : ''}`}>
-                    {loading ? PLACEHOLDER : stats.active}
-                  </span>
-                  <span className="dv3-hero-metric-lab">активных</span>
-                </div>
-              </div>
-            </div>
-            <div className="dv3-hero-foot">
-              <span className={failed ? 'dv3-hero-foot-warn' : 'dv3-hero-foot-ok'}>
-                STATUS · {failed ? 'ошибка загрузки' : 'ок'}
-              </span>
-              <span>{updatedLabel}</span>
-            </div>
-          </div>
-
           {/* STAT GRID */}
           <div className="dv3-grid">
             <StatCard

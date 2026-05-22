@@ -1620,7 +1620,7 @@ html, body {
 /* Mirror .dv3-terminal column so the title lines up with page content at any width. */
 .topbar-inner {
   height: 100%;
-  max-width: 1280px; margin: 0 auto; padding: 0 32px;
+  max-width: var(--content-max, 1280px); margin: 0 auto; padding: 0 32px;
   display: flex; align-items: center; gap: 14px;
 }
 .topbar-title {
@@ -1629,6 +1629,17 @@ html, body {
   color: var(--ink); letter-spacing: -0.01em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* App-wide period selector, right of the title, aligned to the content edge. */
+.topbar-slot { display: flex; align-items: center; min-width: 0; margin-left: auto; }
+.topbar-period {
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--radius, 6px);
+  font-family: inherit; font-size: 13px;
+  padding: 5px 10px; max-width: 240px; cursor: pointer;
+}
+.topbar-period:hover { border-color: var(--accent); }
+.topbar-period:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.topbar-period:disabled { opacity: .6; cursor: default; }
 .topbar-actions {
   /* Pinned to the screen edge, breaking out of the centered title column. */
   position: absolute; right: 20px; top: 0; height: 100%;

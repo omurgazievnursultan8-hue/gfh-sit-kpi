@@ -181,51 +181,33 @@ export function EvaluationFormPage() {
       <style>{DV3_FORM_CSS}</style>
 
       <div className="dv3-terminal" style={{ maxWidth: 860 }}>
-        {/* HERO */}
-        <div className="dv3-hero">
-          <div className="dv3-hero-meta">
-            <span className="dv3-hero-meta-l">EVAL.SCORE</span>
-            <span className="dv3-hero-meta-r">{lastSaved ? `Сохранено ${lastSaved.toLocaleTimeString('ru-RU')}` : ''}</span>
-          </div>
-          <div className="dv3-hero-main">
-            <div>
-              <h1 className="dv3-hero-title">
-                <span className="dv3-accent">Оценка сотрудника</span>
-              </h1>
-              <p className="dv3-hero-sub">{evaluation.evaluateeName}</p>
-            </div>
-            <div className="dv3-hero-metrics">
-              <div className="dv3-hero-metric">
-                <span className="dv3-hero-metric-num">
-                  {previewScore !== null ? previewScore.toFixed(2) : '··'}
-                </span>
-                <span className="dv3-hero-metric-lab">итог (preview)</span>
-              </div>
-            </div>
-          </div>
-          <div className="dv3-hero-foot">
-            <div className="dv3-btn-row">
-              <button onClick={save} disabled={saving} className="dv3-btn">
-                <Save size={14} />
-                {saving ? 'Сохранение...' : 'Сохранить'}
-              </button>
-              <button onClick={() => setSubmitOpen(true)} className="dv3-btn dv3-btn--primary">
-                <Send size={14} />
-                Отправить
-              </button>
-            </div>
-            {previewScore !== null && (
-              <span className="dv3-hero-foot-ok" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                <Eye size={13} /> Итог: {previewScore.toFixed(2)}
-              </span>
-            )}
-          </div>
-        </div>
-
         {renderSection(positiveCriteria, 'Положительные критерии')}
         {renderSection(antiBonusCriteria, 'Антибонусы')}
 
         <FileUploadSection evaluationId={evaluationId} />
+
+        {/* Action bar — Save / Submit (formerly in the page-header card) */}
+        <div className="dv3-form-actions">
+          {previewScore !== null && (
+            <span className="dv3-hero-foot-ok" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Eye size={13} /> Итог: {previewScore.toFixed(2)}
+            </span>
+          )}
+          <span className="dv3-form-actions-spacer" />
+          {lastSaved && (
+            <span className="dv3-form-actions-saved">Сохранено {lastSaved.toLocaleTimeString('ru-RU')}</span>
+          )}
+          <div className="dv3-btn-row">
+            <button onClick={save} disabled={saving} className="dv3-btn">
+              <Save size={14} />
+              {saving ? 'Сохранение...' : 'Сохранить'}
+            </button>
+            <button onClick={() => setSubmitOpen(true)} className="dv3-btn dv3-btn--primary">
+              <Send size={14} />
+              Отправить
+            </button>
+          </div>
+        </div>
       </div>
 
       <ConfirmDialog
