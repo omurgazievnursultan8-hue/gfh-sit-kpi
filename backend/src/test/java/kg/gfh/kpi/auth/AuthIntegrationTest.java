@@ -19,8 +19,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDateTime;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import jakarta.servlet.http.Cookie;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -78,5 +80,21 @@ class AuthIntegrationTest {
                 .content("{\"email\":\"admin@gfh.kg\",\"password\":\"wrong\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+    }
+
+    // Unauthenticated requests must return 401 (not 403) so the frontend axios
+    // interceptor triggers token refresh / login redirect instead of silently
+    // swallowing the error and rendering empty (zeroed) data.
+    @Test
+    void protectedEndpointWithNoTokenReturns401() throws Exception {
+        mockMvc.perform(get("/api/v1/analytics/personal"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void protectedEndpointWithInvalidTokenReturns401() throws Exception {
+        mockMvc.perform(get("/api/v1/analytics/personal")
+                .cookie(new Cookie("access_token", "invalid.jwt.token")))
+                .andExpect(status().isUnauthorized());
     }
 }
