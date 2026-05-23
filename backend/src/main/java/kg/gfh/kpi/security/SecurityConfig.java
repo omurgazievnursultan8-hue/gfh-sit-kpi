@@ -49,6 +49,13 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
+            // Without an explicit entry point Spring falls back to a 403 for
+            // unauthenticated requests. Return 401 so the SPA can distinguish
+            // "expired/missing token" (refresh + retry, else redirect to login)
+            // from a genuine 403 access-denial.
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, e) ->
+                    res.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED)))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }

@@ -9,7 +9,8 @@ import type { Delegation } from '../org/delegationsApi'
 import { evaluationsApi, type Evaluation } from '../evaluations/evaluationsApi'
 import { appealsApi, type AppealSummary } from '../appeals/appealsApi'
 import { DASHBOARD_CSS } from './dashboardStyles'
-import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
+import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { RATING_ZONES } from '../../lib/ratingZones'
 import { RatingPanel } from './RatingPanel'
 import { EvalCyclePanel } from './EvalCyclePanel'
 import { AppealsPanel } from './AppealsPanel'
@@ -29,8 +30,6 @@ export function DashboardPage() {
   const [appeals, setAppeals] = useState<AppealSummary[]>([])
   const [partialFailure, setPartialFailure] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
-  const [now, setNow] = useState(new Date())
 
   // Selected period scopes every card + panel — sourced from the app-wide
   // topbar selector (PeriodContext).
@@ -98,7 +97,6 @@ export function DashboardPage() {
     Promise.allSettled(tasks).then(results => {
       if (results.some(r => r.status === 'rejected')) setPartialFailure(true)
       setLoading(false)
-      setLoadedAt(new Date())
     })
   }, [])
 
@@ -110,43 +108,7 @@ export function DashboardPage() {
     analyticsApi.scorecard(selectedPeriod === 'ALL' ? undefined : selectedPeriod)
       .then(setScorecard)
       .finally(() => setScorecardLoading(false))
-  }, [ratingPanelOpen, selectedPeriod, isAllPeriods])
-
-  // Live tick — re-render every 60s so clock + relative time stay fresh.
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  // ── time / clock (derived from `now`, fixed to Bishkek tz) ───────────────────
-  const BISHKEK_TZ = 'Asia/Bishkek'
-  const clockParts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: BISHKEK_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
-  }).formatToParts(now)
-  const hh = clockParts.find(p => p.type === 'hour')?.value ?? '00'
-  const mm = clockParts.find(p => p.type === 'minute')?.value ?? '00'
-  const hours = Number(hh)
-  const timeGreeting = hours < 12
-    ? t('dashboard.greetingMorning')
-    : hours < 18
-      ? t('dashboard.greetingAfternoon')
-      : t('dashboard.greetingEvening')
-
-  const datePart = now.toLocaleDateString(
-    i18n.language === 'kg' ? 'ky-KG' : 'ru-RU',
-    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: BISHKEK_TZ },
-  )
-  const todayLine = `${datePart} · ${hh}:${mm}`
-  const clockKgt = `${hh}:${mm}`
-
-  // Relative "updated N min ago" string.
-  let updatedLabel = ''
-  if (loadedAt) {
-    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
-    updatedLabel = mins < 1
-      ? t('dashboard.updatedJustNow')
-      : t('dashboard.updatedMinutesAgo', { count: mins })
-  }
+  }, [ratingPanelOpen, selectedPeriod])
 
   // ── period scoping ──────────────────────────────────────────────────────────
   // evaluationId → periodId, so appeals (which carry no periodId) can be scoped.
@@ -166,9 +128,37 @@ export function DashboardPage() {
   const periodScore = isAllPeriods
     ? (analytics?.currentScore ?? null)
     : (analytics?.history.find(h => h.periodId === selectedPeriod)?.score ?? null)
-  const scoreWhole = periodScore !== null ? Math.round(periodScore) : null
-  const scorePct = periodScore !== null ? periodScore / 100 : 0
-  const zone = scoreZone(scoreWhole)
+  // Display rounds to a whole number; zone classification uses raw score so
+  // borderline values (e.g. 49.6) still resolve to the correct zone.
+  const scoreDisplay = periodScore !== null ? Math.round(periodScore) : null
+  const scorePct = periodScore !== null
+    ? Math.min(1, Math.max(0, periodScore / 100))
+    : 0
+  if (periodScore !== null && (periodScore < 0 || periodScore > 100)) {
+    console.warn('[dashboard] score out of 0..100 range:', periodScore)
+  }
+
+  // Previous-period score for trend chip — history sorted desc by startDate.
+  const prevScore = useMemo(() => {
+    const hist = analytics?.history ?? []
+    if (hist.length < 2) return null
+    const sorted = [...hist].sort((a, b) => b.startDate.localeCompare(a.startDate))
+    if (isAllPeriods) return sorted[1]?.score ?? null
+    const idx = sorted.findIndex(h => h.periodId === selectedPeriod)
+    return idx >= 0 ? sorted[idx + 1]?.score ?? null : null
+  }, [analytics, selectedPeriod, isAllPeriods])
+  const delta = periodScore !== null && prevScore !== null
+    ? Math.round(periodScore - prevScore)
+    : null
+
+  // Period caption for SELF.RATING — "May 2026" / "all periods".
+  const periodLabel = useMemo(() => {
+    if (isAllPeriods) return t('dashboard.allPeriods')
+    const p = periodById.get(selectedPeriod as number)
+    if (!p) return null
+    const locale = i18n.language === 'kg' ? 'ky-KG' : 'ru-RU'
+    return new Date(p.endDate).toLocaleDateString(locale, { month: 'long', year: 'numeric' })
+  }, [isAllPeriods, selectedPeriod, periodById, i18n.language, t])
 
   // SELF.RATING empty-state — distinguish "evaluation in progress, no score
   // yet" from "no evaluation for this period at all".
@@ -178,16 +168,31 @@ export function DashboardPage() {
   const ratingState: 'scored' | 'pending' | 'none' =
     periodScore !== null ? 'scored' : myPeriodEval ? 'pending' : 'none'
 
+  // Pending-state rich note — evaluator name + draft/submitted status pill.
+  const pendingStatusKey = myPeriodEval?.status === 'SUBMITTED'
+    ? 'evaluations.statusSubmitted'
+    : 'evaluations.statusDraft'
+  const pendingNote = ratingState === 'pending' && myPeriodEval ? (
+    <div className="dv3-pending">
+      <div className="dv3-pending-lead">{t('dashboard.ratingPending')}</div>
+      {myPeriodEval.evaluatorName && (
+        <div className="dv3-pending-eval">{myPeriodEval.evaluatorName}</div>
+      )}
+      <span className={`dv3-pending-pill dv3-pending-pill--${myPeriodEval.status.toLowerCase()}`}>
+        {t(pendingStatusKey)}
+      </span>
+    </div>
+  ) : null
+
   // EVAL.CYCLE — completed = submitted or later; total = all in scope.
   const cycleDone = scopedEvals.filter(e => e.status !== 'DRAFT').length
   const cycleTotal = scopedEvals.length
   const cyclePct = cycleTotal > 0 ? cycleDone / cycleTotal : 0
-  const pendingEvals = scopedEvals.filter(e => e.status === 'DRAFT').length
 
-  // APPEALS — share of open tasks (appeals vs appeals + pending evaluations).
+  // APPEALS — pending share of my appeals in scope.
   const appealsPending = scopedAppeals.filter(a => a.status === 'PENDING').length
-  const openTasks = appealsPending + pendingEvals
-  const appealsPct = openTasks > 0 ? appealsPending / openTasks : 0
+  const appealsTotal = scopedAppeals.length
+  const appealsPct = appealsTotal > 0 ? appealsPending / appealsTotal : 0
 
   // DELEGATIONS — active share of all delegations (not period-scoped).
   const activeDelegations = delegations.filter(d => d.isActive)
@@ -197,13 +202,6 @@ export function DashboardPage() {
 
   // Neutral placeholder while loading; genuine zeros still render as 0.
   const PLACEHOLDER = '··'
-
-  // ── hero ───────────────────────────────────────────────────────────────────
-  // Russian ФИО is "Surname Name Patronymic"; greet by Name + Patronymic.
-  const nameParts = analytics?.fullName?.trim().split(/\s+/) ?? []
-  const greetingName = nameParts.length >= 3
-    ? `${nameParts[1]} ${nameParts[2]}`
-    : nameParts.slice(1).join(' ') || nameParts[0] || ''
 
   return (
     <div className="dv3-root">
@@ -225,21 +223,37 @@ export function DashboardPage() {
           <StatCard
             className="dv3-col-3"
             title={t('dashboard.cardSelfRating')} id="R01" loading={loading}
-            value={scoreWhole}
+            value={scoreDisplay}
             unit={ratingState === 'scored' ? '/ 100' : undefined}
-            zoneScore={scoreWhole}
+            zoneScore={periodScore}
+            subtitle={ratingState === 'scored' ? periodLabel : undefined}
             emptyNote={
               ratingState === 'pending'
-                ? t('dashboard.ratingPending')
+                ? pendingNote
                 : ratingState === 'none'
                   ? t('dashboard.ratingNone')
                   : undefined
             }
             onClick={openRatingPanel} active={ratingPanelOpen}
+            controls="rating-panel"
             gauge={ratingState === 'scored' ? {
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
-              current: scoreWhole,
+              current: t(
+                periodScore! >= RATING_ZONES.up
+                  ? 'dashboard.zoneUp'
+                  : periodScore! >= RATING_ZONES.warn
+                    ? 'dashboard.zoneNorm'
+                    : 'dashboard.zoneDown'
+              ),
+              ariaLabel: t('dashboard.ratingAria', { score: scoreDisplay }),
+              thresholds: [
+                { at: RATING_ZONES.warn, zone: 'warn' },
+                { at: RATING_ZONES.up, zone: 'up' },
+              ],
+            } : undefined}
+            delta={ratingState === 'scored' && delta !== null && !isAllPeriods ? {
+              value: delta, label: t('dashboard.vsPrev'),
             } : undefined}
           />
 
@@ -270,9 +284,9 @@ export function DashboardPage() {
             active={appealsPanelOpen}
             gauge={{
               pct: appealsPct, variant: 'meta',
-              left: '0%',
-              center: <><strong>{Math.round(appealsPct * 100)}%</strong> {t('dashboard.ofOpenTasks')}</>,
-              right: '100%',
+              left: '0',
+              center: <><strong>{appealsPending}</strong> / {appealsTotal} {t('dashboard.total')}</>,
+              right: appealsTotal,
             }}
           />
 
@@ -293,7 +307,14 @@ export function DashboardPage() {
           />
 
           {ratingPanelOpen && (
-            <RatingPanel card={scorecard} loading={scorecardLoading} />
+            <div
+              id="rating-panel"
+              role="region"
+              aria-label={t('dashboard.cardSelfRating')}
+              style={{ display: 'contents' }}
+            >
+              <RatingPanel card={scorecard} loading={scorecardLoading} />
+            </div>
           )}
 
           {evalCyclePanelOpen && (

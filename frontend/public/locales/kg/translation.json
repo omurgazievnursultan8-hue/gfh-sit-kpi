@@ -399,7 +399,6 @@
     "pendingAppeals": "Каралуудагы даттануулар",
     "unread": "Окулган эмес",
     "activeDelegations": "Активдүү делегирлөөлөр",
-    "ofOpenTasks": "ачык тапшырмалардан",
     "inbox": "келген кат",
     "total": "бардыгы",
     "zoneUp": "Максаттан жогору",
@@ -411,6 +410,9 @@
     "cardDelegations": "ДЕЛЕГИРЛӨӨ",
     "ratingPending": "Баа күтүлүүдө",
     "ratingNone": "Мезгил үчүн баа жок",
+    "vsPrev": "өткөнгө",
+    "ratingAria": "Рейтинг 100дөн {{score}}",
+    "allPeriods": "Бардык мезгилдер",
     "evalCyclePanel": {
       "incompleteTitle": "АЯКТАЛБАГАН БААЛООЛОР",
       "completedTitle": "АЯКТАЛГАН БААЛООЛОР",

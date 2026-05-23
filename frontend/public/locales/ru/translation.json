@@ -511,7 +511,6 @@
     "pendingAppeals": "Апелляции на рассмотрении",
     "unread": "Непрочитанные",
     "activeDelegations": "Активные делегирования",
-    "ofOpenTasks": "от открытых задач",
     "inbox": "входящие",
     "total": "всего",
     "zoneUp": "Выше цели",
@@ -523,6 +522,9 @@
     "cardDelegations": "ДЕЛЕГИРОВАНИЕ",
     "ratingPending": "Ожидает оценки",
     "ratingNone": "Нет оценки за период",
+    "vsPrev": "vs пред.",
+    "ratingAria": "Рейтинг {{score}} из 100",
+    "allPeriods": "Все периоды",
     "evalCyclePanel": {
       "incompleteTitle": "НЕЗАВЕРШЁННЫЕ ОЦЕНКИ",
       "completedTitle": "ЗАВЕРШЁННЫЕ ОЦЕНКИ",
