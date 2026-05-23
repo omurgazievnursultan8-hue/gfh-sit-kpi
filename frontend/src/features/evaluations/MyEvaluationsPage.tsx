@@ -8,8 +8,7 @@ import { DataPanel, type Column, type FilterDef } from '../../components/DataPan
 import {
   STATUS_LABELS, STATUS_ORDER, EvaluationStatusBadge,
 } from './components/evaluationStatus'
-import { StatusDistribution } from './components/StatusDistribution'
-import { ScoreTrend, SCORE_TREND_CSS } from './components/ScoreTrend'
+import { StatusDistributionCard } from './components/StatusDistribution'
 import { formatPeriodRange } from './components/periodFormat'
 import { periodsApi, type Period } from '../periods/periodsApi'
 
@@ -245,7 +244,6 @@ export function MyEvaluationsPage() {
       <div className="dv3-root">
         <style>{DASHBOARD_CSS}</style>
         <style>{STAT_CARD_CSS}</style>
-        <style>{SCORE_TREND_CSS}</style>
 
         <div className="dv3-terminal">
           {/* STAT GRID */}
@@ -273,32 +271,19 @@ export function MyEvaluationsPage() {
             />
             <StatCard
               className="dv3-col-3"
-              title="PENDING" id="P01" loading={loading}
-              value={pending} label="ждут реакции"
-              gauge={{
-                pct: total > 0 ? pending / total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{total > 0 ? Math.round((pending / total) * 100) : 0}%</strong> всех</>,
-                right: total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="APPEALS" id="X01" loading={loading}
-              value={appealed} label="апелляции"
+              title="INBOX" id="I01" loading={loading}
+              value={pending + appealed} label="требуют реакции"
               onClick={() => navigate('/my-tasks')}
               gauge={{
-                pct: total > 0 ? appealed / total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{total > 0 ? Math.round((appealed / total) * 100) : 0}%</strong> всех</>,
+                pct: total > 0 ? (pending + appealed) / total : 0, variant: 'meta',
+                left: <><strong>{pending}</strong> ждут</>,
+                center: <><strong>{appealed}</strong> {plural(appealed, ['апелл', 'апелл', 'апелл'])}</>,
                 right: total,
               }}
             />
-            <ScoreTrend
-              className="dv3-col-12"
-              evaluations={all}
-              periodById={periodById}
-              loading={loading}
+            <StatusDistributionCard
+              className="dv3-col-3"
+              counts={counts} total={total} loading={loading}
             />
           </div>
 
@@ -326,7 +311,6 @@ export function MyEvaluationsPage() {
           onRowClick={(e) => navigate(`/my-evaluations/${e.id}`)}
         />
 
-        <StatusDistribution counts={counts} total={total} />
           </div>
         </div>
       </div>
