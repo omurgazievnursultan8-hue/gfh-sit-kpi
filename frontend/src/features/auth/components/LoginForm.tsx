@@ -127,7 +127,7 @@ export function LoginForm() {
 
         <button
           type="submit"
-          disabled={!isFormValid || loading || success}
+          disabled={loading || success}
           className={`login-btn-submit${success ? ' login-btn-submit--success' : ''}`}
         >
           {loading ? (
