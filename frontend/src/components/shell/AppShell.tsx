@@ -9,6 +9,7 @@ import { Topbar } from './Topbar'
 import { CommandPalette } from './CommandPalette'
 import { PageTitleProvider, usePageTitleKey } from '../../context/PageContext'
 import { PeriodProvider } from '../../context/PeriodContext'
+import { AdminRangeProvider } from '../../context/AdminRangeContext'
 import { NAV_SECTIONS, type SectionKey, type Role } from './navConfig'
 import { pushRecent } from './navMemory'
 
@@ -361,7 +362,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => { announceMountedRef.current = true }, [])
 
   if (!showShell) {
-    return <PageTitleProvider><PeriodProvider>{children}</PeriodProvider></PageTitleProvider>
+    return <PageTitleProvider><PeriodProvider><AdminRangeProvider>{children}</AdminRangeProvider></PeriodProvider></PageTitleProvider>
   }
 
   const activeAccent = activeSection
@@ -371,6 +372,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <PageTitleProvider>
      <PeriodProvider>
+     <AdminRangeProvider>
       <div
         className={`app-shell${panelOpen ? ' app-shell--panel-open' : ''}${pinned ? ' app-shell--pinned' : ''}`}
         style={activeAccent ? ({ '--section-accent': activeAccent } as React.CSSProperties) : undefined}
@@ -439,6 +441,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         )}
       </div>
+     </AdminRangeProvider>
      </PeriodProvider>
     </PageTitleProvider>
   )

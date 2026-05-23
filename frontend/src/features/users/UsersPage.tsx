@@ -271,6 +271,10 @@ export function UsersPage() {
               className="dv3-col-3"
               title="USERS.TOTAL" id="U01" loading={loading}
               value={total} label="сотрудников"
+              breakdown={[
+                { label: 'активны',   value: activeCount,   tone: 'up' },
+                { label: 'неактивны', value: inactiveCount, tone: 'neutral' },
+              ]}
             />
             <StatCard
               className="dv3-col-3"

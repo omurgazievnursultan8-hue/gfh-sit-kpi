@@ -15,6 +15,9 @@ public interface AppealRepository extends JpaRepository<Appeal, Long> {
     boolean existsByEvaluationId(Long evaluationId);
     List<Appeal> findByStatusAndDeadlineBefore(AppealStatus status, LocalDateTime now);
     long countByStatus(AppealStatus status);
+    long countByCreatedAtAfter(LocalDateTime cutoff);
+    long countByStatusAndCreatedAtAfter(AppealStatus status, LocalDateTime cutoff);
+    long countByStatusNotAndCreatedAtAfter(AppealStatus status, LocalDateTime cutoff);
 
     @Query("SELECT a FROM Appeal a WHERE a.evaluationId IN " +
            "(SELECT e.id FROM Evaluation e WHERE e.evaluator.id = :evaluatorId) " +

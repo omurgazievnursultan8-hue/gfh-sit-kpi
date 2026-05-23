@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { usePageTitleKey } from '../../context/PageContext'
 import { usePeriod, ALL_PERIODS } from '../../context/PeriodContext'
+import { useAdminRange, ADMIN_RANGE_OPTIONS, AdminRange } from '../../context/AdminRangeContext'
 import { formatPeriodRange } from '../../features/evaluations/components/periodFormat'
 import { NAV_SECTIONS } from './navConfig'
 
@@ -16,6 +17,8 @@ export function Topbar({ onHamburgerClick, mobileNavOpen }: TopbarProps) {
   const location = useLocation()
   const contextTitleKey = usePageTitleKey()
   const { periodOptions, selectedPeriod, setSelectedPeriod, loading: periodsLoading } = usePeriod()
+  const { range: adminRange, setRange: setAdminRange } = useAdminRange()
+  const isAdminRoute = location.pathname.startsWith('/admin')
 
   const derivedLabel = useMemo(() => {
     for (const section of NAV_SECTIONS) {
@@ -56,6 +59,19 @@ export function Topbar({ onHamburgerClick, mobileNavOpen }: TopbarProps) {
       </h1>
 
       <div className="topbar-slot">
+        {isAdminRoute && (
+          <select
+            id="dv3-admin-range"
+            className="topbar-period"
+            aria-label="Период изменений"
+            value={adminRange}
+            onChange={e => setAdminRange(e.target.value as AdminRange)}
+          >
+            {ADMIN_RANGE_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.labelRu}</option>
+            ))}
+          </select>
+        )}
         <select
           id="dv3-period"
           className="topbar-period"

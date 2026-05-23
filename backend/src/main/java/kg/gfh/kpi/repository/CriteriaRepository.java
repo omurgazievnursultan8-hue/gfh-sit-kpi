@@ -9,9 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface CriteriaRepository extends JpaRepository<Criteria, Long> {
+
+    long countByCreatedAtAfter(LocalDateTime cutoff);
+
 
     Page<Criteria> findByActiveTrue(Pageable pageable);
 
@@ -37,4 +41,6 @@ public interface CriteriaRepository extends JpaRepository<Criteria, Long> {
     boolean existsByIdAndFrozenTrue(Long id);
 
     long countByActiveTrue();
+    long countByActiveTrueAndCreatedAtAfter(LocalDateTime cutoff);
+    long countByActiveFalseAndCreatedAtAfter(LocalDateTime cutoff);
 }

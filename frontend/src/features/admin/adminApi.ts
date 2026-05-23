@@ -34,14 +34,39 @@ export interface AdminStats {
   totalUsers: number
   activeUsers: number
   activeEvaluationPeriods: number
+  totalEvaluationPeriods: number
   pendingEvaluations: number
   totalEvaluations: number
   openAppeals: number
+  totalAppeals: number
   auditLogsLast24h: number
   criteriaActive: number
+  totalCriteria: number
   delegationsActive: number
   delegationsExpiringSoon: number
   orgUnitsCount: number
+  orgUnitsBlocks: number
+  orgUnitsDepartments: number
+  orgUnitsUnits: number
+  usersDelta: number
+  evaluationPeriodsDelta: number
+  evaluationsDelta: number
+  appealsDelta: number
+  criteriaDelta: number
+  orgUnitsDelta: number
+  usersActiveDelta: number
+  usersInactiveDelta: number
+  periodsActiveDelta: number
+  periodsInactiveDelta: number
+  evalsPendingDelta: number
+  evalsCompletedDelta: number
+  appealsOpenDelta: number
+  appealsClosedDelta: number
+  criteriaActiveDelta: number
+  criteriaInactiveDelta: number
+  orgBlocksDelta: number
+  orgDepartmentsDelta: number
+  orgUnitsLeafDelta: number
 }
 
 export interface QuartzJobInfo {
@@ -59,7 +84,7 @@ export interface ErrorLogsResponse {
 }
 
 export const adminApi = {
-  getStats: () => api.get<AdminStats>('/admin/stats').then(r => r.data),
+  getStats: (range?: string) => api.get<AdminStats>('/admin/stats', { params: range ? { range } : {} }).then(r => r.data),
   getQuartzJobs: () => api.get<QuartzJobInfo[]>('/admin/quartz-jobs').then(r => r.data),
   getErrorLogs: () => api.get<ErrorLogsResponse>('/admin/error-logs').then(r => r.data),
 }

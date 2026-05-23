@@ -25,8 +25,8 @@ public class AdminController {
     private final Scheduler scheduler;
 
     @GetMapping("/stats")
-    public AdminStatsResponse getStats() {
-        return adminService.getStats();
+    public AdminStatsResponse getStats(@RequestParam(value = "range", required = false) String range) {
+        return adminService.getStats(range);
     }
 
     @GetMapping("/quartz-jobs")
