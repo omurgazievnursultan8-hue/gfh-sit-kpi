@@ -10,6 +10,7 @@ import { evaluationsApi, type Evaluation } from '../evaluations/evaluationsApi'
 import { appealsApi, type AppealSummary } from '../appeals/appealsApi'
 import { DASHBOARD_CSS } from './dashboardStyles'
 import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { RATING_ZONES } from '../../lib/ratingZones'
 import { RatingPanel } from './RatingPanel'
 import { EvalCyclePanel } from './EvalCyclePanel'
 import { AppealsPanel } from './AppealsPanel'
@@ -127,7 +128,9 @@ export function DashboardPage() {
   const periodScore = isAllPeriods
     ? (analytics?.currentScore ?? null)
     : (analytics?.history.find(h => h.periodId === selectedPeriod)?.score ?? null)
-  const scoreWhole = periodScore !== null ? Math.round(periodScore) : null
+  // Display keeps 1 decimal so the value matches its zone color near boundaries
+  // (e.g. 49.6 reads as warn, not down). Raw score drives zone classification.
+  const scoreDisplay = periodScore !== null ? periodScore.toFixed(1) : null
   const scorePct = periodScore !== null
     ? Math.min(1, Math.max(0, periodScore / 100))
     : 0
@@ -148,6 +151,15 @@ export function DashboardPage() {
     ? Math.round(periodScore - prevScore)
     : null
 
+  // Sparkline points — chronological scores (oldest → newest), capped to last 12
+  // so dense histories stay legible at 80×24px.
+  const sparkPoints = useMemo(() => {
+    const hist = analytics?.history ?? []
+    if (hist.length < 2) return null
+    const chrono = [...hist].sort((a, b) => a.startDate.localeCompare(b.startDate))
+    return chrono.slice(-12).map(h => h.score)
+  }, [analytics])
+
   // Period caption for SELF.RATING — "May 2026" / "all periods".
   const periodLabel = useMemo(() => {
     if (isAllPeriods) return t('dashboard.allPeriods')
@@ -164,6 +176,22 @@ export function DashboardPage() {
     : myEvaluations.find(e => e.periodId === selectedPeriod) ?? null
   const ratingState: 'scored' | 'pending' | 'none' =
     periodScore !== null ? 'scored' : myPeriodEval ? 'pending' : 'none'
+
+  // Pending-state rich note — evaluator name + draft/submitted status pill.
+  const pendingStatusKey = myPeriodEval?.status === 'SUBMITTED'
+    ? 'evaluations.statusSubmitted'
+    : 'evaluations.statusDraft'
+  const pendingNote = ratingState === 'pending' && myPeriodEval ? (
+    <div className="dv3-pending">
+      <div className="dv3-pending-lead">{t('dashboard.ratingPending')}</div>
+      {myPeriodEval.evaluatorName && (
+        <div className="dv3-pending-eval">{myPeriodEval.evaluatorName}</div>
+      )}
+      <span className={`dv3-pending-pill dv3-pending-pill--${myPeriodEval.status.toLowerCase()}`}>
+        {t(pendingStatusKey)}
+      </span>
+    </div>
+  ) : null
 
   // EVAL.CYCLE — completed = submitted or later; total = all in scope.
   const cycleDone = scopedEvals.filter(e => e.status !== 'DRAFT').length
@@ -204,25 +232,39 @@ export function DashboardPage() {
           <StatCard
             className="dv3-col-3"
             title={t('dashboard.cardSelfRating')} id="R01" loading={loading}
-            value={scoreWhole}
+            value={scoreDisplay}
             unit={ratingState === 'scored' ? '/ 100' : undefined}
-            zoneScore={scoreWhole}
+            zoneScore={periodScore}
             subtitle={ratingState === 'scored' ? periodLabel : undefined}
             emptyNote={
               ratingState === 'pending'
-                ? t('dashboard.ratingPending')
+                ? pendingNote
                 : ratingState === 'none'
                   ? t('dashboard.ratingNone')
                   : undefined
             }
             onClick={openRatingPanel} active={ratingPanelOpen}
+            controls="rating-panel"
             gauge={ratingState === 'scored' ? {
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
-              ariaLabel: t('dashboard.ratingAria', { score: scoreWhole }),
+              ariaLabel: t('dashboard.ratingAria', { score: scoreDisplay }),
+              thresholds: [
+                { at: RATING_ZONES.warn, zone: 'warn' },
+                { at: RATING_ZONES.up, zone: 'up' },
+              ],
+              zoneLabels: {
+                down: t('dashboard.zoneDown'),
+                warn: t('dashboard.zoneNorm'),
+                up: t('dashboard.zoneUp'),
+              },
             } : undefined}
-            delta={ratingState === 'scored' && delta !== null ? {
-              value: delta, unit: 'pts', label: t('dashboard.vsPrev'),
+            delta={ratingState === 'scored' && delta !== null && !isAllPeriods ? {
+              value: delta, label: t('dashboard.vsPrev'),
+            } : undefined}
+            sparkline={ratingState === 'scored' && sparkPoints ? {
+              points: sparkPoints,
+              ariaLabel: t('dashboard.ratingTrendAria', { count: sparkPoints.length }),
             } : undefined}
           />
 
@@ -276,7 +318,14 @@ export function DashboardPage() {
           />
 
           {ratingPanelOpen && (
-            <RatingPanel card={scorecard} loading={scorecardLoading} />
+            <div
+              id="rating-panel"
+              role="region"
+              aria-label={t('dashboard.cardSelfRating')}
+              style={{ display: 'contents' }}
+            >
+              <RatingPanel card={scorecard} loading={scorecardLoading} />
+            </div>
           )}
 
           {evalCyclePanelOpen && (

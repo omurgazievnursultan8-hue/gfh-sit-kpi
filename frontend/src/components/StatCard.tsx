@@ -24,12 +24,19 @@ export interface StatCardGauge {
   center?: ReactNode             // 'meta' variant only
   current?: ReactNode            // 'marker' variant pin value
   ariaLabel?: string             // SR description; defaults to "<pct>%"
+  thresholds?: { at: number; zone: 'warn' | 'up' | 'down' }[]  // marker only
+  zoneLabels?: { down: ReactNode; warn: ReactNode; up: ReactNode }  // marker only — replaces left/center/right
 }
 
 export interface StatCardDelta {
   value: number                  // signed; sign drives direction glyph
   unit?: string                  // e.g. 'pts', '%', defaults to nothing
   label?: string                 // e.g. 'vs Q1' — small caption below chip
+}
+
+export interface StatCardSparkline {
+  points: number[]               // chronological (oldest → newest), 0..100 domain
+  ariaLabel?: string
 }
 
 export interface StatCardProps {
@@ -46,18 +53,20 @@ export interface StatCardProps {
   zoneScore?: number | null
   gauge?: StatCardGauge
   delta?: StatCardDelta          // optional ▲/▼ trend chip
+  sparkline?: StatCardSparkline  // optional mini trend line, rendered above delta
   onClick?: () => void
   onHover?: () => void
   active?: boolean
   className?: string
+  controls?: string              // id of the panel this card expands (a11y)
 }
 
 // ── component ───────────────────────────────────────────────────────────────
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, emptyNote, subtitle, zoneScore, gauge, delta,
-  onClick, onHover, active, className,
+  unit, label, emptyNote, subtitle, zoneScore, gauge, delta, sparkline,
+  onClick, onHover, active, className, controls,
 }: StatCardProps) {
   const { t } = useTranslation()
   const zone = scoreZone(zoneScore)
@@ -82,6 +91,21 @@ export function StatCard({
 
   const gaugePct = gauge ? Math.max(0, Math.min(1, gauge.pct)) : 0
   const gaugeWidthPct = Math.round(gaugePct * 100)
+
+  // Sparkline — render only with ≥2 chronological points. Domain assumed 0..100.
+  const sparkPoints = sparkline && sparkline.points.length >= 2
+    ? sparkline.points.map((v, i, arr) => {
+        const x = (i / (arr.length - 1)) * 100
+        const y = 28 - Math.max(0, Math.min(100, v)) / 100 * 26
+        return `${x.toFixed(2)},${y.toFixed(2)}`
+      }).join(' ')
+    : null
+  const sparkLast = sparkline && sparkline.points.length >= 2
+    ? {
+        x: 100,
+        y: 28 - Math.max(0, Math.min(100, sparkline.points[sparkline.points.length - 1])) / 100 * 26,
+      }
+    : null
 
   const body = (
     <>
@@ -126,6 +150,27 @@ export function StatCard({
               )}
             </div>
             <div className="dv3-kpi-side">
+              {!loading && sparkPoints && sparkLast && (
+                <svg
+                  className="dv3-spark"
+                  viewBox="0 0 100 30"
+                  preserveAspectRatio="none"
+                  role="img"
+                  aria-label={sparkline?.ariaLabel ?? 'trend'}
+                >
+                  <polyline
+                    className="dv3-spark-line"
+                    points={sparkPoints}
+                    fill="none"
+                  />
+                  <circle
+                    className="dv3-spark-dot"
+                    cx={sparkLast.x}
+                    cy={sparkLast.y}
+                    r="2"
+                  />
+                </svg>
+              )}
               {!loading && zone.labelKey && (
                 <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
                   {t(zone.labelKey)}
@@ -171,6 +216,14 @@ export function StatCard({
                 width={loading ? 0 : gaugeWidthPct}
                 className="dv3-gauge-fill"
               />
+              {gauge.variant === 'marker' && !loading && gauge.thresholds?.map(th => (
+                <line
+                  key={th.at}
+                  x1={th.at} x2={th.at}
+                  y1="-0.5" y2="4.5"
+                  className={`dv3-gauge-tick dv3-gauge-tick--${th.zone}`}
+                />
+              ))}
               {gauge.variant === 'marker' && !loading && (
                 <g transform={`translate(${gaugeWidthPct} 0)`}>
                   <rect x="-0.5" y="-1" width="1" height="6" className="dv3-gauge-pin" />
@@ -179,14 +232,24 @@ export function StatCard({
             </svg>
             {gauge.variant === 'marker' ? (
               <div className="dv3-gauge-meta dv3-gauge-meta--mark">
-                <span>{gauge.left}</span>
+                {gauge.zoneLabels ? (
+                  <div className="dv3-gauge-zones">
+                    <span className="dv3-gauge-zone dv3-gauge-zone--down">{gauge.zoneLabels.down}</span>
+                    <span className="dv3-gauge-zone dv3-gauge-zone--warn">{gauge.zoneLabels.warn}</span>
+                    <span className="dv3-gauge-zone dv3-gauge-zone--up">{gauge.zoneLabels.up}</span>
+                  </div>
+                ) : (
+                  <>
+                    <span>{gauge.left}</span>
+                    <span>{gauge.right}</span>
+                  </>
+                )}
                 <span
                   className="dv3-gauge-cur"
                   style={{ left: `${gaugeWidthPct}%` }}
                 >
                   <strong>{gauge.current}</strong>
                 </span>
-                <span>{gauge.right}</span>
               </div>
             ) : (
               <div className="dv3-gauge-meta">
@@ -212,6 +275,7 @@ export function StatCard({
         role="button"
         tabIndex={0}
         aria-expanded={active !== undefined ? active : undefined}
+        aria-controls={controls}
         onClick={onClick}
         onMouseEnter={onHover}
         onFocus={onHover}
@@ -399,6 +463,27 @@ export const STAT_CARD_CSS = `
 .dv3-delta--down { color: var(--dv3-zone-down); border-color: color-mix(in srgb, var(--dv3-zone-down) 40%, var(--dv3-border)); }
 .dv3-delta--flat { color: var(--dv3-text3); }
 
+/* SPARKLINE */
+.dv3-spark {
+  display: block;
+  width: 80px; height: 24px;
+  overflow: visible;
+}
+.dv3-spark-line {
+  stroke: var(--dv3-card-zone);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.85;
+}
+.dv3-spark-dot {
+  fill: var(--dv3-card-zone);
+}
+@media (max-width: 640px) {
+  .dv3-spark { width: 64px; height: 20px; }
+}
+
 /* SVG GAUGE */
 .dv3-gauge { align-self: stretch; margin-top: auto; padding-top: 14px; font-size: 11px; color: var(--dv3-text3); }
 .dv3-gauge-svg { display: block; width: 100%; height: 6px; overflow: visible; }
@@ -411,6 +496,14 @@ export const STAT_CARD_CSS = `
   fill: var(--dv3-card-zone);
   stroke: var(--dv3-card-zone); stroke-width: 0.4;
 }
+.dv3-gauge-tick {
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.55;
+}
+.dv3-gauge-tick--warn { stroke: var(--dv3-zone-warn); }
+.dv3-gauge-tick--up   { stroke: var(--dv3-zone-up); }
+.dv3-gauge-tick--down { stroke: var(--dv3-zone-down); }
 .dv3-gauge-meta {
   display: flex; justify-content: space-between;
   font-size: 10px; color: var(--dv3-text3);
@@ -425,6 +518,15 @@ export const STAT_CARD_CSS = `
   max-width: 60%;
   text-align: center;
 }
+.dv3-gauge-zones {
+  display: grid; width: 100%;
+  grid-template-columns: 50% 30% 20%;
+  font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+}
+.dv3-gauge-zone { padding: 0 4px; }
+.dv3-gauge-zone--down { text-align: left;   color: var(--dv3-zone-down); }
+.dv3-gauge-zone--warn { text-align: center; color: var(--dv3-zone-warn); }
+.dv3-gauge-zone--up   { text-align: right;  color: var(--dv3-zone-up); }
 
 /* SKELETON shimmer */
 .dv3-skel {

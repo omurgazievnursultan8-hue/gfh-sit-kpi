@@ -153,4 +153,28 @@ export const DASHBOARD_CSS = `
 
 /* card active state when its panel is open */
 .dv3-card-btn[aria-expanded="true"] { border-color: var(--dv3-accent); }
+
+/* SELF.RATING pending-state block */
+.dv3-pending {
+  display: flex; flex-direction: column; gap: 4px;
+  font-style: normal;
+}
+.dv3-pending-lead {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--dv3-text4); font-weight: 500;
+}
+.dv3-pending-eval {
+  font-size: 13px; line-height: 1.25;
+  color: var(--dv3-text); font-weight: 600;
+}
+.dv3-pending-pill {
+  align-self: flex-start; margin-top: 2px;
+  padding: 2px 7px;
+  border: 1px solid var(--dv3-border);
+  background: var(--dv3-bg);
+  font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+  color: var(--dv3-text3);
+}
+.dv3-pending-pill--draft     { color: var(--dv3-zone-warn); border-color: color-mix(in srgb, var(--dv3-zone-warn) 40%, var(--dv3-border)); }
+.dv3-pending-pill--submitted { color: var(--dv3-zone-up);   border-color: color-mix(in srgb, var(--dv3-zone-up)   40%, var(--dv3-border)); }
 `
