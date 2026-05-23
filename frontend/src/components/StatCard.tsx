@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { RATING_ZONES } from '../lib/ratingZones'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 // Maps a 0–100 score to a colour zone. null/undefined → neutral.
@@ -9,8 +10,8 @@ export function scoreZone(score: number | null | undefined): {
   if (score === null || score === undefined) {
     return { numClass: '', tagClass: '', labelKey: null }
   }
-  if (score >= 80) return { numClass: 'zone-up', tagClass: 'up', labelKey: 'dashboard.zoneUp' }
-  if (score >= 50) return { numClass: 'zone-warn', tagClass: 'warn', labelKey: 'dashboard.zoneNorm' }
+  if (score >= RATING_ZONES.up)   return { numClass: 'zone-up',   tagClass: 'up',   labelKey: 'dashboard.zoneUp' }
+  if (score >= RATING_ZONES.warn) return { numClass: 'zone-warn', tagClass: 'warn', labelKey: 'dashboard.zoneNorm' }
   return { numClass: 'zone-down', tagClass: 'down', labelKey: 'dashboard.zoneDown' }
 }
 
@@ -41,6 +42,7 @@ export interface StatCardProps {
   unit?: string
   label?: string
   emptyNote?: ReactNode
+  subtitle?: ReactNode
   zoneScore?: number | null
   gauge?: StatCardGauge
   delta?: StatCardDelta          // optional ▲/▼ trend chip
@@ -54,7 +56,7 @@ export interface StatCardProps {
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, emptyNote, zoneScore, gauge, delta,
+  unit, label, emptyNote, subtitle, zoneScore, gauge, delta,
   onClick, onHover, active, className,
 }: StatCardProps) {
   const { t } = useTranslation()
@@ -85,7 +87,15 @@ export function StatCard({
     <>
       <span className="dv3-card-tag">[ {id} ]</span>
       <div className="dv3-card-head">
-        <span className="dv3-card-title"><strong>{title}</strong></span>
+        <span className="dv3-card-title">
+          <strong>{title}</strong>
+          {onClick && (
+            <span
+              className={`dv3-card-chev${active ? ' dv3-card-chev--open' : ''}`}
+              aria-hidden="true"
+            >▸</span>
+          )}
+        </span>
         <span className="dv3-card-status">
           <i
             className={`dv3-dot${zone.tagClass ? ` dv3-dot--${zone.tagClass}` : ''}`}
@@ -139,6 +149,9 @@ export function StatCard({
               )}
             </div>
           </div>
+        )}
+        {!loading && !showEmptyNote && subtitle && (
+          <div className="dv3-kpi-subtitle">{subtitle}</div>
         )}
         {gauge && !showEmptyNote && (
           <div
@@ -237,6 +250,7 @@ export const STAT_CARD_CSS = `
   position: relative;
   display: flex; flex-direction: column;
   text-align: left;
+  min-height: 220px;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 220ms ease;
 }
 .dv3-card--zone-up   { --dv3-card-zone: var(--dv3-zone-up); }
@@ -297,7 +311,13 @@ export const STAT_CARD_CSS = `
   color: var(--dv3-text3);
 }
 .dv3-card-head strong { color: var(--dv3-text); font-weight: 600; letter-spacing: 0.14em; }
-.dv3-card-title { position: relative; padding-left: 0; }
+.dv3-card-title { position: relative; padding-left: 0; display: inline-flex; align-items: center; gap: 6px; }
+.dv3-card-chev {
+  font-size: 10px; color: var(--dv3-text4);
+  display: inline-block; transition: transform 180ms ease, color 180ms ease;
+}
+.dv3-card-btn:hover .dv3-card-chev { color: var(--dv3-card-zone); }
+.dv3-card-chev--open { transform: rotate(90deg); color: var(--dv3-card-zone); }
 .dv3-card-btn:hover .dv3-card-title strong::after,
 .dv3-card-btn:focus-visible .dv3-card-title strong::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px;
@@ -345,6 +365,11 @@ export const STAT_CARD_CSS = `
   font-style: italic; color: var(--dv3-text3);
   letter-spacing: 0.01em;
 }
+.dv3-kpi-subtitle {
+  margin-top: 6px;
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--dv3-text4); font-weight: 500;
+}
 
 /* zone KPI / tag */
 .dv3-kpi-num--zone-up   { color: var(--dv3-zone-up); }
@@ -375,15 +400,15 @@ export const STAT_CARD_CSS = `
 .dv3-delta--flat { color: var(--dv3-text3); }
 
 /* SVG GAUGE */
-.dv3-gauge { align-self: stretch; margin-top: 14px; font-size: 11px; color: var(--dv3-text3); }
+.dv3-gauge { align-self: stretch; margin-top: auto; padding-top: 14px; font-size: 11px; color: var(--dv3-text3); }
 .dv3-gauge-svg { display: block; width: 100%; height: 6px; overflow: visible; }
 .dv3-gauge-track { fill: var(--dv3-border); }
 .dv3-gauge-fill {
-  fill: var(--dv3-card-zone);
+  fill: var(--dv3-accent);
   transition: width 720ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .dv3-gauge-pin {
-  fill: var(--dv3-text);
+  fill: var(--dv3-card-zone);
   stroke: var(--dv3-card-zone); stroke-width: 0.4;
 }
 .dv3-gauge-meta {
@@ -424,6 +449,7 @@ export const STAT_CARD_CSS = `
 
 /* MOBILE */
 @media (max-width: 640px) {
+  .dv3-card { min-height: 180px; }
   .dv3-kpi { grid-template-columns: 1fr; gap: 10px; }
   .dv3-kpi-side { flex-direction: row; align-items: center; align-self: flex-start; }
   .dv3-kpi-num { font-size: 44px; }
