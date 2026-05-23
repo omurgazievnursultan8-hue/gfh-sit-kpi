@@ -114,6 +114,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/admin/org', labelKey: 'admin.orgStructure', icon: Building2, roles: ADMIN_ONLY },
           { to: '/admin/criteria', labelKey: 'admin.criteria', icon: ListChecks, roles: ADMIN_ONLY },
           { to: '/admin/periods', labelKey: 'admin.periods', icon: Calendar, roles: ADMIN_ONLY },
+          { to: '/admin/evaluations', labelKey: 'admin.evaluations', icon: FileCheck, roles: ADMIN_ONLY },
           { to: '/admin/delegations', labelKey: 'admin.delegations', icon: GitBranch, roles: ADMIN_ONLY },
         ],
       },

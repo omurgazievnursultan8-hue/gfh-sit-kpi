@@ -11,8 +11,10 @@ import kg.gfh.kpi.exception.ApiException;
 import kg.gfh.kpi.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -262,6 +264,29 @@ public class EvaluationService {
     public Page<EvaluationResponse> listForEmployee(Long employeeId, Pageable pageable) {
         return evaluationRepository.findByEvaluateeId(employeeId, pageable)
             .map(EvaluationResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EvaluationResponse> listForAdmin(
+        Long periodId, Long evaluateeId, Long evaluatorId,
+        EvaluationStatus status, String q, Pageable pageable
+    ) {
+        Specification<Evaluation> spec = (root, query, cb) -> {
+            List<Predicate> ps = new java.util.ArrayList<>();
+            if (periodId != null) ps.add(cb.equal(root.get("period").get("id"), periodId));
+            if (evaluateeId != null) ps.add(cb.equal(root.get("evaluatee").get("id"), evaluateeId));
+            if (evaluatorId != null) ps.add(cb.equal(root.get("evaluator").get("id"), evaluatorId));
+            if (status != null) ps.add(cb.equal(root.get("status"), status));
+            if (q != null && !q.isBlank()) {
+                String like = "%" + q.toLowerCase() + "%";
+                ps.add(cb.or(
+                    cb.like(cb.lower(root.get("evaluatee").get("fullName")), like),
+                    cb.like(cb.lower(root.get("evaluator").get("fullName")), like)
+                ));
+            }
+            return ps.isEmpty() ? cb.conjunction() : cb.and(ps.toArray(new Predicate[0]));
+        };
+        return evaluationRepository.findAll(spec, pageable).map(EvaluationResponse::from);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

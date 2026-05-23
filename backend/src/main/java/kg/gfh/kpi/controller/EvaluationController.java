@@ -121,6 +121,27 @@ public class EvaluationController {
         return new PeriodProgress(total, completed);
     }
 
+    @GetMapping("/evaluations")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<EvaluationResponse> listAll(
+            @RequestParam(required = false) Long periodId,
+            @RequestParam(required = false) Long evaluateeId,
+            @RequestParam(required = false) Long evaluatorId,
+            @RequestParam(required = false) EvaluationStatus status,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        String[] parts = sort.split(",", 2);
+        String field = parts[0];
+        org.springframework.data.domain.Sort.Direction dir =
+            parts.length > 1 && parts[1].equalsIgnoreCase("asc")
+                ? org.springframework.data.domain.Sort.Direction.ASC
+                : org.springframework.data.domain.Sort.Direction.DESC;
+        return evaluationService.listForAdmin(periodId, evaluateeId, evaluatorId, status, q,
+            PageRequest.of(page, size, org.springframework.data.domain.Sort.by(dir, field)));
+    }
+
     @GetMapping("/evaluations/my-tasks")
     public Page<EvaluationResponse> myPendingEvaluations(
             Authentication auth,

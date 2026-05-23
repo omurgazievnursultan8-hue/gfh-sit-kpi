@@ -119,6 +119,7 @@ export function AdminDashboardPage() {
             className="dv3-col-3"
             title="EVAL.QUEUE" id="E01" loading={loading}
             value={totalEvals} label="оценок"
+            onClick={() => navigate('/admin/evaluations')}
             delta={{ value: evalsDelta }}
             breakdown={[
               { label: 'в работе',  value: pendingEvals,   tone: 'warn', delta: evalsPendingDelta },

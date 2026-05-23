@@ -31,7 +31,20 @@ export interface PageResponse<T> {
   size: number
 }
 
+export interface AdminListParams {
+  periodId?: number
+  evaluateeId?: number
+  evaluatorId?: number
+  status?: EvaluationStatus
+  q?: string
+  page?: number
+  size?: number
+  sort?: string
+}
+
 export const evaluationsApi = {
+  adminList: (params: AdminListParams = {}) =>
+    api.get<PageResponse<Evaluation>>('/evaluations', { params }).then(r => r.data),
   myTasks: (page = 0, size = 20) =>
     api.get<PageResponse<Evaluation>>('/evaluations/my-tasks', { params: { page, size } }).then(r => r.data),
   myHistory: (page = 0, size = 20) =>
