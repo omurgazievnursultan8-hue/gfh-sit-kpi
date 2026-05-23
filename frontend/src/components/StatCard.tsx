@@ -25,7 +25,7 @@ export interface StatCardGauge {
   current?: ReactNode            // 'marker' variant pin value
   ariaLabel?: string             // SR description; defaults to "<pct>%"
   thresholds?: { at: number; zone: 'warn' | 'up' | 'down' }[]  // marker only
-  zoneLabels?: { down: ReactNode; warn: ReactNode; up: ReactNode }  // marker only — replaces left/center/right
+  zoneLabels?: { down?: ReactNode; warn?: ReactNode; up?: ReactNode }  // marker only — replaces left/center/right; omit a field to hide that label
 }
 
 export interface StatCardDelta {
@@ -129,11 +129,6 @@ export function StatCard({
               )}
             </div>
             <div className="dv3-kpi-side">
-              {!loading && zone.labelKey && (
-                <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
-                  {t(zone.labelKey)}
-                </span>
-              )}
               {!loading && delta && deltaDir && (
                 <span
                   className={`dv3-delta dv3-delta--${deltaDir}`}
@@ -192,9 +187,15 @@ export function StatCard({
               <div className="dv3-gauge-meta dv3-gauge-meta--mark">
                 {gauge.zoneLabels ? (
                   <div className="dv3-gauge-zones">
-                    <span className="dv3-gauge-zone dv3-gauge-zone--down">{gauge.zoneLabels.down}</span>
-                    <span className="dv3-gauge-zone dv3-gauge-zone--warn">{gauge.zoneLabels.warn}</span>
-                    <span className="dv3-gauge-zone dv3-gauge-zone--up">{gauge.zoneLabels.up}</span>
+                    {gauge.zoneLabels.down !== undefined && (
+                      <span className="dv3-gauge-zone dv3-gauge-zone--down">{gauge.zoneLabels.down}</span>
+                    )}
+                    {gauge.zoneLabels.warn !== undefined && (
+                      <span className="dv3-gauge-zone dv3-gauge-zone--warn">{gauge.zoneLabels.warn}</span>
+                    )}
+                    {gauge.zoneLabels.up !== undefined && (
+                      <span className="dv3-gauge-zone dv3-gauge-zone--up">{gauge.zoneLabels.up}</span>
+                    )}
                   </div>
                 ) : (
                   <>

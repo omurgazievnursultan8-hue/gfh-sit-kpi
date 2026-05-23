@@ -239,16 +239,18 @@ export function DashboardPage() {
             gauge={ratingState === 'scored' ? {
               pct: scorePct, variant: 'marker',
               left: '0', right: '100',
+              current: t(
+                periodScore! >= RATING_ZONES.up
+                  ? 'dashboard.zoneUp'
+                  : periodScore! >= RATING_ZONES.warn
+                    ? 'dashboard.zoneNorm'
+                    : 'dashboard.zoneDown'
+              ),
               ariaLabel: t('dashboard.ratingAria', { score: scoreDisplay }),
               thresholds: [
                 { at: RATING_ZONES.warn, zone: 'warn' },
                 { at: RATING_ZONES.up, zone: 'up' },
               ],
-              zoneLabels: {
-                down: t('dashboard.zoneDown'),
-                warn: t('dashboard.zoneNorm'),
-                up: t('dashboard.zoneUp'),
-              },
             } : undefined}
             delta={ratingState === 'scored' && delta !== null && !isAllPeriods ? {
               value: delta, label: t('dashboard.vsPrev'),
