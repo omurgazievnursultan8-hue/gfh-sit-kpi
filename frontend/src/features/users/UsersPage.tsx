@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react
 import { useTranslation } from 'react-i18next'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { UserFormModal } from './components/UserFormModal'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
@@ -86,16 +85,6 @@ export function UsersPage() {
     const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
     updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
   }
-
-  /* ── derived stats ─────────────────────────────────────────────────────── */
-  const PLACEHOLDER = '··'
-  const total = users.length
-  const activeCount = useMemo(() => users.filter(u => u.isActive).length, [users])
-  const inactiveCount = total - activeCount
-  const privilegedCount = useMemo(
-    () => users.filter(u => ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT'].includes(u.role)).length,
-    [users],
-  )
 
   const drawerUser = drawerId != null ? users.find(u => u.id === drawerId) ?? null : null
 
@@ -262,56 +251,9 @@ export function UsersPage() {
     <>
       <div className="dv3-root">
         <style>{DASHBOARD_CSS}</style>
-        <style>{STAT_CARD_CSS}</style>
 
         <div className="dv3-terminal">
-          {/* STAT GRID */}
-          <div className="dv3-grid">
-            <StatCard
-              className="dv3-col-3"
-              title="USERS.TOTAL" id="U01" loading={loading}
-              value={total} label="сотрудников"
-              breakdown={[
-                { label: 'активны',   value: activeCount,   tone: 'up' },
-                { label: 'неактивны', value: inactiveCount, tone: 'neutral' },
-              ]}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="ACTIVE" id="A01" loading={loading}
-              value={activeCount} label="активны"
-              gauge={{
-                pct: total > 0 ? activeCount / total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{total > 0 ? Math.round((activeCount / total) * 100) : 0}%</strong> всех</>,
-                right: total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="PRIVILEGED" id="R01" loading={loading}
-              value={privilegedCount} label="админы / руководители"
-              gauge={{
-                pct: total > 0 ? privilegedCount / total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{total > 0 ? Math.round((privilegedCount / total) * 100) : 0}%</strong> всех</>,
-                right: total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="INACTIVE" id="X01" loading={loading}
-              value={inactiveCount} label="неактивны"
-              gauge={{
-                pct: total > 0 ? inactiveCount / total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{total > 0 ? Math.round((inactiveCount / total) * 100) : 0}%</strong> всех</>,
-                right: total,
-              }}
-            />
-          </div>
-
-          <div style={{ marginTop: 24 }}>
+          <div>
             <DataPanel<User>
           mode="client"
           columns={columns}
