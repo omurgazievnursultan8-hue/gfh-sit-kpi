@@ -128,9 +128,9 @@ export function DashboardPage() {
   const periodScore = isAllPeriods
     ? (analytics?.currentScore ?? null)
     : (analytics?.history.find(h => h.periodId === selectedPeriod)?.score ?? null)
-  // Display keeps 1 decimal so the value matches its zone color near boundaries
-  // (e.g. 49.6 reads as warn, not down). Raw score drives zone classification.
-  const scoreDisplay = periodScore !== null ? periodScore.toFixed(1) : null
+  // Display rounds to a whole number; zone classification uses raw score so
+  // borderline values (e.g. 49.6) still resolve to the correct zone.
+  const scoreDisplay = periodScore !== null ? Math.round(periodScore) : null
   const scorePct = periodScore !== null
     ? Math.min(1, Math.max(0, periodScore / 100))
     : 0
@@ -150,15 +150,6 @@ export function DashboardPage() {
   const delta = periodScore !== null && prevScore !== null
     ? Math.round(periodScore - prevScore)
     : null
-
-  // Sparkline points — chronological scores (oldest → newest), capped to last 12
-  // so dense histories stay legible at 80×24px.
-  const sparkPoints = useMemo(() => {
-    const hist = analytics?.history ?? []
-    if (hist.length < 2) return null
-    const chrono = [...hist].sort((a, b) => a.startDate.localeCompare(b.startDate))
-    return chrono.slice(-12).map(h => h.score)
-  }, [analytics])
 
   // Period caption for SELF.RATING — "May 2026" / "all periods".
   const periodLabel = useMemo(() => {
@@ -261,10 +252,6 @@ export function DashboardPage() {
             } : undefined}
             delta={ratingState === 'scored' && delta !== null && !isAllPeriods ? {
               value: delta, label: t('dashboard.vsPrev'),
-            } : undefined}
-            sparkline={ratingState === 'scored' && sparkPoints ? {
-              points: sparkPoints,
-              ariaLabel: t('dashboard.ratingTrendAria', { count: sparkPoints.length }),
             } : undefined}
           />
 

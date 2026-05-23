@@ -34,11 +34,6 @@ export interface StatCardDelta {
   label?: string                 // e.g. 'vs Q1' — small caption below chip
 }
 
-export interface StatCardSparkline {
-  points: number[]               // chronological (oldest → newest), 0..100 domain
-  ariaLabel?: string
-}
-
 export interface StatCardProps {
   title: string
   id: string
@@ -53,7 +48,6 @@ export interface StatCardProps {
   zoneScore?: number | null
   gauge?: StatCardGauge
   delta?: StatCardDelta          // optional ▲/▼ trend chip
-  sparkline?: StatCardSparkline  // optional mini trend line, rendered above delta
   onClick?: () => void
   onHover?: () => void
   active?: boolean
@@ -65,7 +59,7 @@ export interface StatCardProps {
 export function StatCard({
   title, id, loading = false, value,
   placeholder = '··', emptyValue = '—',
-  unit, label, emptyNote, subtitle, zoneScore, gauge, delta, sparkline,
+  unit, label, emptyNote, subtitle, zoneScore, gauge, delta,
   onClick, onHover, active, className, controls,
 }: StatCardProps) {
   const { t } = useTranslation()
@@ -91,21 +85,6 @@ export function StatCard({
 
   const gaugePct = gauge ? Math.max(0, Math.min(1, gauge.pct)) : 0
   const gaugeWidthPct = Math.round(gaugePct * 100)
-
-  // Sparkline — render only with ≥2 chronological points. Domain assumed 0..100.
-  const sparkPoints = sparkline && sparkline.points.length >= 2
-    ? sparkline.points.map((v, i, arr) => {
-        const x = (i / (arr.length - 1)) * 100
-        const y = 28 - Math.max(0, Math.min(100, v)) / 100 * 26
-        return `${x.toFixed(2)},${y.toFixed(2)}`
-      }).join(' ')
-    : null
-  const sparkLast = sparkline && sparkline.points.length >= 2
-    ? {
-        x: 100,
-        y: 28 - Math.max(0, Math.min(100, sparkline.points[sparkline.points.length - 1])) / 100 * 26,
-      }
-    : null
 
   const body = (
     <>
@@ -150,27 +129,6 @@ export function StatCard({
               )}
             </div>
             <div className="dv3-kpi-side">
-              {!loading && sparkPoints && sparkLast && (
-                <svg
-                  className="dv3-spark"
-                  viewBox="0 0 100 30"
-                  preserveAspectRatio="none"
-                  role="img"
-                  aria-label={sparkline?.ariaLabel ?? 'trend'}
-                >
-                  <polyline
-                    className="dv3-spark-line"
-                    points={sparkPoints}
-                    fill="none"
-                  />
-                  <circle
-                    className="dv3-spark-dot"
-                    cx={sparkLast.x}
-                    cy={sparkLast.y}
-                    r="2"
-                  />
-                </svg>
-              )}
               {!loading && zone.labelKey && (
                 <span className={`dv3-zone-tag dv3-zone-tag--${zone.tagClass}`}>
                   {t(zone.labelKey)}
@@ -462,27 +420,6 @@ export const STAT_CARD_CSS = `
 .dv3-delta--up   { color: var(--dv3-zone-up);   border-color: color-mix(in srgb, var(--dv3-zone-up)   40%, var(--dv3-border)); }
 .dv3-delta--down { color: var(--dv3-zone-down); border-color: color-mix(in srgb, var(--dv3-zone-down) 40%, var(--dv3-border)); }
 .dv3-delta--flat { color: var(--dv3-text3); }
-
-/* SPARKLINE */
-.dv3-spark {
-  display: block;
-  width: 80px; height: 24px;
-  overflow: visible;
-}
-.dv3-spark-line {
-  stroke: var(--dv3-card-zone);
-  stroke-width: 1.4;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.85;
-}
-.dv3-spark-dot {
-  fill: var(--dv3-card-zone);
-}
-@media (max-width: 640px) {
-  .dv3-spark { width: 64px; height: 20px; }
-}
 
 /* SVG GAUGE */
 .dv3-gauge { align-self: stretch; margin-top: auto; padding-top: 14px; font-size: 11px; color: var(--dv3-text3); }

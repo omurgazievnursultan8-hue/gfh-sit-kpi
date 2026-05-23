@@ -524,7 +524,6 @@
     "ratingNone": "Нет оценки за период",
     "vsPrev": "vs пред.",
     "ratingAria": "Рейтинг {{score}} из 100",
-    "ratingTrendAria": "Тренд за последние {{count}} периодов",
     "allPeriods": "Все периоды",
     "evalCyclePanel": {
       "incompleteTitle": "НЕЗАВЕРШЁННЫЕ ОЦЕНКИ",

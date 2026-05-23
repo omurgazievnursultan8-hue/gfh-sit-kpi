@@ -412,7 +412,6 @@
     "ratingNone": "Мезгил үчүн баа жок",
     "vsPrev": "өткөнгө",
     "ratingAria": "Рейтинг 100дөн {{score}}",
-    "ratingTrendAria": "Акыркы {{count}} мезгилдин тренди",
     "allPeriods": "Бардык мезгилдер",
     "evalCyclePanel": {
       "incompleteTitle": "АЯКТАЛБАГАН БААЛООЛОР",
