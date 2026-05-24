@@ -1,13 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import {
-  ChevronLeft, ChevronRight, Plus, Download, X, Trash2, Pencil, CalendarDays,
+  ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil,
 } from 'lucide-react'
 import { RootState } from '../../app/store'
-import { DataTable, type Column } from '../../components/DataTable'
+import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { CalendarDay, DayType, calendarApi } from './calendarApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
 
 const MONTHS_RU = [
@@ -53,7 +52,6 @@ function monthWeeks(year: number, month: number) {
   }
   const weeks: typeof cells[] = []
   for (let w = 0; w < 6; w++) weeks.push(cells.slice(w * 7, w * 7 + 7))
-  // drop a trailing week with no in-month days
   while (weeks.length > 4 && weeks[weeks.length - 1].every(c => !c.inMonth)) weeks.pop()
   return weeks
 }
@@ -193,15 +191,17 @@ export function CalendarPage() {
   const currentYear = today.getFullYear()
 
   const [year, setYear] = useState(currentYear)
-  const [focus, setFocus] = useState(() =>
-    Math.min(11, Math.max(2, today.getMonth() + 1)))
+  const [focus, setFocus] = useState(() => today.getMonth() + 1)
   const [days, setDays] = useState<CalendarDay[]>([])
   const [loading, setLoading] = useState(true)
-  const [importing, setImporting] = useState(false)
   const [saving, setSaving] = useState(false)
   const [draft, setDraft] = useState<DraftDay | null>(null)
+  const [yearOffset, setYearOffset] = useState(0)
 
-  const yearTabs = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]
+  const yearTabs = useMemo(() => {
+    const base = currentYear + yearOffset
+    return [base - 2, base - 1, base, base + 1]
+  }, [currentYear, yearOffset])
 
   const loadDays = useCallback(async (y: number) => {
     setLoading(true)
@@ -237,40 +237,54 @@ export function CalendarPage() {
     [days],
   )
 
-  // Year-wide totals for the hero / StatCards.
-  const yearStats = useMemo(() => {
-    let working = 0, holidays = 0
-    for (let month = 1; month <= 12; month++) {
-      const dim = new Date(year, month, 0).getDate()
-      for (let day = 1; day <= dim; day++) {
-        const date = new Date(year, month - 1, day)
-        const entry = entryMap.get(dayKey(date))
-        if (isWorkingDay(date, entry)) working++
-        if (entry?.dayType === 'HOLIDAY') holidays++
-      }
-    }
-    return { working, holidays, special: days.length }
-  }, [year, entryMap, days.length])
-
-  // Live clock for the hero meta-bar.
-  const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
+  const specialSearchText = useCallback((d: CalendarDay) => {
+    const dt = new Date(d.day + 'T00:00:00')
+    return [
+      d.day,
+      dt.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      TYPE_META[d.dayType].label,
+      d.descriptionRu ?? '',
+      d.descriptionKg ?? '',
+    ].join(' ')
   }, [])
-  const hh = pad(now.getHours())
-  const mm = pad(now.getMinutes())
-  const datePart = now.toLocaleDateString('ru-RU', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
+
+  const specialFilters = useMemo<FilterDef[]>(() => [
+    {
+      key: 'type',
+      label: 'Тип',
+      type: 'select',
+      options: [
+        { value: 'HOLIDAY', label: 'Праздник' },
+        { value: 'WORKING', label: 'Рабочий день' },
+        { value: 'DAY_OFF', label: 'Выходной' },
+      ],
+    },
+  ], [])
+
+  const specialClientFilter = useCallback(
+    (d: CalendarDay, v: Record<string, string>) => !v.type || d.dayType === v.type,
+    [],
+  )
+
+  const specialComparator = useCallback((key: string) => (a: CalendarDay, b: CalendarDay) => {
+    switch (key) {
+      case 'date': return a.day.localeCompare(b.day)
+      case 'weekday': return new Date(a.day + 'T00:00:00').getDay() - new Date(b.day + 'T00:00:00').getDay()
+      case 'type': return TYPE_META[a.dayType].label.localeCompare(TYPE_META[b.dayType].label, 'ru')
+      case 'descriptionRu': return (a.descriptionRu ?? '').localeCompare(b.descriptionRu ?? '', 'ru')
+      case 'descriptionKg': return (a.descriptionKg ?? '').localeCompare(b.descriptionKg ?? '', 'ru')
+      default: return 0
+    }
+  }, [])
 
   const specialColumns = useMemo<Column<CalendarDay>[]>(() => {
     const cols: Column<CalendarDay>[] = [
       {
         key: 'date',
         header: 'Дата',
+        sortable: true,
         render: d => (
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}>
+          <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
             {new Date(d.day + 'T00:00:00').toLocaleDateString('ru-RU', {
               day: '2-digit', month: '2-digit', year: 'numeric',
             })}
@@ -280,6 +294,7 @@ export function CalendarPage() {
       {
         key: 'weekday',
         header: 'День недели',
+        sortable: true,
         render: d => (
           <span style={{ color: 'var(--muted)' }}>
             {WD_SHORT[new Date(d.day + 'T00:00:00').getDay()]}
@@ -289,6 +304,7 @@ export function CalendarPage() {
       {
         key: 'type',
         header: 'Тип',
+        sortable: true,
         render: d => {
           const meta = TYPE_META[d.dayType]
           return <span className={`pc-chip ${meta.cls}`}>{meta.label}</span>
@@ -377,181 +393,201 @@ export function CalendarPage() {
     }
   }
 
-  const runImport = async () => {
-    setImporting(true)
-    try {
-      setDays(await calendarApi.importHolidays(year))
-    } finally {
-      setImporting(false)
-    }
+  /* ── Focus month grid ─────────────────────────────────────────── */
+  const focusWeeks = useMemo(() => monthWeeks(year, focus), [year, focus])
+  const focusStats = useMemo(() => monthStats(focus), [focus, monthStats])
+
+  /* ── Keyboard navigation in focus month ─────────────────────── */
+  const [cursorKey, setCursorKey] = useState<string | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  const moveCursor = (delta: number) => {
+    const base = cursorKey ? new Date(cursorKey + 'T00:00:00') : new Date(year, focus - 1, 1)
+    const next = new Date(base)
+    next.setDate(next.getDate() + delta)
+    if (next.getFullYear() !== year) return
+    setFocus(next.getMonth() + 1)
+    setCursorKey(dayKey(next))
   }
 
-  const visibleMonths = [focus - 1, focus, focus + 1]
+  const onGridKey = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowRight': e.preventDefault(); moveCursor(1); break
+      case 'ArrowLeft':  e.preventDefault(); moveCursor(-1); break
+      case 'ArrowDown':  e.preventDefault(); moveCursor(7); break
+      case 'ArrowUp':    e.preventDefault(); moveCursor(-7); break
+      case 'Enter':
+      case ' ': {
+        if (!cursorKey) return
+        e.preventDefault()
+        openDay(new Date(cursorKey + 'T00:00:00'))
+        break
+      }
+    }
+  }
 
   return (
     <div className="dv3-root pc-root">
       <style>{DASHBOARD_CSS}</style>
-      <style>{STAT_CARD_CSS}</style>
       <style>{DV3_FORM_CSS}</style>
       <style>{CSS}</style>
 
-      <div className="dv3-terminal">
+      <div className="pc-shell">
 
-        {/* TOOLBAR — year switcher + admin actions (formerly in the header card) */}
-        <div className="pc-toolbar">
-          <span className="pc-years" role="group" aria-label="Год">
-            {yearTabs.map(y => (
-              <button
-                key={y}
-                className={y === year ? 'is-active' : ''}
-                onClick={() => setYear(y)}
-                aria-pressed={y === year}
-              >
-                {y}
-              </button>
+        {/* FOCUS MONTH */}
+        <section className={`pc-focus ${loading ? 'is-loading' : ''}`}>
+          <div className="pc-yearbar">
+            <button
+              className="pc-year-shift"
+              onClick={() => setYearOffset(o => o - 1)}
+              aria-label="Раньше"
+            >
+              <ChevronLeft size={14} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+            <div className="pc-years" role="group" aria-label="Год">
+              {yearTabs.map(y => (
+                <button
+                  key={y}
+                  className={y === year ? 'is-active' : ''}
+                  onClick={() => setYear(y)}
+                  aria-pressed={y === year}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
+            <button
+              className="pc-year-shift"
+              onClick={() => setYearOffset(o => o + 1)}
+              aria-label="Позже"
+            >
+              <ChevronRight size={14} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+            <div className="pc-legend" role="group" aria-label="Легенда">
+              <span className="pc-leg"><i className="sw workday" />Рабочий</span>
+              <span className="pc-leg"><i className="sw weekend" />Выходной</span>
+              <span className="pc-leg"><i className="sw holiday" />Праздник</span>
+              <span className="pc-leg"><i className="sw shift" />Перенос</span>
+            </div>
+          </div>
+          <header className="pc-focus-head">
+            <button
+              className="pc-focus-nav"
+              onClick={() => setFocus(f => Math.max(1, f - 1))}
+              disabled={focus <= 1}
+              aria-label="Предыдущий месяц"
+            >
+              <ChevronLeft size={16} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+            <div className="pc-focus-title">
+              <h2>{MONTHS_RU[focus - 1]} {year}</h2>
+              {year === currentYear && focus === today.getMonth() + 1 && (
+                <span className="pc-tag">текущий</span>
+              )}
+            </div>
+            <div className="pc-focus-meter">
+              <span><b>{focusStats.working}</b> раб.</span>
+              <span><b>{focusStats.holidays}</b> празд.</span>
+            </div>
+            <button
+              className="pc-focus-nav"
+              onClick={() => setFocus(f => Math.min(12, f + 1))}
+              disabled={focus >= 12}
+              aria-label="Следующий месяц"
+            >
+              <ChevronRight size={16} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </header>
+
+          <div
+            ref={gridRef}
+            className="pc-focus-grid"
+            role="grid"
+            tabIndex={0}
+            onKeyDown={onGridKey}
+            aria-label={`${MONTHS_RU[focus - 1]} ${year}`}
+          >
+            {WEEKDAYS_RU.map((w, i) => (
+              <div className={`pc-wd ${i >= 5 ? 'is-wknd' : ''}`} key={w}>{w}</div>
             ))}
-          </span>
-          {isAdmin && (
-            <span className="pc-head-actions">
-              <button className="dv3-btn" onClick={runImport} disabled={importing || loading}>
-                <Download size={15} strokeWidth={2} aria-hidden="true" />
-                {importing ? 'Импорт…' : 'Импорт'}
-              </button>
-              <button className="dv3-btn dv3-btn--primary" onClick={openNew}>
+            {focusWeeks.flat().map(({ date, inMonth }, i) => {
+              const key = dayKey(date)
+              const entry = entryMap.get(key)
+              const st = statusOf(date, entry)
+              const isToday = key === todayKey
+              const isCursor = key === cursorKey
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  role="gridcell"
+                  className={[
+                    'pc-day', `st-${st.toLowerCase()}`,
+                    inMonth ? '' : 'is-out',
+                    isToday ? 'is-today' : '',
+                    isCursor ? 'is-cursor' : '',
+                    isAdmin && inMonth ? 'is-clickable' : '',
+                  ].join(' ')}
+                  onClick={() => inMonth && openDay(date)}
+                  disabled={!isAdmin || !inMonth}
+                  aria-label={`${date.getDate()} ${MONTHS_RU[date.getMonth()]}${
+                    entry?.descriptionRu ? ` — ${entry.descriptionRu}` : ''
+                  }`}
+                  aria-current={isToday ? 'date' : undefined}
+                >
+                  <span className="pc-day-num">
+                    <span className="pc-day-num-inner">{date.getDate()}</span>
+                  </span>
+                  {inMonth && entry?.descriptionRu && (
+                    <span className="pc-day-label" title={entry.descriptionRu}>
+                      <i className="pc-day-mark" aria-hidden="true" />
+                      <span className="pc-day-text">{entry.descriptionRu}</span>
+                    </span>
+                  )}
+                  {inMonth && entry && !entry.descriptionRu && (
+                    <span className="pc-day-label pc-day-label--bare" aria-hidden="true">
+                      <i className="pc-day-mark" />
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* SPECIAL DAYS PANEL */}
+        <section className="pc-special-panel">
+          <div className="pc-special-head">
+            <h2>Особые дни {year}</h2>
+            <span className="pc-special-count">{specialDays.length}</span>
+          </div>
+          <DataPanel<CalendarDay>
+            mode="client"
+            columns={specialColumns}
+            rows={specialDays}
+            rowKey={d => d.id}
+            loading={loading}
+            caption={`Особые дни ${year}`}
+            empty={`Нет особых дней за ${year} год.${isAdmin ? ' Нажмите «Импорт» или «Добавить день».' : ''}`}
+            searchable
+            searchText={specialSearchText}
+            searchPlaceholder="Поиск по дате или описанию…"
+            filters={specialFilters}
+            clientFilter={specialClientFilter}
+            comparator={specialComparator}
+            defaultSort={{ key: 'date', dir: 'asc' }}
+            panelStorageKey="calendar:special-days"
+            columnConfig
+            pageSize={10}
+            toolbarActions={isAdmin && (
+              <button className="pc-btn pc-btn--primary" onClick={openNew}>
                 <Plus size={15} strokeWidth={2.4} aria-hidden="true" />
                 Добавить день
               </button>
-            </span>
-          )}
-        </div>
-
-        {/* STAT GRID */}
-        <div className="dv3-grid">
-          <StatCard
-            className="dv3-col-4"
-            title="WORKING.DAYS" id="W01" loading={loading}
-            value={yearStats.working} label={`раб. ${plural(yearStats.working, ['день', 'дня', 'дней'])} ${year}`}
+            )}
           />
-          <StatCard
-            className="dv3-col-4"
-            title="HOLIDAYS" id="H01" loading={loading}
-            value={yearStats.holidays} label="праздников"
-          />
-          <StatCard
-            className="dv3-col-4"
-            title="SPECIAL.DAYS" id="S01" loading={loading}
-            value={yearStats.special} label="особых дней"
-          />
-        </div>
-      </div>
+        </section>
 
-      <div className="pc-below">
-      {/* LEGEND */}
-      <div className="pc-legend">
-        <span className="pc-leg"><i className="sw workday" />Рабочий день</span>
-        <span className="pc-leg"><i className="sw weekend" />Выходной</span>
-        <span className="pc-leg"><i className="sw holiday" />Праздник</span>
-        <span className="pc-leg"><i className="sw shift" />Перенос</span>
-        <div className="pc-monthnav" role="group" aria-label="Листать месяцы">
-          <button onClick={() => setFocus(f => Math.max(2, f - 1))}
-            disabled={focus <= 2} aria-label="Предыдущие месяцы">
-            <ChevronLeft size={16} strokeWidth={2.2} aria-hidden="true" />
-          </button>
-          <button onClick={() => setFocus(f => Math.min(11, f + 1))}
-            disabled={focus >= 11} aria-label="Следующие месяцы">
-            <ChevronRight size={16} strokeWidth={2.2} aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-
-      {/* MONTH STRIP */}
-      {loading ? (
-        <div className="pc-strip">
-          {[0, 1, 2].map(i => <div className="pc-month pc-skeleton" key={i} aria-hidden="true" />)}
-        </div>
-      ) : (
-        <div className="pc-strip">
-          {visibleMonths.map(month => {
-            const isFocus = month === focus
-            const isCurrentMonth = year === currentYear && month === today.getMonth() + 1
-            const stats = monthStats(month)
-            const weeks = monthWeeks(year, month)
-            return (
-              <section className={`pc-month ${isFocus ? 'is-focus' : ''}`} key={month}>
-                <div className="pc-month-head">
-                  <div className="pc-month-title">
-                    <h2>{MONTHS_RU[month - 1]} {year}</h2>
-                    {isCurrentMonth && <span className="pc-tag">текущий</span>}
-                  </div>
-                  <div className="pc-month-stat">
-                    {stats.working} раб. {plural(stats.working, ['день', 'дня', 'дней'])}
-                    <span aria-hidden="true"> · </span>
-                    {stats.holidays} {plural(stats.holidays, ['праздник', 'праздника', 'праздников'])}
-                  </div>
-                </div>
-
-                <div className="pc-grid">
-                  {WEEKDAYS_RU.map((w, i) => (
-                    <div className={`pc-wd ${i >= 5 ? 'is-wknd' : ''}`} key={w}>{w}</div>
-                  ))}
-                  {weeks.flat().map(({ date, inMonth }, i) => {
-                    const key = dayKey(date)
-                    const entry = entryMap.get(key)
-                    const st = statusOf(date, entry)
-                    const isToday = key === todayKey
-                    return (
-                      <button
-                        key={i}
-                        type="button"
-                        className={[
-                          'pc-day', `st-${st.toLowerCase()}`,
-                          inMonth ? '' : 'is-out',
-                          isToday ? 'is-today' : '',
-                          isAdmin ? 'is-clickable' : '',
-                        ].join(' ')}
-                        onClick={() => inMonth && openDay(date)}
-                        disabled={!isAdmin || !inMonth}
-                        aria-label={`${date.getDate()} ${MONTHS_RU[date.getMonth()]}${
-                          entry?.descriptionRu ? ` — ${entry.descriptionRu}` : ''
-                        }`}
-                      >
-                        <span className="pc-day-num">{date.getDate()}</span>
-                        {isToday && <span className="pc-day-today">сегодня</span>}
-                        {inMonth && entry?.descriptionRu && (
-                          <span className="pc-day-label">{entry.descriptionRu}</span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-            )
-          })}
-        </div>
-      )}
-
-      {/* SPECIAL DAYS TABLE */}
-      <section className="pc-special">
-        <div className="pc-special-head">
-          <h2>Особые дни {year}</h2>
-          <span className="pc-special-count">{specialDays.length}</span>
-        </div>
-        <DataTable<CalendarDay>
-          columns={specialColumns}
-          rows={specialDays}
-          rowKey={d => d.id}
-          caption={`Особые дни ${year}`}
-          loading={loading}
-          empty={
-            <div className="pc-special-empty">
-              <CalendarDays size={20} strokeWidth={1.6} aria-hidden="true" />
-              Нет особых дней за {year} год.
-              {isAdmin && ' Нажмите «Импорт» или «Добавить день».'}
-            </div>
-          }
-          totalCount={specialDays.length}
-        />
-      </section>
       </div>
 
       {draft && (
@@ -570,251 +606,369 @@ export function CalendarPage() {
 /* ── Scoped styles ────────────────────────────────────────────────── */
 
 const CSS = `
+/* ── Modern minimal calendar — Linear/Vercel-inspired ───────────── */
 .pc-root {
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+  --pc-radius:    14px;
+  --pc-radius-sm: 10px;
+  --pc-radius-xs: 8px;
+  --pc-shadow-sm: 0 1px 2px rgba(0,0,0,.18);
+  --pc-shadow-md: 0 4px 14px -4px rgba(0,0,0,.35), 0 2px 4px rgba(0,0,0,.18);
+  --pc-shadow-lg: 0 20px 50px -12px rgba(0,0,0,.55);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   color: var(--dv3-text);
 }
-.pc-below { max-width: 1280px; margin: 0 auto; padding: 0 32px 48px; }
-@media (max-width: 640px) { .pc-below { padding: 0 12px 24px; } }
+.pc-shell {
+  max-width: 1240px; margin: 0 auto; padding: 28px 28px 56px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+@media (max-width: 640px) { .pc-shell { padding: 16px 14px 32px; gap: 14px; } }
 
-/* TOOLBAR — year switcher + admin actions */
-.pc-toolbar {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-.pc-toolbar .pc-head-actions { margin-left: auto; }
-.pc-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pc-years {
-  display: flex; gap: 2px;
-  background: var(--dv3-bg3); border: 1px solid var(--dv3-border2);
-  padding: 2px;
-}
-.pc-years button {
-  font-family: inherit;
-  font-size: 11px; font-weight: 600; color: var(--dv3-text3);
-  border: none; background: transparent; cursor: pointer;
-  padding: 5px 10px; letter-spacing: 0.04em;
-  transition: color .14s ease, background .14s ease;
-}
-.pc-years button:hover { color: var(--dv3-text); }
-.pc-years button.is-active { background: var(--dv3-accent); color: var(--dv3-bg); }
-
-/* LEGEND */
-.pc-legend {
-  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  margin: 24px 0 16px;
-  font-size: 11px; letter-spacing: 0.04em;
-}
-.pc-leg {
+/* BUTTONS */
+.pc-btn {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11px; color: var(--dv3-text3); text-transform: uppercase;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  color: var(--dv3-text); cursor: pointer;
+  background: var(--dv3-bg2); border: 1px solid var(--dv3-border2);
+  padding: 8px 14px; border-radius: var(--pc-radius-sm);
+  box-shadow: var(--pc-shadow-sm);
+  transition: background .14s, border-color .14s, transform .08s, box-shadow .14s;
 }
-.pc-leg .sw {
-  width: 12px; height: 12px;
-  border: 1px solid var(--dv3-border2);
+.pc-btn:hover { background: var(--dv3-bg3); border-color: var(--dv3-border-hi); }
+.pc-btn:active { transform: translateY(1px); }
+.pc-btn:disabled { opacity: .55; cursor: default; }
+.pc-btn--primary {
+  background: var(--dv3-accent); color: var(--dv3-bg);
+  border-color: var(--dv3-accent);
+  box-shadow: var(--pc-shadow-md);
 }
-.sw.workday { background: var(--dv3-bg3); }
-.sw.weekend { background: var(--dv3-bg2); border-color: var(--dv3-border-hi); }
-.sw.holiday { background: color-mix(in srgb, var(--dv3-zone-down) 22%, var(--dv3-bg2)); border-color: var(--dv3-zone-down); }
-.sw.shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 22%, var(--dv3-bg2)); border-color: var(--dv3-zone-warn); }
-.pc-monthnav { display: flex; gap: 3px; margin-left: auto; }
-.pc-monthnav button {
-  display: grid; place-items: center;
-  width: 30px; height: 30px;
-  border: 1px solid var(--dv3-border2);
-  background: var(--dv3-bg3); color: var(--dv3-text3); cursor: pointer;
-  transition: border-color .14s ease, color .14s ease;
+.pc-btn--primary:hover {
+  background: color-mix(in srgb, var(--dv3-accent) 88%, white);
+  border-color: color-mix(in srgb, var(--dv3-accent) 88%, white);
 }
-.pc-monthnav button:hover:not(:disabled) { border-color: var(--dv3-border-hi); color: var(--dv3-text); }
-.pc-monthnav button:disabled { opacity: .4; cursor: default; }
 
-/* MONTH STRIP */
-.pc-strip {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
-  margin-bottom: 24px;
+@keyframes pc-shimmer { to { background-position: -200% 0; } }
+
+/* ── FOCUS MONTH — Cron/Apple-Calendar style ─────────────────────── */
+.pc-focus {
+  position: relative;
+  background:
+    radial-gradient(120% 60% at 0% 0%, color-mix(in srgb, var(--dv3-accent) 8%, transparent) 0%, transparent 55%),
+    var(--dv3-bg2);
+  border: 1px solid var(--dv3-border);
+  border-radius: 18px;
+  padding: 20px 22px 22px;
+  box-shadow: 0 1px 0 color-mix(in srgb, white 4%, transparent) inset,
+              0 24px 60px -30px rgba(0,0,0,.55),
+              0 4px 14px -8px rgba(0,0,0,.35);
 }
-.pc-month {
-  background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
-  padding: 16px 16px 18px;
-}
-.pc-month.is-focus { border-color: var(--dv3-accent); }
-.pc-skeleton {
-  min-height: 360px;
+.pc-focus.is-loading {
+  min-height: 520px;
   background: linear-gradient(90deg, var(--dv3-bg2) 25%, var(--dv3-bg3) 50%, var(--dv3-bg2) 75%);
   background-size: 200% 100%;
   animation: pc-shimmer 1.3s infinite linear;
 }
-@keyframes pc-shimmer { to { background-position: -200% 0; } }
+.pc-focus.is-loading > * { visibility: hidden; }
 
-.pc-month-head {
-  display: flex; align-items: flex-start; justify-content: space-between;
-  gap: 10px; margin-bottom: 14px;
+/* TOP STRIP — year tabs + legend */
+.pc-yearbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 16px; margin-bottom: 16px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--dv3-border) 80%, transparent);
 }
-.pc-month-title { display: flex; align-items: center; gap: 8px; }
-.pc-month-head h2 {
+.pc-years {
+  display: inline-flex; gap: 2px;
+  background: color-mix(in srgb, var(--dv3-bg3) 70%, transparent);
+  border: 1px solid var(--dv3-border2);
+  padding: 3px; border-radius: 999px;
+}
+.pc-years button {
   font-family: inherit;
-  font-size: 13px; font-weight: 600; margin: 0; line-height: 1.1;
-  letter-spacing: 0.04em; text-transform: uppercase; color: var(--dv3-text);
+  font-size: 12.5px; font-weight: 500; color: var(--dv3-text3);
+  border: none; background: transparent; cursor: pointer;
+  padding: 5px 13px; border-radius: 999px;
+  transition: color .14s, background .14s;
+  font-variant-numeric: tabular-nums;
 }
+.pc-years button:hover { color: var(--dv3-text); background: var(--dv3-bg3); }
+.pc-years button.is-active {
+  background: var(--dv3-text); color: var(--dv3-bg);
+  font-weight: 600;
+}
+.pc-year-shift {
+  display: grid; place-items: center;
+  width: 30px; height: 30px;
+  border: 1px solid var(--dv3-border2);
+  background: transparent; color: var(--dv3-text3); cursor: pointer;
+  border-radius: 999px;
+  transition: background .14s, border-color .14s, color .14s;
+}
+.pc-year-shift:hover { background: var(--dv3-bg3); border-color: var(--dv3-border-hi); color: var(--dv3-text); }
+
+.pc-legend {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-left: auto;
+}
+.pc-leg {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--dv3-text3);
+}
+.pc-leg .sw {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.sw.workday { background: color-mix(in srgb, var(--dv3-text3) 55%, transparent); }
+.sw.weekend { background: color-mix(in srgb, var(--dv3-text4) 70%, transparent); }
+.sw.holiday { background: var(--dv3-zone-down); box-shadow: 0 0 0 2px color-mix(in srgb, var(--dv3-zone-down) 22%, transparent); }
+.sw.shift   { background: var(--dv3-zone-warn); box-shadow: 0 0 0 2px color-mix(in srgb, var(--dv3-zone-warn) 22%, transparent); }
+
+/* MONTH HEAD — big title left, stats + nav right */
+.pc-focus-head {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+}
+.pc-focus-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.pc-focus-head h2 {
+  font-family: inherit;
+  font-size: 28px; font-weight: 700; margin: 0;
+  letter-spacing: -0.025em; line-height: 1.1;
+  color: var(--dv3-text);
+  text-transform: none;
+}
+.pc-focus-meter {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px;
+  font-size: 12px; color: var(--dv3-text3);
+  background: color-mix(in srgb, var(--dv3-bg3) 60%, transparent);
+  border: 1px solid var(--dv3-border2);
+}
+.pc-focus-meter span + span::before {
+  content: '·'; margin: 0 6px; color: var(--dv3-text4);
+}
+.pc-focus-meter b {
+  font-weight: 600; color: var(--dv3-text);
+  font-variant-numeric: tabular-nums; margin-right: 3px;
+}
+.pc-focus-nav {
+  display: grid; place-items: center;
+  width: 32px; height: 32px;
+  border: 1px solid var(--dv3-border2);
+  background: color-mix(in srgb, var(--dv3-bg3) 60%, transparent);
+  color: var(--dv3-text3); cursor: pointer;
+  border-radius: 999px;
+  transition: background .14s, border-color .14s, color .14s;
+}
+.pc-focus-nav:hover:not(:disabled) { background: var(--dv3-bg3); border-color: var(--dv3-border-hi); color: var(--dv3-text); }
+.pc-focus-nav:disabled { opacity: .3; cursor: default; }
+
 .pc-tag {
-  font-size: 9px; font-weight: 700; letter-spacing: .07em;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
   text-transform: uppercase; color: var(--dv3-accent);
-  background: var(--dv3-accent-bg); border: 1px solid var(--dv3-accent);
-  padding: 2px 6px;
-}
-.pc-month-stat {
-  font-size: 10px; color: var(--dv3-text3); text-align: right;
-  white-space: nowrap; padding-top: 3px; letter-spacing: 0.03em;
+  background: var(--dv3-accent-bg);
+  padding: 3px 8px; border-radius: 4px;
+  align-self: center;
 }
 
-/* DAY GRID */
-.pc-grid {
+/* GRID — borderless, subtle alternating wash, hover fill */
+.pc-focus-grid {
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  outline: none;
+  padding-top: 4px;
 }
+.pc-focus-grid:focus-visible { outline: 2px solid var(--dv3-accent); outline-offset: 4px; border-radius: 10px; }
 .pc-wd {
-  font-size: 9px; font-weight: 700; letter-spacing: .08em;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .08em;
   text-transform: uppercase; color: var(--dv3-text4);
-  text-align: center; padding-bottom: 5px;
+  text-align: center; padding: 6px 0 10px;
 }
-.pc-wd.is-wknd { color: var(--dv3-text3); }
+.pc-wd.is-wknd { color: color-mix(in srgb, var(--dv3-text4) 70%, var(--dv3-zone-down)); }
 
 .pc-day {
   position: relative;
-  aspect-ratio: 1 / 1;
-  display: flex; flex-direction: column;
-  border: 1px solid var(--dv3-border);
-  padding: 5px 6px; cursor: default;
-  background: var(--dv3-bg3);
+  min-height: 92px;
+  display: flex; flex-direction: column; align-items: stretch;
+  border: 0;
+  padding: 8px 10px 10px; cursor: default;
+  background: transparent;
   text-align: left; font: inherit;
-  transition: border-color .12s ease, background .12s ease;
+  border-radius: 10px;
+  transition: background .14s, box-shadow .14s;
   overflow: hidden;
 }
-.pc-day.st-workday { background: var(--dv3-bg3); }
-.pc-day.st-weekend { background: var(--dv3-bg2); }
-.pc-day.st-holiday { background: color-mix(in srgb, var(--dv3-zone-down) 16%, var(--dv3-bg2)); border-color: color-mix(in srgb, var(--dv3-zone-down) 45%, var(--dv3-border)); }
-.pc-day.st-shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 16%, var(--dv3-bg2)); border-color: color-mix(in srgb, var(--dv3-zone-warn) 45%, var(--dv3-border)); }
-.pc-day.is-out { background: transparent; border-color: transparent; opacity: .38; }
+.pc-day.st-weekend { background: color-mix(in srgb, var(--dv3-bg3) 35%, transparent); }
+.pc-day.st-holiday { background: color-mix(in srgb, var(--dv3-zone-down) 9%, transparent); }
+.pc-day.st-shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 9%, transparent); }
+.pc-day.is-out { opacity: .3; }
 .pc-day.is-clickable:not(.is-out) { cursor: pointer; }
 .pc-day.is-clickable:not(.is-out):hover {
-  border-color: var(--dv3-border-hi);
-  z-index: 2;
+  background: color-mix(in srgb, var(--dv3-text) 6%, var(--dv3-bg3));
+  box-shadow: inset 0 0 0 1px var(--dv3-border-hi);
 }
-.pc-day.is-today {
-  outline: 2px solid var(--dv3-accent);
-  outline-offset: -2px;
-  border-color: var(--dv3-accent);
+.pc-day.is-cursor {
+  box-shadow: inset 0 0 0 2px var(--dv3-accent);
 }
-.pc-day-num {
-  font-family: inherit;
-  font-size: 12px; font-weight: 600; color: var(--dv3-text);
-  font-variant-numeric: tabular-nums;
-}
-.pc-day.st-holiday .pc-day-num { color: var(--dv3-zone-down); }
-.pc-day.st-weekend .pc-day-num { color: var(--dv3-text3); }
-.pc-day.is-out .pc-day-num { color: var(--dv3-text4); }
-.pc-day-today {
-  font-size: 8px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--dv3-accent);
-  margin-top: auto;
-}
-.pc-day-label {
-  font-size: 8.5px; line-height: 1.2; color: var(--dv3-zone-down);
-  margin-top: 2px;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.pc-day.st-shift .pc-day-label { color: var(--dv3-zone-warn); }
 
-/* SPECIAL DAYS TABLE */
-.pc-special {
-  background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
-  overflow: hidden;
+/* DATE NUMBER — today gets filled accent disc */
+.pc-day-num {
+  display: inline-flex; align-items: center; justify-content: flex-start;
+  font-family: inherit;
+  font-size: 13px; font-weight: 500; color: var(--dv3-text);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: auto;
+}
+.pc-day-num-inner {
+  display: inline-grid; place-items: center;
+  min-width: 26px; height: 26px; padding: 0 6px;
+  border-radius: 999px;
+  line-height: 1;
+}
+.pc-day.st-holiday .pc-day-num-inner { color: var(--dv3-zone-down); font-weight: 600; }
+.pc-day.st-weekend .pc-day-num-inner { color: var(--dv3-text3); }
+.pc-day.is-out .pc-day-num-inner { color: var(--dv3-text4); }
+.pc-day.is-today .pc-day-num-inner {
+  background: var(--dv3-accent);
+  color: var(--dv3-bg);
+  font-weight: 700;
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--dv3-accent) 60%, transparent);
+}
+
+/* EVENT MARKER — bottom strip with dot + label */
+.pc-day-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 10.5px; line-height: 1.25; font-weight: 500;
+  color: var(--dv3-zone-down);
+  margin-top: 6px; padding: 4px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--dv3-zone-down) 14%, transparent);
+  white-space: nowrap; overflow: hidden;
+}
+.pc-day-label.pc-day-label--bare {
+  width: fit-content; padding: 3px 5px;
+}
+.pc-day-mark {
+  flex: 0 0 auto;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--dv3-zone-down);
+}
+.pc-day-text {
+  overflow: hidden; text-overflow: ellipsis;
+}
+.pc-day.st-shift .pc-day-label {
+  color: var(--dv3-zone-warn);
+  background: color-mix(in srgb, var(--dv3-zone-warn) 14%, transparent);
+}
+.pc-day.st-shift .pc-day-mark { background: var(--dv3-zone-warn); }
+
+/* SPECIAL DAYS PANEL */
+.pc-special-panel {
+  display: flex; flex-direction: column; gap: 12px;
 }
 .pc-special-head {
   display: flex; align-items: center; gap: 10px;
-  padding: 13px 18px; border-bottom: 1px solid var(--dv3-border);
-  background: var(--dv3-bg3);
+  padding: 0 2px;
 }
 .pc-special-head h2 {
   font-family: inherit;
-  font-size: 11px; font-weight: 600; margin: 0;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dv3-text);
+  font-size: 18px; font-weight: 600; margin: 0;
+  letter-spacing: -0.01em; text-transform: none; color: var(--dv3-text);
 }
 .pc-special-count {
   font-family: inherit;
-  font-size: 11px; font-weight: 600; color: var(--dv3-accent);
-  background: var(--dv3-accent-bg); border: 1px solid var(--dv3-accent);
-  padding: 2px 8px; font-variant-numeric: tabular-nums;
-}
-.pc-special-empty {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 40px 20px; color: var(--dv3-text3); font-size: 13px;
+  font-size: 12px; font-weight: 600; color: var(--dv3-accent);
+  background: var(--dv3-accent-bg);
+  border: 1px solid color-mix(in srgb, var(--dv3-accent) 40%, transparent);
+  padding: 2px 10px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
 }
 .pc-dash { color: var(--dv3-text4); }
 .pc-icon-btn {
   display: inline-grid; place-items: center;
-  width: 28px; height: 28px;
+  width: 30px; height: 30px;
   border: 1px solid var(--dv3-border2);
   background: var(--dv3-bg3); color: var(--dv3-text3); cursor: pointer;
-  transition: border-color .14s ease, color .14s ease;
+  border-radius: 8px;
+  transition: background .14s, border-color .14s, color .14s;
 }
-.pc-icon-btn:hover { border-color: var(--dv3-border-hi); color: var(--dv3-text); }
+.pc-icon-btn:hover { background: var(--dv3-bg2); border-color: var(--dv3-border-hi); color: var(--dv3-text); }
 
 .pc-chip {
-  display: inline-block;
-  font-size: 10px; font-weight: 700; letter-spacing: .06em;
-  text-transform: uppercase;
+  display: inline-flex; align-items: center;
+  font-family: inherit;
+  font-size: 12px; font-weight: 500; letter-spacing: 0;
+  text-transform: none;
   border: 1px solid var(--dv3-border2);
-  padding: 2px 8px;
+  padding: 3px 10px; border-radius: 999px;
+  background: var(--dv3-bg3); color: var(--dv3-text3);
 }
-.pc-chip.holiday { background: color-mix(in srgb, var(--dv3-zone-down) 16%, var(--dv3-bg2)); color: var(--dv3-zone-down); border-color: color-mix(in srgb, var(--dv3-zone-down) 45%, var(--dv3-border)); }
-.pc-chip.shift   { background: color-mix(in srgb, var(--dv3-zone-warn) 16%, var(--dv3-bg2)); color: var(--dv3-zone-warn); border-color: color-mix(in srgb, var(--dv3-zone-warn) 45%, var(--dv3-border)); }
-.pc-chip.dayoff  { background: var(--dv3-bg3); color: var(--dv3-text3); }
+.pc-chip.holiday {
+  background: color-mix(in srgb, var(--dv3-zone-down) 14%, var(--dv3-bg2));
+  color: var(--dv3-zone-down);
+  border-color: color-mix(in srgb, var(--dv3-zone-down) 40%, transparent);
+}
+.pc-chip.shift {
+  background: color-mix(in srgb, var(--dv3-zone-warn) 14%, var(--dv3-bg2));
+  color: var(--dv3-zone-warn);
+  border-color: color-mix(in srgb, var(--dv3-zone-warn) 40%, transparent);
+}
+.pc-chip.dayoff { background: var(--dv3-bg3); color: var(--dv3-text3); }
 
 /* MODAL */
 .pc-modal-scrim {
   position: fixed; inset: 0; z-index: 60;
-  background: rgba(0,0,0,.55);
+  background: rgba(0,0,0,.6);
+  backdrop-filter: blur(4px);
   display: grid; place-items: center; padding: 20px;
-  animation: pc-fade .14s ease;
+  animation: pc-fade .18s ease;
 }
 @keyframes pc-fade { from { opacity: 0; } }
 .pc-modal {
-  width: 100%; max-width: 440px;
+  width: 100%; max-width: 460px;
   background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
-  border-top: 2px solid var(--dv3-zone-info);
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
+  border-radius: var(--pc-radius);
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
   color: var(--dv3-text);
-  animation: pc-pop .16s cubic-bezier(.2,.7,.3,1.2);
+  box-shadow: var(--pc-shadow-lg);
+  animation: pc-pop .18s cubic-bezier(.2,.7,.3,1.2);
+  overflow: hidden;
 }
-@keyframes pc-pop { from { transform: scale(.96); opacity: 0; } }
+@keyframes pc-pop { from { transform: translateY(8px) scale(.97); opacity: 0; } }
 .pc-modal-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 14px; border-bottom: 1px solid var(--dv3-border);
+  padding: 18px 22px 16px; border-bottom: 1px solid var(--dv3-border);
 }
 .pc-modal-head h3 {
   font-family: inherit;
-  font-size: 12px; font-weight: 600; margin: 0;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--dv3-text);
+  font-size: 16px; font-weight: 600; margin: 0;
+  letter-spacing: -0.01em; text-transform: none; color: var(--dv3-text);
 }
 .pc-modal-x {
   display: grid; place-items: center;
-  width: 30px; height: 30px;
+  width: 32px; height: 32px;
   border: 1px solid var(--dv3-border2); background: var(--dv3-bg3);
   color: var(--dv3-text3); cursor: pointer;
+  border-radius: 8px;
+  transition: background .14s, color .14s;
 }
-.pc-modal-x:hover { border-color: var(--dv3-border-hi); color: var(--dv3-text); }
-.pc-modal-body {
-  padding: 18px 20px;
-}
+.pc-modal-x:hover { background: var(--dv3-bg2); color: var(--dv3-text); }
+.pc-modal-body { padding: 20px 22px; }
 .pc-modal-foot {
   display: flex; align-items: center; gap: 8px;
-  padding: 14px 20px 18px; border-top: 1px solid var(--dv3-border);
+  padding: 16px 22px 20px; border-top: 1px solid var(--dv3-border);
+  background: color-mix(in srgb, var(--dv3-bg3) 50%, transparent);
 }
 .pc-modal-foot-main { display: flex; gap: 8px; margin-left: auto; }
 
 @media (max-width: 900px) {
-  .pc-strip { grid-template-columns: 1fr; }
-  .pc-month:not(.is-focus) { display: none; }
+  .pc-day { min-height: 64px; }
+  .pc-focus { padding: 16px; }
+  .pc-focus-head h2 { font-size: 18px; }
+}
+@media (max-width: 640px) {
+  .pc-legend { margin-left: 0; padding-left: 0; width: 100%; }
+  .pc-focus { padding: 14px; }
+  .pc-focus-meter { display: none; }
+  .pc-day { min-height: 52px; padding: 6px 7px; }
+  .pc-day-num { font-size: 12.5px; }
+  .pc-day-label { font-size: 10px; }
 }
 `
+
