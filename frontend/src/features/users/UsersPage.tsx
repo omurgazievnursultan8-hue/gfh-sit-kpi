@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { UserFormModal } from './components/UserFormModal'
-import { UserDetailDrawer } from './components/UserDetailDrawer'
 import { UserRowMenu, type UserActions } from './components/UserRowMenu'
 import { Avatar, RoleBadge, StatusPill, ROLE_RANK } from './components/usersMeta'
 import { User, usersApi } from './usersApi'
@@ -13,6 +13,7 @@ const PANEL_KEY = 'gfh_users'
 
 export function UsersPage() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
 
   const FILTERS: FilterDef[] = useMemo(() => {
     const roleOptions = [
@@ -42,8 +43,6 @@ export function UsersPage() {
     open: boolean; title: string; description: string; onConfirm: () => void
   }>({ open: false, title: '', description: '', onConfirm: () => {} })
 
-  const [drawerId, setDrawerId] = useState<number | null>(null)
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [failed, setFailed] = useState(false)
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
   const [now, setNow] = useState(new Date())
@@ -86,19 +85,15 @@ export function UsersPage() {
     updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
   }
 
-  const drawerUser = drawerId != null ? users.find(u => u.id === drawerId) ?? null : null
-
-  const openDrawer = (user: User) => { setDrawerId(user.id); setDrawerOpen(true) }
-  const closeDrawer = () => setDrawerOpen(false)
+  const openDetail = (user: User) => navigate(`/admin/users/${user.id}`)
 
   const confirm = (title: string, description: string, onConfirm: () => void) => {
-    closeDrawer()
     setConfirmDialog({ open: true, title, description, onConfirm })
   }
   const closeConfirm = () => setConfirmDialog(d => ({ ...d, open: false }))
 
   const actions: UserActions = {
-    onEdit: (user) => { closeDrawer(); setEditingUser(user) },
+    onEdit: (user) => { setEditingUser(user) },
     onDeactivate: (user) => confirm(
       t('v2.users.deactivateTitle'),
       t('v2.users.deactivateMsg', { name: user.fullName }),
@@ -187,12 +182,12 @@ export function UsersPage() {
   const renderCard = (u: User): ReactNode => (
     <div
       className="users-card"
-      onClick={() => openDrawer(u)}
+      onClick={() => openDetail(u)}
       tabIndex={0}
       role="button"
       aria-label={t('v2.users.openProfile', { name: u.fullName })}
       onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(u) }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(u) }
       }}
       style={{
         background: 'var(--surface)', border: '1px solid var(--line)',
@@ -273,19 +268,12 @@ export function UsersPage() {
           renderCard={renderCard}
           panelStorageKey={PANEL_KEY}
           columnConfig
-          onRowClick={openDrawer}
+          onRowClick={openDetail}
           toolbarActions={addButton}
         />
           </div>
         </div>
       </div>
-
-      <UserDetailDrawer
-        user={drawerUser}
-        open={drawerOpen && drawerUser != null}
-        onClose={closeDrawer}
-        actions={actions}
-      />
 
       <UserFormModal
         open={showCreateModal || !!editingUser}

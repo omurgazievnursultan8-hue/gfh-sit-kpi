@@ -14,6 +14,7 @@ import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { PdpaConsentPage } from './features/auth/PdpaConsentPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
 import { UsersPage } from './features/users/UsersPage'
+import { UserDetailPage } from './features/users/UserDetailPage'
 import { CriteriaPage } from './features/criteria/CriteriaPage'
 import { OrgPage } from './features/org/OrgPage'
 import { DelegationsPage } from './features/org/DelegationsPage'
@@ -54,6 +55,7 @@ export default function App() {
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
+      <Route path="/users/:id" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserDetailPage /></ProtectedRoute>} />
       <Route path="/users-v2" element={<Navigate to="/users" replace />} />
       <Route path="/criteria-v2" element={<Navigate to="/criteria" replace />} />
       <Route path="/org" element={<ProtectedRoute allowedRoles={['ADMIN']}><OrgPage /></ProtectedRoute>} />
@@ -104,6 +106,7 @@ export default function App() {
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="org" element={<OrgPage />} />
         <Route path="delegations" element={<DelegationsPage />} />
         <Route path="criteria" element={<CriteriaPage />} />
