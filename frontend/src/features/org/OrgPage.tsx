@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSelector } from 'react-redux'
-import { Pencil, Trash2, Plus } from 'lucide-react'
+import { Pencil, Trash2, Plus, X } from 'lucide-react'
 import { RootState } from '../../app/store'
 import { orgApi, OrgUnit, OrgUnitRequest } from './orgApi'
-import { OrgTreeNode } from './components/OrgTreeNode'
+import { OrgCanvas } from './components/OrgCanvas'
 import { OrgUnitFormModal } from './components/OrgUnitFormModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
@@ -76,7 +76,6 @@ export function OrgPage() {
   const [defaultParent, setDefaultParent] = useState<OrgUnit | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<OrgUnit | null>(null)
 
-  const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
   const loadTree = useCallback(async () => {
@@ -84,7 +83,6 @@ export function OrgPage() {
     try {
       const data = await orgApi.getStructure()
       setTree(data)
-      setExpanded(new Set(collectIds(data)))
       if (data.length > 0 && selectedId == null) setSelectedId(data[0].id)
       setFailed(false)
     } catch {
@@ -110,15 +108,6 @@ export function OrgPage() {
     return m
   }, [users])
 
-  const toggleExpanded = (id: number) => {
-    setExpanded(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
   const selected = selectedId != null ? findById(tree, selectedId) : null
   const path = selected ? findPath(tree, selected.id) ?? [] : []
 
@@ -143,69 +132,64 @@ export function OrgPage() {
     }
   }
 
+  const drawerOpen = selected != null
+  const drawerRail = selected ? TYPE_RAIL[selected.type] : 'var(--dv3-border2)'
+
   return (
     <>
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }} className="dv3-root org-scope">
+      <div className="dv3-root org-scope">
         <style>{DASHBOARD_CSS}</style>
         <style>{DV3_FORM_CSS}</style>
         <style>{ORG_CSS}</style>
 
-        {isAdmin && (
-          <div className="org-toolbar">
+        <div className="dv3-terminal">
+        <div className="org-canvas-header">
+          <span className="org-panel-head-label">Граф · {totalUnits} узлов</span>
+          {isAdmin && (
             <button
               className="dv3-btn dv3-btn--primary"
               onClick={() => { setEditing(null); setDefaultParent(null); setModalOpen(true) }}
             >
               <Plus size={14} /> Добавить блок
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Split layout */}
-        <div className="org-split" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 380px)', gap: 16 }}>
-          {/* Tree column */}
-          <div className="org-panel org-panel--accent">
-            <div style={{ padding: '14px 16px' }}>
-              <div className="org-panel-head">
-                <span>Дерево</span>
-                <span className="org-panel-count">{totalUnits} узлов</span>
-              </div>
-
-              {loading ? (
-                <div className="org-placeholder">— Загрузка —</div>
-              ) : tree.length === 0 ? (
-                <div className="org-placeholder">— Структура не настроена —</div>
-              ) : (
-                tree.map((node, i) => (
-                  <OrgTreeNode
-                    key={node.id}
-                    node={node}
-                    isAdmin={isAdmin}
-                    outline={String(i + 1)}
-                    expanded={expanded}
-                    selectedId={selectedId}
-                    toggleExpanded={toggleExpanded}
-                    onSelect={n => setSelectedId(n.id)}
-                  />
-                ))
-              )}
+        {/* Canvas + overlaid drawer */}
+        <div className="org-stage">
+          {loading ? (
+            <div className="org-canvas-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="org-placeholder">— Загрузка —</div>
             </div>
-          </div>
+          ) : tree.length === 0 ? (
+            <div className="org-canvas-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="org-placeholder">— Структура не настроена —</div>
+            </div>
+          ) : (
+            <OrgCanvas
+              tree={tree}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              headLookup={headLookup}
+            />
+          )}
 
-          {/* Spec panel */}
-          <div
-            className="org-panel org-spec"
-            style={{
-              alignSelf: 'start',
-              position: 'sticky',
-              top: 16,
-              borderTop: `2px solid ${selected ? TYPE_RAIL[selected.type] : 'var(--dv3-border2)'}`,
-            }}
+          {/* Glass drawer */}
+          <aside
+            className={`org-drawer ${drawerOpen ? 'org-drawer--open' : ''}`}
+            style={{ borderTop: `2px solid ${drawerRail}` }}
+            aria-hidden={!drawerOpen}
           >
-            {!selected ? (
-              <div className="org-placeholder" style={{ padding: '64px 0' }}>— Узел не выбран —</div>
-            ) : (
-              <div style={{ padding: '20px 20px 18px' }}>
+            {selected && (
+              <div className="org-drawer-inner">
+                <button
+                  className="org-drawer-close"
+                  onClick={() => setSelectedId(null)}
+                  aria-label="Закрыть"
+                >
+                  <X size={14} />
+                </button>
+
                 <div className="org-spec-kicker">
                   Спецификация · {TYPE_LABELS[selected.type]}
                 </div>
@@ -216,7 +200,6 @@ export function OrgPage() {
                   <div className="org-spec-sub">{selected.nameKg}</div>
                 )}
 
-                {/* Breadcrumb path */}
                 {path.length > 1 && (
                   <div className="org-crumbs">
                     {path.slice(0, -1).map((p, i) => (
@@ -231,7 +214,6 @@ export function OrgPage() {
                   </div>
                 )}
 
-                {/* Spec rows */}
                 <div style={{ marginTop: 18, borderTop: '1px solid var(--dv3-border)' }}>
                   <SpecRow label="Тип" value={TYPE_LABELS[selected.type]} />
                   <SpecRow
@@ -242,11 +224,7 @@ export function OrgPage() {
                   />
                   <SpecRow
                     label="Родитель"
-                    value={
-                      path.length > 1
-                        ? path[path.length - 2].nameRu
-                        : null
-                    }
+                    value={path.length > 1 ? path[path.length - 2].nameRu : null}
                     placeholder="корневой узел"
                   />
                   <SpecRow
@@ -255,7 +233,6 @@ export function OrgPage() {
                   />
                 </div>
 
-                {/* Children list */}
                 {selected.children.length > 0 && (
                   <div style={{ marginTop: 14 }}>
                     <div className="org-spec-kicker" style={{ marginBottom: 8 }}>Содержит</div>
@@ -266,10 +243,7 @@ export function OrgPage() {
                           onClick={() => setSelectedId(c.id)}
                           className="org-child"
                         >
-                          <span
-                            className="org-child-dot"
-                            style={{ background: TYPE_RAIL[c.type] }}
-                          />
+                          <span className="org-child-dot" style={{ background: TYPE_RAIL[c.type] }} />
                           <span className="org-child-name">{c.nameRu}</span>
                           <span className="org-child-type">{TYPE_LABELS[c.type]}</span>
                         </button>
@@ -278,7 +252,6 @@ export function OrgPage() {
                   </div>
                 )}
 
-                {/* Actions */}
                 {isAdmin && (
                   <div className="dv3-btn-row" style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--dv3-border)' }}>
                     <button
@@ -303,7 +276,8 @@ export function OrgPage() {
                 )}
               </div>
             )}
-          </div>
+          </aside>
+        </div>
         </div>
       </div>
 
@@ -333,87 +307,103 @@ export function OrgPage() {
  * consumed by the un-editable OrgTreeNode component onto the --dv3-* palette so
  * the tree rows render in the terminal skin. */
 const ORG_CSS = `
-.org-scope { color: var(--dv3-text); font-family: 'Geist Mono', ui-monospace, Menlo, monospace; }
-.org-toolbar { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.org-scope { color: var(--dv3-text); }
+.org-canvas-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.org-panel-head-label {
+  font-size: 11px; letter-spacing: 0.04em;
+  color: var(--dv3-text3); font-weight: 500;
+}
 
-.org-panel {
-  position: relative;
+.org-stage { position: relative; }
+
+/* Flat slide-in drawer (users-page aesthetic) */
+.org-drawer {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 380px;
+  max-width: 90vw;
   background: var(--dv3-bg2);
   border: 1px solid var(--dv3-border);
-  overflow: hidden;
+  border-radius: 12px;
+  transform: translateX(calc(100% + 12px));
+  opacity: 0;
+  transition: transform 220ms ease, opacity 180ms ease;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 12px 32px -12px rgba(0,0,0,0.18);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
-.org-panel--accent { border-top: 2px solid var(--dv3-accent); }
+.org-drawer::-webkit-scrollbar { width: 6px; }
+.org-drawer::-webkit-scrollbar-thumb { background: var(--dv3-border2); border-radius: 3px; }
 
-.org-panel-head {
-  display: flex; align-items: baseline; justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--dv3-text3); font-weight: 600;
+.org-drawer--open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
 }
-.org-panel-count { color: var(--dv3-text4); letter-spacing: 0.04em; }
+
+.org-drawer-inner { padding: 22px 22px 20px; position: relative; }
+
+.org-drawer-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--dv3-bg3);
+  border: 1px solid var(--dv3-border);
+  border-radius: 8px;
+  color: var(--dv3-text3);
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.org-drawer-close:hover { color: var(--dv3-accent); border-color: var(--dv3-border2); }
 
 .org-placeholder {
   padding: 48px 0; text-align: center;
-  font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  font-size: 13px;
   color: var(--dv3-text4);
 }
 
 .org-spec-kicker {
-  font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--dv3-text3); font-weight: 600; margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--dv3-text3); font-weight: 500; margin-bottom: 8px;
 }
 .org-spec-title {
-  font-size: 20px; font-weight: 600; color: var(--dv3-text);
-  line-height: 1.15; margin: 0; letter-spacing: -0.005em;
+  font-size: 18px; font-weight: 600; color: var(--dv3-text);
+  line-height: 1.25; margin: 0;
 }
-.org-spec-sub { font-size: 12.5px; color: var(--dv3-text3); margin-top: 4px; font-style: italic; }
+.org-spec-sub { font-size: 12.5px; color: var(--dv3-text3); margin-top: 4px; }
 
 .org-crumbs {
-  margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
-  font-size: 10.5px; color: var(--dv3-text3);
+  margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  font-size: 12px; color: var(--dv3-text3);
 }
 .org-crumb-btn {
   background: transparent; border: none; padding: 0; color: inherit;
   cursor: pointer; font-family: inherit; font-size: inherit;
 }
-.org-crumb-btn:hover { color: var(--dv3-accent); text-decoration: underline; }
+.org-crumb-btn:hover { color: var(--dv3-accent); }
 .org-crumb-sep { color: var(--dv3-text4); }
 .org-crumb-cur { color: var(--dv3-text2); }
 
 .org-child {
   display: flex; align-items: center; gap: 8px; text-align: left;
-  background: var(--dv3-bg3); border: 1px solid var(--dv3-border);
-  padding: 6px 9px; cursor: pointer;
-  transition: border-color 120ms ease;
+  background: var(--dv3-bg2); border: 1px solid var(--dv3-border);
+  border-radius: 8px;
+  padding: 8px 10px; cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-.org-child:hover { border-color: var(--dv3-accent); }
-.org-child-dot { width: 6px; height: 6px; flex-shrink: 0; }
-.org-child-name { flex: 1; font-size: 12.5px; color: var(--dv3-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.org-child-type { font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dv3-text4); }
-
-/* Remap legacy vars used by OrgTreeNode (un-editable) onto the dv3 palette. */
-.org-panel {
-  --ink: var(--dv3-text);
-  --ink-soft: var(--dv3-text2);
-  --ink-dim: var(--dv3-text3);
-  --ink-faint: var(--dv3-text4);
-  --line-soft: var(--dv3-border);
-  --line: var(--dv3-border);
-  --line-strong: var(--dv3-border2);
-  --accent: var(--dv3-accent);
-  --accent-mute: var(--dv3-accent-bg);
-  --surface: var(--dv3-bg2);
-  --surface-mute: var(--dv3-bg3);
-  --gold: var(--dv3-zone-warn);
-  --gold-soft: color-mix(in srgb, var(--dv3-zone-warn) 14%, transparent);
-}
-.org-panel .org-row { border-radius: 0 !important; }
-.org-panel .org-row:hover { background: var(--dv3-bg3); }
-.org-panel .org-row .font-display { font-family: 'Geist Mono', ui-monospace, Menlo, monospace !important; }
+.org-child:hover { border-color: var(--dv3-border2); box-shadow: 0 4px 12px -6px rgba(0,0,0,0.15); }
+.org-child-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.org-child-name { flex: 1; font-size: 13px; color: var(--dv3-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.org-child-type { font-size: 11px; color: var(--dv3-text4); }
 
 @media (max-width: 920px) {
-  .org-split { grid-template-columns: 1fr !important; }
-  .org-spec { position: static !important; }
+  .org-drawer { width: 100%; border-radius: 12px 12px 0 0; }
 }
 `
 
