@@ -1,34 +1,13 @@
-import { useEffect, useState, useCallback, useId, useMemo } from 'react'
+import { useEffect, useState, useCallback, useId, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Download, Search, RotateCcw, ChevronLeft, ChevronRight,
-  ChevronDown, FileSearch,
-} from 'lucide-react'
+import { Download } from 'lucide-react'
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
-import { DataTable, type Column } from '../../components/DataTable'
-import { TableCard } from '../../components/TableCard'
+import { DataPanel, type Column, type FilterDef, type PanelState } from '../../components/DataPanel'
 import { Badge, type BadgeTone } from '../../components/Badge'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 
-const PLACEHOLDER = '··'
+const PANEL_KEY = 'gfh_audit'
 
-const KNOWN_ACTIONS = [
-  'CREATE_USER', 'UPDATE_USER', 'DEACTIVATE_USER',
-  'SUBMIT_EVALUATION', 'UPDATE_CRITERIA', 'DELETE_CRITERIA',
-  'DOWNLOAD_FILE', 'EXPORT_REPORT',
-  'CREATE_ORG_UNIT', 'UPDATE_ORG_UNIT', 'DELETE_ORG_UNIT',
-  'CREATE_DELEGATION', 'DELETE_DELEGATION',
-]
-
-const KNOWN_ENTITY_TYPES = [
-  'USER', 'EVALUATION', 'CRITERIA', 'EVALUATION_FILE',
-  'ORG_UNIT', 'DELEGATION', 'PERIOD',
-]
-
-const PAGE_SIZE = 20
-
-/** Map an action verb prefix to a semantic Badge tone. */
 function actionTone(action: string): BadgeTone {
   if (/^(CREATE|SUBMIT)/.test(action)) return 'success'
   if (/^(DELETE|DEACTIVATE)/.test(action)) return 'danger'
@@ -37,7 +16,6 @@ function actionTone(action: string): BadgeTone {
   return 'neutral'
 }
 
-/** Initials avatar fallback for an actor email. */
 function initials(email: string): string {
   return email.slice(0, 2).toUpperCase()
 }
@@ -47,36 +25,52 @@ export function AuditLogPage() {
 
   const [entries, setEntries] = useState<AuditLogEntry[]>([])
   const [totalElements, setTotalElements] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState<number | null>(null)
+  const [seenActions, setSeenActions] = useState<string[]>([])
+  const [seenEntityTypes, setSeenEntityTypes] = useState<string[]>([])
 
-  const [action, setAction] = useState('')
-  const [entityType, setEntityType] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
+  const [filterValues, setFilterValuesState] = useState<Record<string, string>>({})
+
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
 
-  const [failed, setFailed] = useState(false)
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
-  const [now, setNow] = useState(new Date())
-
-  const actionId = useId()
-  const entityTypeId = useId()
   const fromId = useId()
   const toId = useId()
 
   const dateLocale = i18n.language.startsWith('kg') ? 'ky-KG' : 'ru-RU'
-  const hasFilters = Boolean(action || entityType || from || to)
+
+  const FILTERS: FilterDef[] = useMemo(() => [
+    {
+      key: 'action',
+      label: t('audit.action'),
+      type: 'select',
+      options: [
+        { value: '', label: t('audit.allActions', '— все —') },
+        ...seenActions.map(a => ({ value: a, label: a })),
+      ],
+    },
+    {
+      key: 'entityType',
+      label: t('audit.entityType'),
+      type: 'select',
+      options: [
+        { value: '', label: t('audit.allEntityTypes', '— все —') },
+        ...seenEntityTypes.map(et => ({ value: et, label: et })),
+      ],
+    },
+  ], [t, seenActions, seenEntityTypes])
 
   const buildParams = useCallback((): AuditSearchParams => ({
-    action: action || undefined,
-    entityType: entityType || undefined,
+    action: filterValues.action || undefined,
+    entityType: filterValues.entityType || undefined,
     from: from ? `${from}T00:00:00` : undefined,
     to: to ? `${to}T23:59:59` : undefined,
     page,
-    size: PAGE_SIZE,
-  }), [action, entityType, from, to, page])
+    size: pageSize,
+  }), [filterValues, from, to, page, pageSize])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -84,99 +78,86 @@ export function AuditLogPage() {
       const data = await auditApi.search(buildParams())
       setEntries(data.content)
       setTotalElements(data.totalElements)
-      setTotalPages(data.totalPages)
-      setFailed(false)
+      setSeenActions(prev => {
+        const set = new Set(prev)
+        for (const e of data.content) if (e.action) set.add(e.action)
+        return Array.from(set).sort()
+      })
+      setSeenEntityTypes(prev => {
+        const set = new Set(prev)
+        for (const e of data.content) if (e.entityType) set.add(e.entityType)
+        return Array.from(set).sort()
+      })
     } catch {
       setEntries([])
       setTotalElements(0)
-      setTotalPages(0)
-      setFailed(true)
     } finally {
       setLoading(false)
-      setLoadedAt(new Date())
     }
   }, [buildParams])
 
+  useEffect(() => { fetchData() }, [fetchData])
+
+  // Reset to first page when filters or dates change.
+  const firstRender = useRef(true)
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  // Live tick — refresh clock + relative time each minute.
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  /* ── time / clock ──────────────────────────────────────────────────────── */
-  const hours = now.getHours()
-  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const todayLine = `${datePart} · ${hh}:${mm}`
-  const clockKgt = `${hh}:${mm}`
-
-  let updatedLabel = ''
-  if (loadedAt) {
-    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
-    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
-  }
-
-  /* ── derived stats (current page) ──────────────────────────────────────── */
-  const todayKey = new Date().toDateString()
-  const todayCount = useMemo(
-    () => entries.filter(e => new Date(e.createdAt).toDateString() === todayKey).length,
-    [entries, todayKey],
-  )
-  const distinctActors = useMemo(
-    () => new Set(entries.map(e => e.actorEmail)).size,
-    [entries],
-  )
-  const distinctActions = useMemo(
-    () => new Set(entries.map(e => e.action)).size,
-    [entries],
-  )
-
-  const handleFilterApply = () => setPage(0)
-
-  const handleReset = () => {
-    setAction('')
-    setEntityType('')
-    setFrom('')
-    setTo('')
+    if (firstRender.current) { firstRender.current = false; return }
     setPage(0)
-  }
+  }, [filterValues, from, to])
+
+  const handleStateChange = useCallback((s: PanelState) => {
+    setPage(s.page)
+    setPageSize(s.pageSize)
+    setFilterValuesState(s.filters)
+  }, [])
 
   const handleExport = () => auditApi.export(buildParams())
 
-  const selectCls =
-    'w-full rounded-lg px-3 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]'
-  const selectStyle = {
+  const dateInputCls =
+    'rounded-lg px-3 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-[var(--accent)]'
+  const dateInputStyle = {
     border: '1px solid var(--line)', background: 'var(--surface-mute)', color: 'var(--ink)',
+    height: 38,
   }
 
+  const dateSlot = (
+    <div className="flex items-center gap-2">
+      <label htmlFor={fromId} className="text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
+        {t('audit.filterFrom')}
+      </label>
+      <input
+        id={fromId} type="date" value={from}
+        onChange={e => setFrom(e.target.value)}
+        className={dateInputCls} style={dateInputStyle}
+      />
+      <label htmlFor={toId} className="text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
+        {t('audit.filterTo')}
+      </label>
+      <input
+        id={toId} type="date" value={to}
+        onChange={e => setTo(e.target.value)}
+        className={dateInputCls} style={dateInputStyle}
+      />
+    </div>
+  )
+
+  const exportButton = (
+    <button
+      type="button"
+      onClick={handleExport}
+      className="inline-flex items-center gap-2 transition-colors"
+      style={{
+        fontSize: 13.5, fontWeight: 500, height: 38, padding: '0 14px', borderRadius: 10,
+        background: 'var(--accent)', color: 'var(--surface)',
+        border: '1px solid var(--accent-ink)', cursor: 'pointer',
+      }}
+    >
+      <Download className="h-4 w-4" aria-hidden="true" />
+      {t('audit.exportAudit')}
+    </button>
+  )
+
   const columns: Column<AuditLogEntry>[] = [
-    {
-      key: 'toggle',
-      header: t('audit.details'),
-      srOnlyHeader: true,
-      width: '40px',
-      render: entry => {
-        const isOpen = expanded === entry.id
-        return (
-          <button
-            type="button"
-            aria-expanded={isOpen}
-            aria-label={t('audit.details') as string}
-            className="flex h-6 w-6 items-center justify-center rounded hover:bg-[var(--accent-mute)]"
-            style={{ color: 'var(--ink-faint)' }}
-            onClick={e => { e.stopPropagation(); setExpanded(isOpen ? null : entry.id) }}
-          >
-            <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-          </button>
-        )
-      },
-    },
     {
       key: 'actor',
       header: t('audit.actor'),
@@ -238,187 +219,35 @@ export function AuditLogPage() {
     </div>
   )
 
-  const emptyState = (
-    <div>
-      <FileSearch className="mx-auto h-10 w-10" style={{ color: 'var(--ink-faint)' }} aria-hidden="true" />
-      <p className="mt-3 text-sm font-medium" style={{ color: 'var(--ink-soft)' }}>{t('common.noData')}</p>
-      {hasFilters && (
-        <button
-          type="button"
-          onClick={handleReset}
-          className="mt-2 text-sm font-medium hover:underline"
-          style={{ color: 'var(--accent-2)' }}
-        >
-          {t('common.reset', 'Сбросить')}
-        </button>
-      )}
-    </div>
-  )
-
   return (
-    <>
-      <div className="dv3-root">
-        <style>{DASHBOARD_CSS}</style>
-        <style>{STAT_CARD_CSS}</style>
+    <div className="dv3-root">
+      <style>{DASHBOARD_CSS}</style>
 
-        <div className="dv3-terminal">
-          {/* STAT GRID */}
-          <div className="dv3-grid">
-            <StatCard
-              className="dv3-col-3"
-              title="AUDIT.TOTAL" id="A01" loading={loading}
-              value={totalElements} label="записей всего"
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="TODAY" id="T01" loading={loading}
-              value={todayCount} label="записей сегодня"
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="ACTORS" id="U01" loading={loading}
-              value={distinctActors} label="на странице"
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="ACTIONS" id="X01" loading={loading}
-              value={distinctActions} label="типов на странице"
-            />
-          </div>
-          <div style={{ marginTop: 24 }}>
-        <div className="space-y-5">
-        {/* Export */}
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {t('audit.exportAudit')}
-          </button>
-        </div>
-
-        {/* Filters */}
-        <div
-          className="rounded-xl p-4 shadow-sm"
-          style={{ background: 'var(--surface)', border: '1px solid var(--line-soft)' }}
-          role="search"
-          aria-label={t('audit.filters', 'Фильтры журнала аудита') as string}
-        >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <label htmlFor={actionId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
-                {t('audit.action')}
-              </label>
-              <select id={actionId} value={action} onChange={e => setAction(e.target.value)} className={selectCls} style={selectStyle}>
-                <option value="">{t('audit.allActions', '— все —')}</option>
-                {KNOWN_ACTIONS.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor={entityTypeId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
-                {t('audit.entityType')}
-              </label>
-              <select id={entityTypeId} value={entityType} onChange={e => setEntityType(e.target.value)} className={selectCls} style={selectStyle}>
-                <option value="">{t('audit.allEntityTypes', '— все —')}</option>
-                {KNOWN_ENTITY_TYPES.map(et => <option key={et} value={et}>{et}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor={fromId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
-                {t('audit.filterFrom')}
-              </label>
-              <input id={fromId} type="date" value={from} onChange={e => setFrom(e.target.value)} className={selectCls} style={selectStyle} />
-            </div>
-
-            <div>
-              <label htmlFor={toId} className="mb-1 block text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
-                {t('audit.filterTo')}
-              </label>
-              <input id={toId} type="date" value={to} onChange={e => setTo(e.target.value)} className={selectCls} style={selectStyle} />
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleFilterApply}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-            >
-              <Search className="h-4 w-4" aria-hidden="true" />
-              {t('common.filter')}
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={!hasFilters}
-              className="inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition hover:bg-[var(--accent-mute)] disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-              style={{ borderColor: 'var(--line)', color: 'var(--ink-soft)' }}
-            >
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              {t('common.reset', 'Сбросить')}
-            </button>
-          </div>
-        </div>
-
-        {/* Table */}
-        <TableCard
-          footer={
-            <div
-              className="flex items-center justify-between text-sm"
-              style={{ color: 'var(--ink-soft)' }}
-              role="navigation"
-              aria-label={t('common.pagination', 'Пагинация') as string}
-            >
-              <span aria-live="polite">
-                {t('common.page')} <span className="font-medium" style={{ color: 'var(--ink)' }}>{page + 1}</span>{' '}
-                {t('common.of')} {Math.max(totalPages, 1)}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={page === 0}
-                  onClick={() => setPage(p => p - 1)}
-                  aria-label={t('common.prevPage', 'Предыдущая страница') as string}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border transition hover:bg-[var(--accent-mute)] disabled:opacity-40"
-                  style={{ borderColor: 'var(--line)', color: 'var(--ink-soft)' }}
-                >
-                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage(p => p + 1)}
-                  aria-label={t('common.nextPage', 'Следующая страница') as string}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border transition hover:bg-[var(--accent-mute)] disabled:opacity-40"
-                  style={{ borderColor: 'var(--line)', color: 'var(--ink-soft)' }}
-                >
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          }
-        >
-          <DataTable<AuditLogEntry>
-            columns={columns}
-            rows={entries}
-            rowKey={entry => entry.id}
-            caption={t('admin.auditLog')}
-            loading={loading}
-            onRowClick={entry => setExpanded(expanded === entry.id ? null : entry.id)}
-            renderExpanded={renderExpanded}
-            expandedKeys={expanded != null ? new Set([expanded]) : undefined}
-            empty={emptyState}
-            totalCount={totalElements}
-          />
-        </TableCard>
-        </div>
-          </div>
-        </div>
+      <div className="dv3-terminal">
+        <DataPanel<AuditLogEntry>
+          mode="server"
+          columns={columns}
+          rows={entries}
+          rowKey={(e) => e.id}
+          loading={loading}
+          caption={t('admin.auditLog')}
+          empty={t('common.noData')}
+          filters={FILTERS}
+          filterSlot={dateSlot}
+          views={['table']}
+          page={page}
+          totalElements={totalElements}
+          pageSize={pageSize}
+          pageSizeOptions={[20, 50, 100]}
+          onStateChange={handleStateChange}
+          onRowClick={(entry) => setExpanded(expanded === entry.id ? null : entry.id)}
+          renderExpanded={renderExpanded}
+          expandedKeys={expanded != null ? new Set([expanded]) : undefined}
+          panelStorageKey={PANEL_KEY}
+          columnConfig
+          toolbarActions={exportButton}
+        />
       </div>
-    </>
+    </div>
   )
 }

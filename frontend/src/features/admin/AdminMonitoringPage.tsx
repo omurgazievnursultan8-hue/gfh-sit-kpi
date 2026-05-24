@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { adminApi, QuartzJobInfo } from './adminApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
-import { DataTable, type Column } from '../../components/DataTable'
-import { TableCard } from '../../components/TableCard'
+import type { ReactNode } from 'react'
+import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { Badge, type BadgeTone } from '../../components/Badge'
 
-const PLACEHOLDER = '··'
+const PANEL_KEY = 'gfh_monitoring_jobs'
 
 type HealthStatus = 'up' | 'down' | 'checking'
 
@@ -33,8 +32,6 @@ export function AdminMonitoringPage() {
   const [jobs, setJobs] = useState<QuartzJobInfo[]>([])
   const [errorLines, setErrorLines] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
-  const [now, setNow] = useState(new Date())
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -53,196 +50,219 @@ export function AdminMonitoringPage() {
     )
 
     setLoading(false)
-    setLoadedAt(new Date())
   }, [])
 
-  useEffect(() => {
-    refresh()
-  }, [refresh])
+  useEffect(() => { refresh() }, [refresh])
 
-  // Live tick — refresh clock + relative time each minute.
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
+  const FILTERS: FilterDef[] = useMemo(() => {
+    const stateOptions = [
+      { value: '',        label: t('common.all', 'Все') },
+      { value: 'NORMAL',  label: 'NORMAL' },
+      { value: 'PAUSED',  label: 'PAUSED' },
+      { value: 'BLOCKED', label: 'BLOCKED' },
+      { value: 'ERROR',   label: 'ERROR' },
+      { value: 'NONE',    label: 'NONE' },
+    ]
+    return [
+      { key: 'state', label: t('monitoring.state'), type: 'select', options: stateOptions },
+    ]
+  }, [t])
 
-  /* ── time / clock ──────────────────────────────────────────────────────── */
-  const hours = now.getHours()
-  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const todayLine = `${datePart} · ${hh}:${mm}`
-  const clockKgt = `${hh}:${mm}`
-
-  let updatedLabel = ''
-  if (loadedAt) {
-    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
-    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
-  }
-
-  /* ── derived stats ─────────────────────────────────────────────────────── */
-  const totalJobs = jobs.length
-  const healthyJobs = useMemo(() => jobs.filter(j => j.state === 'NORMAL').length, [jobs])
-  const troubledJobs = useMemo(
-    () => jobs.filter(j => j.state === 'ERROR' || j.state === 'BLOCKED' || j.state === 'PAUSED').length,
-    [jobs],
-  )
-  const errorCount = errorLines.filter(l => l.trim().length > 0).length
-  const failed = health === 'down'
-  const healthScore = health === 'up' ? 100 : health === 'down' ? 0 : null
-
-  const jobColumns: Column<QuartzJobInfo>[] = [
+  const columns: Column<QuartzJobInfo>[] = [
     {
-      key: 'name',
-      header: t('monitoring.jobName'),
-      render: job => <span className="font-medium" style={{ color: 'var(--ink)' }}>{job.name}</span>,
+      key: 'name', header: t('monitoring.jobName'), sortable: true, hideable: false,
+      render: job => <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{job.name}</span>,
     },
     {
-      key: 'group',
-      header: t('monitoring.jobGroup'),
-      render: job => <span style={{ color: 'var(--ink-soft)' }}>{job.group}</span>,
+      key: 'group', header: t('monitoring.jobGroup'), sortable: true,
+      render: job => <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{job.group}</span>,
     },
     {
-      key: 'cronExpression',
-      header: t('monitoring.cronExpression'),
-      render: job => <span className="font-mono text-xs" style={{ color: 'var(--ink-soft)' }}>{job.cronExpression ?? '—'}</span>,
+      key: 'cronExpression', header: t('monitoring.cronExpression'),
+      render: job => (
+        <span className="font-mono" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
+          {job.cronExpression ?? '—'}
+        </span>
+      ),
     },
     {
-      key: 'previousFireTime',
-      header: t('monitoring.lastFire'),
-      render: job => <span style={{ color: 'var(--ink-soft)' }}>{formatDate(job.previousFireTime)}</span>,
+      key: 'previousFireTime', header: t('monitoring.lastFire'), sortable: true,
+      render: job => <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{formatDate(job.previousFireTime)}</span>,
     },
     {
-      key: 'nextFireTime',
-      header: t('monitoring.nextFire'),
-      render: job => <span style={{ color: 'var(--ink-soft)' }}>{formatDate(job.nextFireTime)}</span>,
+      key: 'nextFireTime', header: t('monitoring.nextFire'), sortable: true,
+      render: job => <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{formatDate(job.nextFireTime)}</span>,
     },
     {
-      key: 'state',
-      header: t('monitoring.state'),
+      key: 'state', header: t('monitoring.state'), sortable: true,
       render: job => <Badge tone={JOB_STATE_TONE[job.state] ?? 'neutral'}>{job.state}</Badge>,
     },
   ]
 
+  const searchText = (j: QuartzJobInfo) => `${j.name} ${j.group} ${j.cronExpression ?? ''}`
+
+  const clientFilter = (j: QuartzJobInfo, v: Record<string, string>) => {
+    if (v.state && j.state !== v.state) return false
+    return true
+  }
+
+  const comparator = (key: string) => (a: QuartzJobInfo, b: QuartzJobInfo): number => {
+    switch (key) {
+      case 'group': return a.group.localeCompare(b.group)
+      case 'state': return a.state.localeCompare(b.state)
+      case 'previousFireTime': return (a.previousFireTime ?? '').localeCompare(b.previousFireTime ?? '')
+      case 'nextFireTime':     return (a.nextFireTime ?? '').localeCompare(b.nextFireTime ?? '')
+      default: return a.name.localeCompare(b.name)
+    }
+  }
+
+  const healthChip = (
+    <div
+      className="inline-flex items-center gap-2"
+      style={{
+        height: 38, padding: '0 12px', borderRadius: 10,
+        border: '1px solid var(--line)', background: 'var(--surface)',
+        fontSize: 13, fontWeight: 500,
+      }}
+    >
+      {health === 'up' ? (
+        <><CheckCircle className="h-4 w-4" style={{ color: '#10b981' }} /><span style={{ color: 'var(--ink)' }}>API UP</span></>
+      ) : health === 'down' ? (
+        <><XCircle className="h-4 w-4" style={{ color: '#ef4444' }} /><span style={{ color: 'var(--ink)' }}>API DOWN</span></>
+      ) : (
+        <span style={{ color: 'var(--ink-faint)' }}>{t('common.loading')}</span>
+      )}
+    </div>
+  )
+
+  const refreshButton = (
+    <button
+      onClick={refresh}
+      disabled={loading}
+      className="inline-flex items-center gap-2 transition-colors"
+      style={{
+        fontSize: 13.5, fontWeight: 500, height: 38, padding: '0 14px', borderRadius: 10,
+        background: 'var(--accent)', color: 'var(--surface)',
+        border: '1px solid var(--accent-ink)', cursor: 'pointer',
+        opacity: loading ? 0.6 : 1,
+      }}
+    >
+      <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+      {t('common.refresh', 'Обновить')}
+    </button>
+  )
+
+  const renderJobCard = (j: QuartzJobInfo): ReactNode => (
+    <div
+      style={{
+        background: 'var(--surface)', border: '1px solid var(--line)',
+        borderRadius: 12, padding: 16,
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="truncate" style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>
+            {j.name}
+          </div>
+          <div className="truncate" style={{ fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 2 }}>
+            {j.group}
+          </div>
+        </div>
+        <Badge tone={JOB_STATE_TONE[j.state] ?? 'neutral'}>{j.state}</Badge>
+      </div>
+      <div className="flex flex-col gap-2.5" style={{ paddingTop: 12, borderTop: '1px dashed var(--line)' }}>
+        <JobMetaRow k={t('monitoring.cronExpression')}>
+          <span className="font-mono" style={{ fontSize: 12, color: 'var(--ink)' }}>
+            {j.cronExpression ?? '—'}
+          </span>
+        </JobMetaRow>
+        <JobMetaRow k={t('monitoring.lastFire')}>
+          <span style={{ color: 'var(--ink)' }}>{formatDate(j.previousFireTime)}</span>
+        </JobMetaRow>
+        <JobMetaRow k={t('monitoring.nextFire')}>
+          <span style={{ color: 'var(--ink)' }}>{formatDate(j.nextFireTime)}</span>
+        </JobMetaRow>
+      </div>
+    </div>
+  )
+
+  const toolbarActions = (
+    <div className="inline-flex items-center gap-2">
+      {healthChip}
+      {refreshButton}
+    </div>
+  )
+
   return (
-    <>
-      <div className="dv3-root">
-        <style>{DASHBOARD_CSS}</style>
-        <style>{STAT_CARD_CSS}</style>
+    <div className="dv3-root">
+      <style>{DASHBOARD_CSS}</style>
 
-        <div className="dv3-terminal">
-          {/* STAT GRID */}
-          <div className="dv3-grid">
-            <StatCard
-              className="dv3-col-3"
-              title="BACKEND.HEALTH" id="H01" loading={loading}
-              value={health === 'up' ? 'UP' : health === 'down' ? 'DOWN' : '…'}
-              label={health === 'up' ? 'API доступен' : health === 'down' ? 'API недоступен' : 'проверка'}
-              zoneScore={healthScore}
-              gauge={{
-                pct: health === 'up' ? 1 : 0, variant: 'marker',
-                left: 'DOWN', right: 'UP',
-                current: health === 'up' ? 'UP' : health === 'down' ? 'DOWN' : '—',
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="JOBS.HEALTHY" id="J01" loading={loading}
-              value={healthyJobs} label="задач NORMAL"
-              gauge={{
-                pct: totalJobs > 0 ? healthyJobs / totalJobs : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{totalJobs > 0 ? Math.round((healthyJobs / totalJobs) * 100) : 0}%</strong> всех</>,
-                right: totalJobs,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="JOBS.ALERT" id="A01" loading={loading}
-              value={troubledJobs} label="paused / error / blocked"
-              gauge={{
-                pct: totalJobs > 0 ? troubledJobs / totalJobs : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{totalJobs > 0 ? Math.round((troubledJobs / totalJobs) * 100) : 0}%</strong> всех</>,
-                right: totalJobs,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="ERROR.LOG" id="E01" loading={loading}
-              value={errorCount} label="строк в error.log"
-            />
-          </div>
-          <div style={{ marginTop: 24 }}>
-      <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
-
-      <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-        <h2 className="mb-3 text-base font-semibold text-gray-800">Backend Health</h2>
-        <div className="flex items-center gap-3">
-          {health === 'up' ? (
-            <>
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <span className="font-medium text-green-700">API is reachable</span>
-            </>
-          ) : health === 'down' ? (
-            <>
-              <XCircle className="h-6 w-6 text-red-500" />
-              <span className="font-medium text-red-700">API is unreachable</span>
-            </>
-          ) : (
-            <span className="text-gray-400">{t('common.loading')}</span>
-          )}
-        </div>
-      </section>
-
-      <TableCard
-        header={
-          <h2 className="font-display" style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>
-            {t('admin.quartzJobs')}
-          </h2>
-        }
-      >
-        <DataTable<QuartzJobInfo>
-          caption={t('admin.quartzJobs')}
+      <div className="dv3-terminal">
+        <DataPanel<QuartzJobInfo>
+          mode="client"
+          columns={columns}
           rows={jobs}
-          rowKey={job => `${job.group}.${job.name}`}
+          rowKey={j => `${j.group}.${j.name}`}
           loading={loading}
+          caption={t('admin.quartzJobs')}
           empty={t('common.noData')}
-          columns={jobColumns}
-          totalCount={jobs.length}
+          searchable
+          searchText={searchText}
+          searchPlaceholder={t('monitoring.jobName')}
+          filters={FILTERS}
+          clientFilter={clientFilter}
+          comparator={comparator}
+          defaultSort={{ key: 'name', dir: 'asc' }}
+          panelStorageKey={PANEL_KEY}
+          columnConfig
+          views={['table', 'cards']}
+          renderCard={renderJobCard}
+          toolbarActions={toolbarActions}
         />
-      </TableCard>
 
-      <section className="rounded-lg border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="text-base font-semibold text-gray-800">{t('monitoring.errorLog')}</h2>
-          <p className="mt-0.5 text-xs text-gray-400">Last 20 lines from error.log</p>
-        </div>
-        <div className="p-4">
-          {errorLines.length === 0 ? (
-            <p className="text-sm text-gray-400">{loading ? t('common.loading') : 'No errors found'}</p>
-          ) : (
-            <pre className="max-h-80 overflow-x-auto overflow-y-auto rounded-md bg-gray-950 p-4 text-xs leading-relaxed text-green-400">
-              {errorLines.join('\n')}
-            </pre>
-          )}
-        </div>
-      </section>
-      </div>
+        <section
+          style={{
+            marginTop: 24, background: 'var(--surface)',
+            border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden',
+          }}
+        >
+          <div style={{ borderBottom: '1px solid var(--line)', padding: '14px 18px' }}>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>
+              {t('monitoring.errorLog')}
+            </h2>
+            <p style={{ marginTop: 2, fontSize: 12, color: 'var(--ink-faint)' }}>
+              Last 20 lines from error.log
+            </p>
           </div>
-        </div>
+          <div style={{ padding: 16 }}>
+            {errorLines.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--ink-faint)' }}>
+                {loading ? t('common.loading') : 'No errors found'}
+              </p>
+            ) : (
+              <pre
+                style={{
+                  maxHeight: 320, overflow: 'auto', borderRadius: 8,
+                  background: '#0a0a0a', color: '#4ade80',
+                  padding: 16, fontSize: 12, lineHeight: 1.6,
+                }}
+              >
+                {errorLines.join('\n')}
+              </pre>
+            )}
+          </div>
+        </section>
       </div>
-    </>
+    </div>
+  )
+}
+
+function JobMetaRow({ k, children }: { k: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3" style={{ minHeight: 22 }}>
+      <span style={{ fontSize: 12.5, color: 'var(--ink-faint)' }}>{k}</span>
+      <span className="truncate" style={{ fontSize: 13, textAlign: 'right' }}>{children}</span>
+    </div>
   )
 }
