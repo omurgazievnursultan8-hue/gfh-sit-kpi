@@ -1,5 +1,7 @@
 package kg.gfh.kpi.dto;
 
+import java.time.LocalDate;
+
 public record AdminStatsResponse(
     long totalUsers,
     long activeUsers,
@@ -36,5 +38,12 @@ public record AdminStatsResponse(
     long criteriaInactiveDelta,
     long orgBlocksDelta,
     long orgDepartmentsDelta,
-    long orgUnitsLeafDelta
+    long orgUnitsLeafDelta,
+    double completionRate,
+    long overdueEvaluations,
+    double avgRatingCurrentPeriod,
+    long ratedEvaluationsCurrentPeriod,
+    LocalDate nextDeadlineDate,
+    String nextDeadlinePeriodLabel,
+    long daysUntilNextDeadline
 ) {}

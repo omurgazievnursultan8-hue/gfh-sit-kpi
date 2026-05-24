@@ -67,6 +67,13 @@ export interface AdminStats {
   orgBlocksDelta: number
   orgDepartmentsDelta: number
   orgUnitsLeafDelta: number
+  completionRate: number
+  overdueEvaluations: number
+  avgRatingCurrentPeriod: number
+  ratedEvaluationsCurrentPeriod: number
+  nextDeadlineDate: string | null
+  nextDeadlinePeriodLabel: string | null
+  daysUntilNextDeadline: number
 }
 
 export interface QuartzJobInfo {

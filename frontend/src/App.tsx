@@ -35,6 +35,7 @@ import { AdminDashboardPage } from './features/admin/AdminDashboardPage'
 import { AuditLogPage } from './features/admin/AuditLogPage'
 import { AdminMonitoringPage } from './features/admin/AdminMonitoringPage'
 import { AdminEvaluationsPage } from './features/admin/AdminEvaluationsPage'
+import { AdminAppealsPage } from './features/admin/AdminAppealsPage'
 import { PeriodsPage } from './features/periods/PeriodsPage'
 
 export default function App() {
@@ -108,6 +109,7 @@ export default function App() {
         <Route path="criteria" element={<CriteriaPage />} />
         <Route path="periods" element={<PeriodsPage />} />
         <Route path="evaluations" element={<AdminEvaluationsPage />} />
+        <Route path="appeals" element={<AdminAppealsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="audit" element={<AuditLogPage />} />

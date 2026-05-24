@@ -4,7 +4,6 @@ import type { TFunction } from 'i18next'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import { StatusPill } from '../users/components/usersMeta'
 import { CriteriaFormModal } from './components/CriteriaFormModal'
 import { CriteriaRowMenu, type CriteriaActions } from './components/CriteriaRowMenu'
@@ -47,9 +46,6 @@ export function CriteriaPage() {
   const [criteria, setCriteria] = useState<Criteria[]>([])
   const [orgUnits, setOrgUnits] = useState<OrgUnit[]>([])
   const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
-  const [now, setNow] = useState(new Date())
   const [activeTab, setActiveTab] = useState<CriteriaType>('POSITIVE')
   const [editing, setEditing] = useState<Criteria | null>(null)
   const [showCreate, setShowCreate] = useState(false)
@@ -63,51 +59,13 @@ export function CriteriaPage() {
       // ~dozens of criteria — fetch wide, DataPanel filters/sorts client-side.
       const data = await criteriaApi.list(0, 500)
       setCriteria(data.content)
-      setFailed(false)
-    } catch {
-      setFailed(true)
     } finally {
       setLoading(false)
-      setLoadedAt(new Date())
     }
   }, [])
 
   useEffect(() => { loadCriteria() }, [loadCriteria])
   useEffect(() => { orgApi.getStructure().then(tree => setOrgUnits(flattenOrgTree(tree))) }, [])
-
-  // Live tick — refresh clock + relative time each minute.
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  /* ── time / clock ──────────────────────────────────────────────────────── */
-  const hours = now.getHours()
-  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const todayLine = `${datePart} · ${hh}:${mm}`
-  const clockKgt = `${hh}:${mm}`
-
-  let updatedLabel = ''
-  if (loadedAt) {
-    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
-    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
-  }
-
-  /* ── derived stats ─────────────────────────────────────────────────────── */
-  const stats = useMemo(() => {
-    const total = criteria.length
-    const active = criteria.filter(c => c.active).length
-    const global = criteria.filter(c => c.orgUnitId == null).length
-    const positive = criteria.filter(c => c.type === 'POSITIVE').length
-    const antiBonus = criteria.filter(c => c.type === 'ANTI_BONUS').length
-    const totalWeight = criteria
-      .filter(c => c.active && c.type === 'POSITIVE')
-      .reduce((s, c) => s + (Number(c.weight) || 0), 0)
-    return { total, active, global, positive, antiBonus, totalWeight }
-  }, [criteria])
 
   const closeConfirm = () => setConfirmDialog(d => ({ ...d, open: false }))
 
@@ -265,57 +223,8 @@ export function CriteriaPage() {
     <>
       <div className="dv3-root">
         <style>{DASHBOARD_CSS}</style>
-        <style>{STAT_CARD_CSS}</style>
 
         <div className="dv3-terminal">
-          {/* STAT GRID */}
-          <div className="dv3-grid">
-            <StatCard
-              className="dv3-col-3"
-              title="CRIT.TOTAL" id="C01" loading={loading}
-              value={stats.total} label="критериев"
-              gauge={{
-                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{stats.active}</strong> активных</>,
-                right: stats.total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="ACTIVE" id="A01" loading={loading}
-              value={stats.active} label="активных"
-              gauge={{
-                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</strong> всех</>,
-                right: stats.total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="SCOPE.GLOBAL" id="G01" loading={loading}
-              value={stats.global} label="глобальных"
-              gauge={{
-                pct: stats.total > 0 ? stats.global / stats.total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{stats.total - stats.global}</strong> локальных</>,
-                right: stats.total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="WEIGHT.SUM" id="W01" loading={loading}
-              value={Math.round(stats.totalWeight)} unit="%"
-              zoneScore={Math.round(stats.totalWeight)}
-              gauge={{
-                pct: Math.min(1, stats.totalWeight / 100), variant: 'marker',
-                left: '0', right: '100',
-                current: `${Math.round(stats.totalWeight)}%`,
-              }}
-            />
-          </div>
-          <div style={{ marginTop: 24 }}>
         <div className="flex gap-1 mb-4" role="tablist">
           {TABS.map(tab => {
             const on = tab.value === activeTab
@@ -361,7 +270,6 @@ export function CriteriaPage() {
           onRowClick={(c) => { if (!c.frozen) setEditing(c) }}
           toolbarActions={addButton}
         />
-      </div>
 
       <CriteriaFormModal
         open={showCreate || editing != null}
@@ -389,6 +297,7 @@ export function CriteriaPage() {
     </>
   )
 }
+
 
 function CardMetaRow({ k, children }: { k: string; children: ReactNode }) {
   return (

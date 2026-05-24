@@ -20,6 +20,16 @@ SPRING_LIQUIBASE_CONTEXTS=prod ./scripts/dev-start.sh
 
 Logs land in `.dev-logs/{backend,frontend}.log`. Postgres container (`gfh-postgres`) is left running on Ctrl+C; stop with `docker stop gfh-postgres`. Backend `:8080`, frontend `:5173`.
 
+### Restart backend only
+
+```bash
+# Kills running spring-boot:run, frees :8080, restarts with dev env, tails log.
+# Use after backend code/schema change while Postgres + frontend keep running.
+./scripts/restart-backend.sh
+```
+
+Sets the same env as `dev-start.sh` (incl. `SPRING_LIQUIBASE_CONTEXTS=dev`, `LOGIN_RATE_LIMIT_ENABLED=false`). Ctrl+C detaches tail; backend keeps running in background. Log: `.dev-logs/backend.log`.
+
 ### Backend
 
 ```bash

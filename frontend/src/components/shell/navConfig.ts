@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Target, FileCheck, ClipboardCheck, CheckSquare,
   ListChecks, TrendingUp, Building2, BarChart3,
   Users, GitBranch, Settings, CalendarDays, ClipboardList, Activity, Calendar,
+  AlertTriangle,
 } from 'lucide-react'
 
 export type Role =
@@ -115,6 +116,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/admin/criteria', labelKey: 'admin.criteria', icon: ListChecks, roles: ADMIN_ONLY },
           { to: '/admin/periods', labelKey: 'admin.periods', icon: Calendar, roles: ADMIN_ONLY },
           { to: '/admin/evaluations', labelKey: 'admin.evaluations', icon: FileCheck, roles: ADMIN_ONLY },
+          { to: '/admin/appeals', labelKey: 'admin.appeals', icon: AlertTriangle, roles: ADMIN_ONLY },
           { to: '/admin/delegations', labelKey: 'admin.delegations', icon: GitBranch, roles: ADMIN_ONLY },
         ],
       },

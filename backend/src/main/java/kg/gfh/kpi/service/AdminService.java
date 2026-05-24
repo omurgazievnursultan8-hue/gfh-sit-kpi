@@ -3,6 +3,7 @@ package kg.gfh.kpi.service;
 import kg.gfh.kpi.dto.AdminStatsResponse;
 import kg.gfh.kpi.entity.Appeal.AppealStatus;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
+import kg.gfh.kpi.entity.EvaluationPeriod;
 import kg.gfh.kpi.entity.EvaluationPeriod.PeriodStatus;
 import kg.gfh.kpi.enums.OrgUnitType;
 import kg.gfh.kpi.repository.*;
@@ -17,8 +18,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -39,7 +42,35 @@ public class AdminService {
 
     public AdminStatsResponse getStats(String range) {
         LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime cutoff = cutoffFor(range);
+
+        long activePeriodTotal = evaluationRepository.countInActivePeriods(PeriodStatus.ACTIVE);
+        long activePeriodCompleted = evaluationRepository.countCompletedInActivePeriods(
+            PeriodStatus.ACTIVE, EvaluationStatus.DRAFT);
+        double completionRate = activePeriodTotal > 0
+            ? (activePeriodCompleted * 100.0) / activePeriodTotal
+            : 0.0;
+
+        long overdue = evaluationRepository.countOverdueInActivePeriods(
+            EvaluationStatus.DRAFT, PeriodStatus.ACTIVE, now);
+
+        Double avgScore = evaluationRepository.avgFinalScoreActivePeriods(
+            PeriodStatus.ACTIVE, EvaluationStatus.DRAFT);
+        double avgRating = avgScore != null ? avgScore : 0.0;
+        long ratedCount = evaluationRepository.countRatedInActivePeriods(
+            PeriodStatus.ACTIVE, EvaluationStatus.DRAFT);
+
+        Optional<EvaluationPeriod> nextPeriod = evaluationPeriodRepository
+            .findFirstByStatusAndEndDateGreaterThanEqualOrderByEndDateAsc(PeriodStatus.ACTIVE, today);
+        LocalDate nextDeadlineDate = nextPeriod.map(EvaluationPeriod::getEndDate).orElse(null);
+        String nextDeadlineLabel = nextPeriod
+            .map(p -> p.getType().name() + " " + p.getStartDate() + ".." + p.getEndDate())
+            .orElse(null);
+        long daysUntilNext = nextDeadlineDate != null
+            ? ChronoUnit.DAYS.between(today, nextDeadlineDate)
+            : 0L;
+
         return new AdminStatsResponse(
             userRepository.count(),
             userRepository.countByIsActiveTrue(),
@@ -76,7 +107,14 @@ public class AdminService {
             criteriaRepository.countByActiveFalseAndCreatedAtAfter(cutoff),
             orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.BLOCK, cutoff),
             orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.DEPARTMENT, cutoff),
-            orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.UNIT, cutoff)
+            orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.UNIT, cutoff),
+            completionRate,
+            overdue,
+            avgRating,
+            ratedCount,
+            nextDeadlineDate,
+            nextDeadlineLabel,
+            daysUntilNext
         );
     }
 

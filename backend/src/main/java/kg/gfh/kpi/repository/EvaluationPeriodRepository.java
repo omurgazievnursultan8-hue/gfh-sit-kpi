@@ -6,8 +6,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface EvaluationPeriodRepository extends JpaRepository<EvaluationPeriod, Long> {
     List<EvaluationPeriod> findByStatus(PeriodStatus status);
@@ -16,4 +18,6 @@ public interface EvaluationPeriodRepository extends JpaRepository<EvaluationPeri
     long countByCreatedAtAfter(LocalDateTime cutoff);
     long countByStatusAndCreatedAtAfter(PeriodStatus status, LocalDateTime cutoff);
     long countByStatusNotAndCreatedAtAfter(PeriodStatus status, LocalDateTime cutoff);
+    Optional<EvaluationPeriod> findFirstByStatusAndEndDateGreaterThanEqualOrderByEndDateAsc(
+        PeriodStatus status, LocalDate today);
 }
