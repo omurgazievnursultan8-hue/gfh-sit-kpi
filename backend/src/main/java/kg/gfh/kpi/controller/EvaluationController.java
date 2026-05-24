@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import kg.gfh.kpi.dto.EvaluationPeriodRequest;
 import kg.gfh.kpi.dto.EvaluationResponse;
 import kg.gfh.kpi.dto.ScoreRequest;
+import kg.gfh.kpi.dto.ScoreResponse;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
 import kg.gfh.kpi.enums.Role;
 import kg.gfh.kpi.repository.EvaluationRepository;
@@ -164,6 +165,16 @@ public class EvaluationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return evaluationService.listAllForEvaluator(resolveUserId(auth), PageRequest.of(page, size));
+    }
+
+    @GetMapping("/evaluations/{id}")
+    public EvaluationResponse getById(@PathVariable Long id, Authentication auth) {
+        return evaluationService.getById(id, resolveUserId(auth));
+    }
+
+    @GetMapping("/evaluations/{id}/scores")
+    public List<ScoreResponse> getScores(@PathVariable Long id, Authentication auth) {
+        return evaluationService.getScores(id, resolveUserId(auth));
     }
 
     @PutMapping("/evaluations/{id}/scores")

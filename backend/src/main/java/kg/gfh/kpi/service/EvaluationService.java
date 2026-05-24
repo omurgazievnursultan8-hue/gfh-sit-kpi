@@ -4,6 +4,8 @@ import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.EvaluationPeriodRequest;
 import kg.gfh.kpi.dto.EvaluationResponse;
 import kg.gfh.kpi.dto.ScoreRequest;
+import kg.gfh.kpi.dto.ScoreResponse;
+import kg.gfh.kpi.enums.Role;
 import kg.gfh.kpi.entity.*;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
 import kg.gfh.kpi.entity.EvaluationPeriod.PeriodStatus;
@@ -247,6 +249,31 @@ public class EvaluationService {
     }
 
     // ── Queries ──────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    public EvaluationResponse getById(Long evaluationId, Long userId) {
+        Evaluation eval = findById(evaluationId);
+        assertCanView(eval, userId);
+        return EvaluationResponse.from(eval);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ScoreResponse> getScores(Long evaluationId, Long userId) {
+        Evaluation eval = findById(evaluationId);
+        assertCanView(eval, userId);
+        return scoreRepository.findByEvaluationId(evaluationId).stream()
+            .map(ScoreResponse::from)
+            .toList();
+    }
+
+    private void assertCanView(Evaluation eval, Long userId) {
+        if (eval.getEvaluator().getId().equals(userId)) return;
+        if (eval.getEvaluatee().getId().equals(userId)) return;
+        Role role = userRepository.findById(userId).map(User::getRole).orElse(Role.EMPLOYEE);
+        if (role == Role.ADMIN) return;
+        throw new ApiException("ACCESS_DENIED",
+            "Доступ запрещён", "Кирүүгө тыюу салынган");
+    }
 
     @Transactional(readOnly = true)
     public Page<EvaluationResponse> listForEvaluator(Long evaluatorId, EvaluationStatus status, Pageable pageable) {
