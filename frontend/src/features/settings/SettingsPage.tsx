@@ -1,13 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  Check, X, Pencil, ShieldCheck, ClipboardCheck, FileText, Settings2,
-  RotateCcw, AlertCircle,
-} from 'lucide-react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Check, X, Pencil, RotateCcw, AlertCircle } from 'lucide-react'
 import { SystemSetting, settingsApi } from './settingsApi'
-import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
-
-const PLACEHOLDER = '··'
+import { DataPanel, type Column } from '../../components/DataPanel'
 
 /* ── Setting metadata ─────────────────────────────────────────────── */
 
@@ -70,12 +64,12 @@ const META: Record<string, SettingMeta> = {
   },
 }
 
-const CATS: { key: CatKey; title: string; caption: string; Icon: typeof ShieldCheck }[] = [
-  { key: 'security',   title: 'Безопасность',  caption: 'Сессии и доступ',          Icon: ShieldCheck },
-  { key: 'evaluation', title: 'Оценка',        caption: 'Периоды, апелляции, рейтинг', Icon: ClipboardCheck },
-  { key: 'compliance', title: 'Соответствие',  caption: 'Персональные данные',       Icon: FileText },
-  { key: 'other',      title: 'Прочее',        caption: 'Незаведённые параметры',    Icon: Settings2 },
-]
+const CAT_LABEL: Record<CatKey, string> = {
+  security:   'Безопасность',
+  evaluation: 'Оценка',
+  compliance: 'Соответствие',
+  other:      'Прочее',
+}
 
 function metaFor(key: string): SettingMeta {
   return META[key] || { cat: 'other', type: 'text', label: key }
@@ -91,6 +85,85 @@ function displayValue(s: SystemSetting): string {
   return s.value
 }
 
+function formatUpdatedAt(iso?: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+const PANEL_KEY = 'admin.settings.panel'
+
+const SETTINGS_PAGE_CSS = `
+.sp-shell { max-width: 1200px; margin: 0 auto; padding: 24px 32px 48px; display: flex; flex-direction: column; gap: 16px; }
+.sp-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.sp-header-text { font-size: 13px; color: var(--ink-soft, #4d5544); line-height: 1.5; max-width: 760px; }
+.sp-refresh-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 6px 12px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
+  cursor: pointer; transition: background 0.12s, border-color 0.12s;
+}
+.sp-refresh-btn:hover:not(:disabled) { background: var(--bg-soft, #ebe6db); }
+.sp-refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.sp-key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: var(--ink-faint); }
+.sp-label { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.sp-hint { font-size: 11.5px; color: var(--ink-faint); line-height: 1.4; margin-top: 2px; max-width: 520px; }
+.sp-value { font-size: 13px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sp-edit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sp-edit-input {
+  font: inherit; font-size: 13px;
+  padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--surface); color: var(--ink);
+  min-width: 0; width: 160px;
+}
+.sp-edit-input--num { width: 110px; font-variant-numeric: tabular-nums; }
+.sp-edit-input:focus { outline: 2px solid var(--accent-2, #2f9e6d); outline-offset: 1px; }
+.sp-unit { font-size: 11px; color: var(--ink-faint); }
+.sp-action-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 11px; font-weight: 500;
+  padding: 5px 10px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--ink-soft); cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.sp-action-btn:hover:not(:disabled) { background: var(--bg-soft, #ebe6db); color: var(--ink); }
+.sp-action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.sp-action-btn--primary { background: var(--accent-2, #2f9e6d); color: #fff; border-color: var(--accent-2, #2f9e6d); }
+.sp-action-btn--primary:hover:not(:disabled) { filter: brightness(1.08); }
+.sp-action-btn--danger { color: var(--danger, #c0533f); border-color: var(--danger, #c0533f); background: transparent; }
+.sp-action-btn--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger, #c0533f) 10%, transparent); color: var(--danger, #c0533f); }
+.sp-cat-pill {
+  display: inline-block; font-size: 10.5px; font-weight: 500;
+  padding: 2px 8px; border-radius: 999px;
+  background: var(--bg-soft, #ebe6db); color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+.sp-card {
+  display: flex; flex-direction: column; gap: 10px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  min-height: 100%;
+}
+.sp-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.sp-card-value-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-top: 8px; border-top: 1px dashed var(--line);
+}
+.sp-card-value { font-size: 15px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sp-card-meta { font-size: 10.5px; color: var(--ink-faint); }
+.sp-error {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--danger, #c0533f); margin-top: 4px;
+}
+`
+
+interface Row extends SystemSetting {
+  _label: string
+  _cat: CatKey
+  _catLabel: string
+}
+
 /* ── Page ─────────────────────────────────────────────────────────── */
 
 export function SettingsPage() {
@@ -100,12 +173,6 @@ export function SettingsPage() {
   const [editValue, setEditValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [now, setNow] = useState(new Date())
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
 
   const loadSettings = async () => {
     setLoading(true)
@@ -144,174 +211,302 @@ export function SettingsPage() {
     }
   }
 
-  const grouped = useMemo(() => {
-    const byCat = new Map<CatKey, SystemSetting[]>()
-    for (const s of settings) {
-      const cat = metaFor(s.key).cat
-      if (!byCat.has(cat)) byCat.set(cat, [])
-      byCat.get(cat)!.push(s)
+  const rows: Row[] = useMemo(() => settings.map(s => {
+    const m = metaFor(s.key)
+    return { ...s, _label: m.label, _cat: m.cat, _catLabel: CAT_LABEL[m.cat] }
+  }), [settings])
+
+  const categoryOptions = useMemo(() => {
+    const seen = new Set<CatKey>()
+    rows.forEach(r => seen.add(r._cat))
+    const opts = (Object.keys(CAT_LABEL) as CatKey[])
+      .filter(k => seen.has(k))
+      .map(k => ({ value: k, label: CAT_LABEL[k] }))
+    return [{ value: '', label: 'Все категории' }, ...opts]
+  }, [rows])
+
+  const columns: Column<Row>[] = [
+    {
+      key: 'label', header: 'Параметр', sortable: true, hideable: false,
+      render: (r) => {
+        const m = metaFor(r.key)
+        const editing = editingKey === r.key
+        return (
+          <div>
+            <div className="sp-label">{r._label}</div>
+            {m.hint && <div className="sp-hint">{m.hint}</div>}
+            <div className="sp-key" style={{ marginTop: 2 }}>{r.key}</div>
+            {editing && error && (
+              <div className="sp-error" role="alert">
+                <AlertCircle size={12} strokeWidth={2} aria-hidden="true" />
+                {error}
+              </div>
+            )}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'value', header: 'Значение',
+      render: (r) => {
+        const m = metaFor(r.key)
+        const editing = editingKey === r.key
+        if (!editing) {
+          return <span className="sp-value">{displayValue(r)}</span>
+        }
+        return (
+          <div className="sp-edit-row" onClick={e => e.stopPropagation()}>
+            {m.type === 'select' ? (
+              <select
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                autoFocus
+                className="sp-edit-input"
+                aria-label={m.label}
+              >
+                {m.options!.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type={m.type === 'number' ? 'number' : 'text'}
+                value={editValue}
+                min={m.min}
+                max={m.max}
+                onChange={e => setEditValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') saveEdit(r.key)
+                  if (e.key === 'Escape') cancelEdit()
+                }}
+                autoFocus
+                className={`sp-edit-input${m.type === 'number' ? ' sp-edit-input--num' : ''}`}
+                aria-label={m.label}
+              />
+            )}
+            {m.unit && <span className="sp-unit">{m.unit}</span>}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'category', header: 'Категория', sortable: true,
+      render: (r) => <span className="sp-cat-pill">{r._catLabel}</span>,
+    },
+    {
+      key: 'updatedAt', header: 'Изменено', sortable: true,
+      render: (r) => (
+        <span className="sp-key" style={{ fontSize: 12 }}>{formatUpdatedAt(r.updatedAt)}</span>
+      ),
+    },
+    {
+      key: 'actions', header: 'Действия', align: 'right', srOnlyHeader: true, hideable: false,
+      render: (r) => {
+        const editing = editingKey === r.key
+        return (
+          <div onClick={e => e.stopPropagation()} className="sp-edit-row" style={{ justifyContent: 'flex-end' }}>
+            {editing ? (
+              <>
+                <button
+                  type="button"
+                  className="sp-action-btn sp-action-btn--primary"
+                  onClick={() => saveEdit(r.key)}
+                  disabled={saving}
+                  title="Сохранить"
+                  aria-label="Сохранить"
+                >
+                  <Check size={13} strokeWidth={2.4} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="sp-action-btn sp-action-btn--danger"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                  title="Отмена"
+                  aria-label="Отмена"
+                >
+                  <X size={13} strokeWidth={2.4} aria-hidden="true" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="sp-action-btn"
+                onClick={() => startEdit(r)}
+                aria-label={`Изменить «${r._label}»`}
+              >
+                <Pencil size={11} strokeWidth={2} aria-hidden="true" />
+                Изменить
+              </button>
+            )}
+          </div>
+        )
+      },
+    },
+  ]
+
+  const searchText = (r: Row) => `${r._label} ${r.key} ${r._catLabel} ${r.value}`
+
+  const clientFilter = (r: Row, v: Record<string, string>) => {
+    if (v.category && r._cat !== v.category) return false
+    return true
+  }
+
+  const renderCard = (r: Row): ReactNode => {
+    const m = metaFor(r.key)
+    const editing = editingKey === r.key
+    return (
+      <div className="sp-card">
+        <div className="sp-card-head">
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="sp-label">{r._label}</div>
+            <div className="sp-key" style={{ marginTop: 2 }}>{r.key}</div>
+          </div>
+          <span className="sp-cat-pill">{r._catLabel}</span>
+        </div>
+
+        {m.hint && <div className="sp-hint" style={{ maxWidth: 'none' }}>{m.hint}</div>}
+
+        {editing && error && (
+          <div className="sp-error" role="alert">
+            <AlertCircle size={12} strokeWidth={2} aria-hidden="true" />
+            {error}
+          </div>
+        )}
+
+        <div className="sp-card-value-row">
+          {editing ? (
+            <div className="sp-edit-row" style={{ flex: 1 }}>
+              {m.type === 'select' ? (
+                <select
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  autoFocus
+                  className="sp-edit-input"
+                  style={{ width: '100%' }}
+                  aria-label={m.label}
+                >
+                  {m.options!.map(o => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type={m.type === 'number' ? 'number' : 'text'}
+                  value={editValue}
+                  min={m.min}
+                  max={m.max}
+                  onChange={e => setEditValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') saveEdit(r.key)
+                    if (e.key === 'Escape') cancelEdit()
+                  }}
+                  autoFocus
+                  className={`sp-edit-input${m.type === 'number' ? ' sp-edit-input--num' : ''}`}
+                  aria-label={m.label}
+                />
+              )}
+              {m.unit && <span className="sp-unit">{m.unit}</span>}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+              <span className="sp-card-value">{displayValue(r)}</span>
+              <span className="sp-card-meta">изм. {formatUpdatedAt(r.updatedAt)}</span>
+            </div>
+          )}
+
+          <div className="sp-edit-row">
+            {editing ? (
+              <>
+                <button
+                  type="button"
+                  className="sp-action-btn sp-action-btn--primary"
+                  onClick={() => saveEdit(r.key)}
+                  disabled={saving}
+                  title="Сохранить"
+                  aria-label="Сохранить"
+                >
+                  <Check size={13} strokeWidth={2.4} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="sp-action-btn sp-action-btn--danger"
+                  onClick={cancelEdit}
+                  disabled={saving}
+                  title="Отмена"
+                  aria-label="Отмена"
+                >
+                  <X size={13} strokeWidth={2.4} aria-hidden="true" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="sp-action-btn"
+                onClick={() => startEdit(r)}
+                aria-label={`Изменить «${r._label}»`}
+              >
+                <Pencil size={11} strokeWidth={2} aria-hidden="true" />
+                Изменить
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const comparator = (key: string) => (a: Row, b: Row): number => {
+    switch (key) {
+      case 'category':  return a._catLabel.localeCompare(b._catLabel, 'ru')
+      case 'updatedAt': return (a.updatedAt ?? '').localeCompare(b.updatedAt ?? '')
+      default:          return a._label.localeCompare(b._label, 'ru')
     }
-    for (const list of byCat.values()) {
-      list.sort((a, b) => metaFor(a.key).label.localeCompare(metaFor(b.key).label, 'ru'))
-    }
-    return byCat
-  }, [settings])
-
-  const lastUpdated = useMemo(() => {
-    const stamps = settings.map(s => s.updatedAt).filter(Boolean).sort()
-    return stamps.length ? new Date(stamps[stamps.length - 1]) : null
-  }, [settings])
-
-  /* ── time / clock ──────────────────────────────────────────────────── */
-  const hours = now.getHours()
-  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const todayLine = `${datePart} · ${hh}:${mm}`
-  const clockKgt = `${hh}:${mm}`
-
-  const updatedLabel = lastUpdated
-    ? `изменено ${lastUpdated.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`
-    : ''
-
-  const visibleCats = CATS.filter(c => (grouped.get(c.key)?.length ?? 0) > 0)
+  }
 
   return (
-    <>
-      <div className="dv3-root">
-        <style>{DASHBOARD_CSS}</style>
-        <style>{DV3_FORM_CSS}</style>
+    <div className="sp-shell">
+      <style>{SETTINGS_PAGE_CSS}</style>
 
-        <div className="dv3-terminal" style={{ maxWidth: 960 }}>
-        </div>
+      <div className="sp-header">
+        <p className="sp-header-text">
+          Глобальные параметры платформы. Изменения вступают в силу немедленно
+          и применяются ко всем пользователям.
+        </p>
+        <button
+          type="button"
+          className="sp-refresh-btn"
+          onClick={loadSettings}
+          disabled={loading}
+          title="Обновить"
+        >
+          <RotateCcw size={13} strokeWidth={2} aria-hidden="true" />
+          Обновить
+        </button>
       </div>
 
-      {/* SETTINGS PANELS */}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '0 32px 48px' }}>
-        <div className="dv3-banner" style={{ marginBottom: 18 }}>
-          Глобальные параметры платформы. Изменения вступают в силу немедленно и
-          применяются ко всем пользователям.
-          <button
-            className="dv3-btn"
-            onClick={loadSettings}
-            disabled={loading}
-            title="Обновить"
-            style={{ float: 'right', marginTop: -4 }}
-          >
-            <RotateCcw size={13} strokeWidth={2} aria-hidden="true" />
-            Обновить
-          </button>
-        </div>
-
-        <div className="dv3-form">
-          {CATS.map(({ key, title, caption, Icon }) => {
-            const items = grouped.get(key)
-            if (!items || items.length === 0) return null
-            return (
-              <section className="dv3-panel dv3-panel--accent" key={key}>
-                <div className="dv3-section-head">
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <Icon size={14} strokeWidth={2} aria-hidden="true" />
-                    {title} · {caption}
-                  </span>
-                  <span>{items.length}</span>
-                </div>
-
-                {items.map(s => {
-                  const m = metaFor(s.key)
-                  const editing = editingKey === s.key
-                  return (
-                    <div className="dv3-setrow" key={s.key}>
-                      <div className="dv3-setrow-main">
-                        <span className="dv3-setrow-title">{m.label}</span>
-                        {(m.hint || s.description) && (
-                          <span className="dv3-setrow-desc">{m.hint || s.description}</span>
-                        )}
-                        <span className="dv3-help" style={{ marginTop: 2 }}>{s.key}</span>
-                        {editing && error && (
-                          <span
-                            className="dv3-banner dv3-banner--error"
-                            role="alert"
-                            style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                          >
-                            <AlertCircle size={13} strokeWidth={2} aria-hidden="true" />
-                            {error}
-                          </span>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {editing ? (
-                          <>
-                            {m.type === 'select' ? (
-                              <select
-                                value={editValue}
-                                onChange={e => setEditValue(e.target.value)}
-                                autoFocus
-                                className="dv3-select"
-                                aria-label={m.label}
-                              >
-                                {m.options!.map(o => (
-                                  <option key={o.value} value={o.value}>{o.label}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <input
-                                type={m.type === 'number' ? 'number' : 'text'}
-                                value={editValue}
-                                min={m.min}
-                                max={m.max}
-                                onChange={e => setEditValue(e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') saveEdit(s.key)
-                                  if (e.key === 'Escape') cancelEdit()
-                                }}
-                                autoFocus
-                                className={`dv3-input${m.type === 'number' ? ' dv3-input--num' : ''}`}
-                                aria-label={m.label}
-                              />
-                            )}
-                            {m.unit && <span className="dv3-help">{m.unit}</span>}
-                            <button
-                              onClick={() => saveEdit(s.key)}
-                              disabled={saving}
-                              className="dv3-btn dv3-btn--primary"
-                              title="Сохранить"
-                            >
-                              <Check size={15} strokeWidth={2.4} aria-hidden="true" />
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              disabled={saving}
-                              className="dv3-btn dv3-btn--danger"
-                              title="Отмена"
-                            >
-                              <X size={15} strokeWidth={2.4} aria-hidden="true" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <span className="dv3-help" style={{ fontSize: 13 }}>{displayValue(s)}</span>
-                            <button
-                              onClick={() => startEdit(s)}
-                              className="dv3-btn"
-                              aria-label={`Изменить «${m.label}»`}
-                            >
-                              <Pencil size={13} strokeWidth={2} aria-hidden="true" />
-                              Изменить
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </section>
-            )
-          })}
-        </div>
-      </div>
-    </>
+      <DataPanel<Row>
+        mode="client"
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.key}
+        loading={loading}
+        caption="Параметры системы"
+        empty="Параметры не настроены"
+        searchable
+        searchText={searchText}
+        searchPlaceholder="Поиск по параметру…"
+        filters={[
+          { key: 'category', label: 'Категория', type: 'select', options: categoryOptions },
+        ]}
+        clientFilter={clientFilter}
+        comparator={comparator}
+        defaultSort={{ key: 'label', dir: 'asc' }}
+        views={['table', 'cards']}
+        renderCard={renderCard}
+        panelStorageKey={PANEL_KEY}
+        columnConfig
+      />
+    </div>
   )
 }
