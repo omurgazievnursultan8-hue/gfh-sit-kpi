@@ -8,7 +8,6 @@ import { OrgUnitFormModal } from './components/OrgUnitFormModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 import api from '../../app/api'
 
 interface UserOption {
@@ -32,31 +31,12 @@ const TYPE_RAIL: Record<OrgUnit['type'], string> = {
   UNIT: 'var(--dv3-zone-up)',
 }
 
-const PLACEHOLDER = '··'
-
 function collectIds(nodes: OrgUnit[], acc: number[] = []): number[] {
   for (const n of nodes) {
     acc.push(n.id)
     if (n.children.length > 0) collectIds(n.children, acc)
   }
   return acc
-}
-
-function maxDepth(nodes: OrgUnit[]): number {
-  let d = 0
-  for (const n of nodes) {
-    d = Math.max(d, 1 + (n.children.length > 0 ? maxDepth(n.children) : 0))
-  }
-  return d
-}
-
-function countWithHead(nodes: OrgUnit[]): number {
-  let c = 0
-  for (const n of nodes) {
-    if (n.headUserId) c += 1
-    if (n.children.length > 0) c += countWithHead(n.children)
-  }
-  return c
 }
 
 function findById(nodes: OrgUnit[], id: number): OrgUnit | null {
@@ -89,9 +69,7 @@ export function OrgPage() {
   const [tree, setTree] = useState<OrgUnit[]>([])
   const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
-  const [now, setNow] = useState(new Date())
+  const [, setFailed] = useState(false)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<OrgUnit | null>(null)
@@ -113,7 +91,6 @@ export function OrgPage() {
       setFailed(true)
     } finally {
       setLoading(false)
-      setLoadedAt(new Date())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -125,31 +102,7 @@ export function OrgPage() {
       .catch(() => {})
   }, [loadTree])
 
-  // Live tick — refresh clock + relative time each minute.
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 60_000)
-    return () => clearInterval(id)
-  }, [])
-
-  /* ── time / clock ──────────────────────────────────────────────────────── */
-  const hours = now.getHours()
-  const timeGreeting = hours < 12 ? 'Доброе утро' : hours < 18 ? 'Добрый день' : 'Добрый вечер'
-  const datePart = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mm = String(now.getMinutes()).padStart(2, '0')
-  const todayLine = `${datePart} · ${hh}:${mm}`
-  const clockKgt = `${hh}:${mm}`
-
-  let updatedLabel = ''
-  if (loadedAt) {
-    const mins = Math.floor((now.getTime() - loadedAt.getTime()) / 60_000)
-    updatedLabel = mins < 1 ? 'обновлено только что' : `обновлено ${mins} мин назад`
-  }
-
-  /* ── derived stats ─────────────────────────────────────────────────────── */
   const totalUnits = useMemo(() => collectIds(tree).length, [tree])
-  const levels = useMemo(() => maxDepth(tree), [tree])
-  const withHead = useMemo(() => countWithHead(tree), [tree])
 
   const headLookup = useMemo(() => {
     const m = new Map<number, string>()
@@ -192,41 +145,6 @@ export function OrgPage() {
 
   return (
     <>
-      <div className="dv3-root">
-        <style>{DASHBOARD_CSS}</style>
-        <style>{STAT_CARD_CSS}</style>
-        <style>{DV3_FORM_CSS}</style>
-        <style>{ORG_CSS}</style>
-
-        <div className="dv3-terminal">
-          {/* STAT GRID */}
-          <div className="dv3-grid">
-            <StatCard
-              className="dv3-col-4"
-              title="ORG.UNITS" id="O01" loading={loading}
-              value={totalUnits} label="узлов структуры"
-            />
-            <StatCard
-              className="dv3-col-4"
-              title="DEPTH" id="D01" loading={loading}
-              value={levels} label="уровней вложенности"
-            />
-            <StatCard
-              className="dv3-col-4"
-              title="HEADS" id="H01" loading={loading}
-              value={withHead} label="с руководителем"
-              gauge={{
-                pct: totalUnits > 0 ? withHead / totalUnits : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{totalUnits > 0 ? Math.round((withHead / totalUnits) * 100) : 0}%</strong> узлов</>,
-                right: totalUnits,
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* TREE + SPEC */}
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px 48px' }} className="dv3-root org-scope">
         <style>{DASHBOARD_CSS}</style>
         <style>{DV3_FORM_CSS}</style>

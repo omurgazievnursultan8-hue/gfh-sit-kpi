@@ -7,7 +7,6 @@ import { DataTable, type Column } from '../../components/DataTable'
 import { TableCard } from '../../components/TableCard'
 import { Badge, type BadgeTone } from '../../components/Badge'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
 
 /* ────────────────────────────────────────────────────────────────────────────
  * "Делегирования оценки" — admin ledger, dv3 terminal skin.
@@ -274,62 +273,13 @@ export function DelegationsPage() {
     <>
       <div className="dv3-root">
         <style>{DASHBOARD_CSS}</style>
-        <style>{STAT_CARD_CSS}</style>
         <style>{`
           .dl-inactive { opacity: .65 }
         `}</style>
 
         <div className="dv3-terminal">
-          {/* STAT GRID */}
-          <div className="dv3-grid">
-            <StatCard
-              className="dv3-col-3"
-              title="DELEG.TOTAL" id="D01" loading={loading}
-              value={stats.total} label="в реестре"
-              gauge={{
-                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{stats.delegatees}</strong> {plural(stats.delegatees, ['чел.', 'чел.', 'чел.'])}</>,
-                right: stats.total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="ACTIVE" id="A01" loading={loading}
-              value={stats.active} label="сейчас в силе"
-              gauge={{
-                pct: stats.total > 0 ? stats.active / stats.total : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}%</strong> всех</>,
-                right: stats.total,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="EXPIRING" id="E01" loading={loading}
-              value={stats.expiring} label="скоро закончатся"
-              gauge={{
-                pct: stats.active > 0 ? stats.expiring / stats.active : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>≤ 7д</strong> до конца</>,
-                right: stats.active,
-              }}
-            />
-            <StatCard
-              className="dv3-col-3"
-              title="OVERDUE" id="X01" loading={loading}
-              value={stats.overdue} label="окно прошло"
-              gauge={{
-                pct: stats.active > 0 ? stats.overdue / stats.active : 0, variant: 'meta',
-                left: '0',
-                center: <><strong>{stats.overdue > 0 ? 'продлить' : 'ок'}</strong></>,
-                right: stats.active,
-              }}
-            />
-          </div>
-
-      {/* LEDGER */}
-          <div style={{ marginTop: 24 }}>
+          {/* LEDGER */}
+          <div>
         <div>
           <TableCard
             header={
