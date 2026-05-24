@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="049-extend-users" author="gfh">
+        <addColumn tableName="users">
+            <column name="last_login_at" type="TIMESTAMP"/>
+            <column name="pdpa_accepted_at" type="TIMESTAMP"/>
+            <column name="preferred_language" type="VARCHAR(2)"/>
+            <column name="must_change_password" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="users" baseColumnNames="unit_id"
+                                 constraintName="fk_users_unit"
+                                 referencedTableName="org_units" referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+        <addForeignKeyConstraint baseTableName="users" baseColumnNames="manager_id"
+                                 constraintName="fk_users_manager"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+        <createIndex tableName="users" indexName="idx_users_last_login_at">
+            <column name="last_login_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

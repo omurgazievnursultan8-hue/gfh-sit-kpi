@@ -56,6 +56,7 @@ public class AuthService {
 
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
