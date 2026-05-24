@@ -80,6 +80,10 @@ export interface DataPanelProps<T> {
 
   onRowClick?: (r: T) => void
   toolbarActions?: ReactNode
+
+  /** Forwarded to the inner DataTable in table view. */
+  renderExpanded?: (row: T) => ReactNode
+  expandedKeys?: Set<string | number>
 }
 
 function loadView(key: string | undefined, views: ViewKind[]): ViewKind {
@@ -118,6 +122,7 @@ export function DataPanel<T>({
   pageSize: pageSizeProp = 10, pageSizeOptions = [10, 25, 50, 100],
   page: pageProp, totalElements, onStateChange,
   onRowClick, toolbarActions,
+  renderExpanded, expandedKeys,
 }: DataPanelProps<T>) {
   const { t } = useTranslation()
   const persisted = useMemo<PanelViewState | null>(
@@ -416,6 +421,8 @@ export function DataPanel<T>({
             onSort={handleSort}
             onRowClick={onRowClick}
             empty={empty}
+            renderExpanded={renderExpanded}
+            expandedKeys={expandedKeys}
           />
         </div>
       )}
