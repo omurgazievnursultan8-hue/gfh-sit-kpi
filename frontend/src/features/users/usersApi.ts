@@ -17,10 +17,12 @@ export interface User {
   employmentType: EmploymentType | null
   role: string
   position: string | null
+  positionId: number | null
   unitId: number | null
   managerId: number | null
   isActive: boolean
   createdAt: string
+  tempPassword?: string | null
 }
 
 export interface PageResponse<T> {
@@ -45,6 +47,7 @@ export interface UserCreateRequest {
   employmentType?: EmploymentType
   role: string
   position?: string
+  positionId?: number | null
   unitId?: number
   managerId?: number
 }
@@ -61,7 +64,7 @@ export const usersApi = {
   reactivate: (id: number) =>
     api.put(`/users/${id}/activate`),
   resetPassword: (id: number) =>
-    api.post(`/users/${id}/reset-password`),
+    api.post<User>(`/users/${id}/reset-password`).then(r => r.data),
   uploadAvatar: (id: number, file: File) => {
     const fd = new FormData()
     fd.append('file', file)
@@ -69,4 +72,63 @@ export const usersApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }).then(r => r.data)
   },
+}
+
+export type EvaluationStatus = 'DRAFT' | 'SUBMITTED' | 'CANCELLED'
+
+export interface EvaluationListItem {
+  id: number
+  periodId: number
+  evaluateeId: number
+  evaluateeName: string
+  evaluatorId: number
+  evaluatorName: string
+  status: EvaluationStatus
+  finalScore: number | null
+  submittedAt: string | null
+  createdAt: string
+}
+
+export interface ScoreItem {
+  criteriaId: number
+  value: number
+  note: string | null
+}
+
+export type CriteriaType = 'POSITIVE' | 'ANTI_BONUS'
+
+export interface CriteriaItem {
+  id: number
+  nameRu: string
+  nameKg: string
+  type: CriteriaType
+  weight: number
+  orgUnitId: number | null
+  orgUnitNameRu: string | null
+  active: boolean
+}
+
+export interface PeriodItem {
+  id: number
+  type: string
+  startDate: string
+  endDate: string
+  submissionDeadline: string | null
+  status: string
+  autoCreated: boolean
+  createdAt: string
+}
+
+export const userDetailApi = {
+  listEvaluations: (evaluateeId: number) =>
+    api.get<PageResponse<EvaluationListItem>>('/evaluations', {
+      params: { evaluateeId, page: 0, size: 100, sort: 'createdAt,desc' },
+    }).then(r => r.data),
+  getScores: (evaluationId: number) =>
+    api.get<ScoreItem[]>(`/evaluations/${evaluationId}/scores`).then(r => r.data),
+  listCriteria: () =>
+    api.get<PageResponse<CriteriaItem> | CriteriaItem[]>('/criteria', { params: { page: 0, size: 500 } })
+      .then(r => Array.isArray(r.data) ? r.data : r.data.content),
+  listPeriods: () =>
+    api.get<PeriodItem[]>('/periods').then(r => r.data),
 }
