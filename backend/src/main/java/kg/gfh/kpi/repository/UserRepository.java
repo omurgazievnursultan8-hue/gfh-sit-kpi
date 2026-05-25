@@ -4,6 +4,7 @@ import kg.gfh.kpi.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,4 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByCreatedAtAfter(LocalDateTime cutoff);
     long countByIsActiveTrueAndCreatedAtAfter(LocalDateTime cutoff);
     long countByIsActiveFalseAndCreatedAtAfter(LocalDateTime cutoff);
+
+    @Query("select u.unitId, count(u) from User u where u.isActive = true and u.unitId is not null group by u.unitId")
+    List<Object[]> countActiveByUnit();
 }
