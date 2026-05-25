@@ -7,6 +7,7 @@ import kg.gfh.kpi.entity.OrgUnit;
 import kg.gfh.kpi.enums.OrgUnitType;
 import kg.gfh.kpi.exception.ApiException;
 import kg.gfh.kpi.repository.OrgUnitRepository;
+import kg.gfh.kpi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class OrgUnitService {
 
     private final OrgUnitRepository orgUnitRepository;
+    private final UserRepository userRepository;
 
     private static final Map<OrgUnitType, Set<OrgUnitType>> ALLOWED_PARENTS = Map.of(
             OrgUnitType.BLOCK, EnumSet.noneOf(OrgUnitType.class),
