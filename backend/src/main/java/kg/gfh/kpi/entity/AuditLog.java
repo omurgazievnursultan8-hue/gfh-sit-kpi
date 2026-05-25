@@ -3,6 +3,7 @@ package kg.gfh.kpi.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.time.LocalDateTime;
 
@@ -30,6 +31,7 @@ public class AuditLog {
     private Long entityId;
 
     @Column(name = "new_value", columnDefinition = "JSONB")
+    @ColumnTransformer(write = "?::jsonb")
     private String newValue;
 
     @Column(name = "ip_address", length = 45)

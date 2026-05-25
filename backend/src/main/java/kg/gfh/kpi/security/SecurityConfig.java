@@ -10,7 +10,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.*;
 
 @Configuration
@@ -20,6 +19,7 @@ import org.springframework.security.web.csrf.*;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final CsrfCookieFilter csrfCookieFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -36,6 +36,12 @@ public class SecurityConfig {
                     "/api/v1/auth/password/reset"
                 ))
             .authorizeHttpRequests(auth -> auth
+                // sendError(...) by CsrfFilter/AccessDeniedHandlerImpl triggers
+                // a Tomcat ERROR dispatch that re-enters the security chain.
+                // Permit ERROR dispatches so the original status code (e.g. 403)
+                // is preserved instead of being overwritten to 401 by our
+                // authenticationEntryPoint.
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                 .requestMatchers(
                     "/api/v1/auth/login",
                     "/api/v1/auth/logout",
@@ -56,7 +62,15 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, e) ->
                     res.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED)))
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, CsrfFilter.class)
+            // CsrfCookieFilter must run AFTER SessionManagementFilter:
+            // SessionManagementFilter's CsrfAuthenticationStrategy rotates the
+            // XSRF token on each authenticated request (deletes old, defers new).
+            // Calling csrfToken.getToken() afterward materialises the new token
+            // back into the XSRF-TOKEN cookie. If it runs earlier, the cookie
+            // is deleted with no replacement and every subsequent request 403s.
+            .addFilterAfter(csrfCookieFilter,
+                org.springframework.security.web.session.SessionManagementFilter.class);
         return http.build();
     }
 
