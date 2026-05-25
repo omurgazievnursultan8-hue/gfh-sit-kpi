@@ -57,8 +57,8 @@ public class AuthController {
         UserDetails ud = (UserDetails) auth.getPrincipal();
         User u = userRepository.findByEmail(ud.getUsername())
                 .orElseThrow(() -> new ApiException("USER_NOT_FOUND", "Пользователь не найден", "Колдонуучу табылган жок"));
-        boolean passwordExpired = u.getPasswordUpdatedAt() != null
-                && u.getPasswordUpdatedAt().isBefore(java.time.LocalDateTime.now().minusDays(90));
+        boolean passwordExpired = u.getPasswordUpdatedAt() == null
+                || u.getPasswordUpdatedAt().isBefore(java.time.LocalDateTime.now().minusDays(90));
         return new LoginResponse(u.getId(), u.getEmail(), u.getFullName(), u.getRole().name(), passwordExpired, false);
     }
 

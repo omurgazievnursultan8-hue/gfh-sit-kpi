@@ -68,6 +68,12 @@ public class UserController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/{id}/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> resetPassword(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.resetPassword(id));
+    }
+
     @GetMapping("/subordinates")
     @PreAuthorize("hasAnyRole('DEPUTY_CHAIRMAN','ORG_HEAD')")
     public ResponseEntity<List<UserResponse>> getSubordinates(

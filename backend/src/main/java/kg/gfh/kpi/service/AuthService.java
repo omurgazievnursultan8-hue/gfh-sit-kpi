@@ -74,7 +74,7 @@ public class AuthService {
 
         setTokenCookies(response, accessToken, rawRefresh);
 
-        boolean passwordExpired = user.getPasswordUpdatedAt() != null &&
+        boolean passwordExpired = user.getPasswordUpdatedAt() == null ||
                 user.getPasswordUpdatedAt().isBefore(LocalDateTime.now().minusDays(90));
 
         return new LoginResponse(user.getId(), user.getEmail(), user.getFullName(),

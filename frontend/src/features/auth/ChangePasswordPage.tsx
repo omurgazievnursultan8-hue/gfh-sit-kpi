@@ -1,4 +1,4 @@
-import { useState, FormEvent, useId } from 'react'
+import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { useTranslation } from 'react-i18next'
@@ -6,6 +6,10 @@ import { AppDispatch } from '../../app/store'
 import { setAuthState } from './authSlice'
 import api from '../../app/api'
 import type { AxiosError } from 'axios'
+import { LangSwitcher } from '../../shared/layout/LangSwitcher'
+import { BrandPanel } from './components/BrandPanel'
+import { PasswordField } from './components/PasswordField'
+import { LoginBanner } from './components/LoginBanner'
 
 export function ChangePasswordPage() {
   const navigate = useNavigate()
@@ -17,13 +21,14 @@ export function ChangePasswordPage() {
   const [error, setError] = useState('')
   const [confirmBlurred, setConfirmBlurred] = useState(false)
   const [loading, setLoading] = useState(false)
-
-  const curId = useId()
-  const newId = useId()
-  const confirmId = useId()
-  const errId = useId()
+  const [success, setSuccess] = useState(false)
 
   const mismatch = confirmBlurred && confirmPassword.length > 0 && newPassword !== confirmPassword
+  const isFormValid =
+    currentPassword.length > 0 &&
+    newPassword.length >= 10 &&
+    confirmPassword.length > 0 &&
+    !mismatch
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -32,11 +37,13 @@ export function ChangePasswordPage() {
       setError(t('auth.passwordsMismatch', 'Пароли не совпадают') as string)
       return
     }
+    if (!isFormValid || loading || success) return
     setLoading(true)
     try {
       await api.post('/users/password/change', { currentPassword, newPassword })
       dispatch(setAuthState({ passwordExpired: false }))
-      navigate('/dashboard')
+      setSuccess(true)
+      setTimeout(() => navigate('/dashboard'), 900)
     } catch (err) {
       const axiosErr = err as AxiosError<{ messageRu?: string; message_ru?: string }>
       const data = axiosErr.response?.data
@@ -47,76 +54,96 @@ export function ChangePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">{t('auth.changePassword', 'Смена пароля')}</h2>
-        <p className="text-sm text-amber-600 mb-4">
-          {t('auth.passwordExpiredHint', 'Срок действия вашего пароля истёк. Необходимо установить новый пароль.')}
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <div>
-            <label htmlFor={curId} className="block text-sm text-gray-700 mb-1">
-              {t('auth.currentPassword', 'Текущий пароль')}
-            </label>
-            <input
-              id={curId}
-              type="password"
-              autoComplete="current-password"
+    <div className="login-bg">
+      <LangSwitcher />
+
+      <main className="login-card">
+        <BrandPanel />
+
+        <section className="login-form-panel" aria-label={t('auth.changePassword', 'Смена пароля') as string}>
+          <div className="login-form-head">
+            <h1 className="login-form-title">{t('auth.changePassword', 'Смена пароля')}</h1>
+            <div className="login-form-rule" aria-hidden="true"><span>◆</span></div>
+          </div>
+
+          <LoginBanner
+            variant="error"
+            title={t('auth.passwordExpiredTitle', 'Требуется обновление пароля') as string}
+            body={t('auth.passwordExpiredHint', 'Срок действия вашего пароля истёк. Необходимо установить новый пароль.') as string}
+          />
+
+          {error && (
+            <LoginBanner
+              id="cp-error"
+              variant="error"
+              title={t('login.errorTitle')}
+              body={error}
+            />
+          )}
+
+          {success && (
+            <LoginBanner
+              variant="success"
+              title={t('common.saved', 'Сохранено') as string}
+              body={t('auth.passwordChanged', 'Пароль обновлён. Перенаправляем…') as string}
+            />
+          )}
+
+          <form onSubmit={handleSubmit} noValidate autoComplete="on">
+            <PasswordField
+              id="cp-current"
+              label={`01 — ${t('auth.currentPassword', 'Текущий пароль')}`}
               value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
+              onChange={setCurrentPassword}
+              autoComplete="current-password"
+              describedBy={error ? 'cp-error' : undefined}
+              error={!!error}
             />
-          </div>
-          <div>
-            <label htmlFor={newId} className="block text-sm text-gray-700 mb-1">
-              {t('auth.newPassword', 'Новый пароль (минимум 10 символов)')}
-            </label>
-            <input
-              id={newId}
-              type="password"
-              autoComplete="new-password"
+
+            <PasswordField
+              id="cp-new"
+              label={`02 — ${t('auth.newPassword', 'Новый пароль (минимум 10 символов)')}`}
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={10}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label htmlFor={confirmId} className="block text-sm text-gray-700 mb-1">
-              {t('auth.confirmPassword', 'Подтвердите новый пароль')}
-            </label>
-            <input
-              id={confirmId}
-              type="password"
+              onChange={setNewPassword}
               autoComplete="new-password"
+            />
+
+            <PasswordField
+              id="cp-confirm"
+              label={`03 — ${t('auth.confirmPassword', 'Подтвердите новый пароль')}`}
               value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              onChange={setConfirmPassword}
               onBlur={() => setConfirmBlurred(true)}
-              required
-              aria-invalid={mismatch || undefined}
-              aria-describedby={mismatch ? errId : undefined}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
+              autoComplete="new-password"
+              error={mismatch}
             />
             {mismatch && (
-              <p id={errId} className="text-sm text-red-600 mt-1">
+              <p className="login-field-hint login-field-hint--warn" style={{ marginTop: -8, marginBottom: 12 }}>
                 {t('auth.passwordsMismatch', 'Пароли не совпадают')}
               </p>
             )}
-          </div>
-          {error && (
-            <p className="text-sm text-red-600" role="alert" aria-live="assertive">{error}</p>
-          )}
-          <button
-            type="submit"
-            disabled={loading || mismatch}
-            className="w-full py-2 bg-primary text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? t('common.saving', 'Сохранение...') : t('auth.changePassword', 'Сменить пароль')}
-          </button>
-        </form>
-      </div>
+
+            <button
+              type="submit"
+              disabled={loading || success || !isFormValid}
+              className={`login-btn-submit${success ? ' login-btn-submit--success' : ''}`}
+            >
+              {loading ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="login-spinner">
+                  <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                  <path d="M21 12a9 9 0 0 0-9-9" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              ) : success ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="5 12 10 17 19 7" />
+                </svg>
+              ) : (
+                <span>{t('auth.changePassword', 'Сменить пароль')}</span>
+              )}
+            </button>
+          </form>
+        </section>
+      </main>
     </div>
   )
 }
