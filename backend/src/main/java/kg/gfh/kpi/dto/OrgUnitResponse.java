@@ -18,12 +18,14 @@ public record OrgUnitResponse(
     String nameKgShort,
     Integer displayOrder,
     LocalDateTime archivedAt,
+    Integer headcountDirect,
+    Integer headcountTotal,
     List<OrgUnitResponse> children
 ) {
     public static OrgUnitResponse from(OrgUnit u) {
         return new OrgUnitResponse(u.getId(), u.getNameRu(), u.getNameKg(),
             u.getType(), u.getParentId(), u.getHeadUserId(),
             u.getCode(), u.getNameRuShort(), u.getNameKgShort(),
-            u.getDisplayOrder(), u.getArchivedAt(), List.of());
+            u.getDisplayOrder(), u.getArchivedAt(), 0, 0, List.of());
     }
 }
