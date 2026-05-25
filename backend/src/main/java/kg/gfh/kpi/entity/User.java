@@ -1,6 +1,7 @@
 package kg.gfh.kpi.entity;
 
 import jakarta.persistence.*;
+import kg.gfh.kpi.enums.EmploymentType;
 import kg.gfh.kpi.enums.Role;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -11,6 +12,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -28,8 +30,36 @@ public class User {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Column(name = "first_name", length = 128)
+    private String firstName;
+
+    @Column(name = "last_name", length = 128)
+    private String lastName;
+
+    @Column(name = "middle_name", length = 128)
+    private String middleName;
+
+    @Column(name = "employee_number", unique = true, length = 32)
+    private String employeeNumber;
+
     @Column(nullable = false, unique = true, length = 255)
     private String email;
+
+    @Column(length = 32)
+    private String phone;
+
+    @Column(name = "avatar_url", length = 512)
+    private String avatarUrl;
+
+    @Column(name = "hire_date")
+    private LocalDate hireDate;
+
+    @Column(name = "termination_date")
+    private LocalDate terminationDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "employment_type", length = 32)
+    private EmploymentType employmentType;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

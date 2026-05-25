@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { usersApi, type User } from './usersApi'
+import { orgApi, type OrgUnit } from '../org/orgApi'
 import { initials } from './components/usersMeta'
+
+function flattenUnits(roots: OrgUnit[]): OrgUnit[] {
+  const out: OrgUnit[] = []
+  const walk = (u: OrgUnit) => { out.push(u); u.children?.forEach(walk) }
+  roots.forEach(walk)
+  return out
+}
 
 type TabKey = 'criteria' | 'team' | 'periods' | 'info'
 
@@ -58,19 +66,56 @@ function yearsSince(iso: string): string {
 export function UserDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [user, setUser] = useState<User | null>(null)
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [units, setUnits] = useState<OrgUnit[]>([])
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [tab, setTab] = useState<TabKey>('criteria')
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadErr, setUploadErr] = useState<string | null>(null)
+
+  const onAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (!f || !user) return
+    if (f.size > 2 * 1024 * 1024) { setUploadErr('Файл больше 2 МБ'); return }
+    if (!['image/png', 'image/jpeg'].includes(f.type)) { setUploadErr('Только PNG или JPEG'); return }
+    setUploading(true); setUploadErr(null)
+    try {
+      const updated = await usersApi.uploadAvatar(user.id, f)
+      setUser(updated)
+    } catch {
+      setUploadErr('Не удалось загрузить аватар')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   useEffect(() => {
     let cancel = false
     setLoading(true); setFailed(false)
-    usersApi.list(0, 500)
-      .then(r => { if (!cancel) setUser(r.content.find(u => String(u.id) === id) ?? null) })
+    Promise.all([usersApi.list(0, 500), orgApi.getStructure().catch(() => [])])
+      .then(([r, u]) => {
+        if (cancel) return
+        setAllUsers(r.content)
+        setUnits(flattenUnits(u as OrgUnit[]))
+        setUser(r.content.find(u2 => String(u2.id) === id) ?? null)
+      })
       .catch(() => { if (!cancel) setFailed(true) })
       .finally(() => { if (!cancel) setLoading(false) })
     return () => { cancel = true }
   }, [id])
+
+  const managerName = useMemo(() => {
+    if (!user?.managerId) return null
+    return allUsers.find(u => u.id === user.managerId)?.fullName ?? null
+  }, [user, allUsers])
+
+  const unitName = useMemo(() => {
+    if (!user?.unitId) return null
+    return units.find(u => u.id === user.unitId)?.nameRu ?? null
+  }, [user, units])
 
   const rating = useMemo(() => {
     if (!user) return 0
@@ -93,10 +138,18 @@ export function UserDetailPage() {
               {/* LEFT: profile side */}
               <aside className="udp-side">
                 <div className="udp-id">
-                  <div className={`udp-avatar-xl ${user.isActive ? '' : 'is-off'}`}>
-                    {initials(user.fullName)}
+                  <button
+                    type="button"
+                    className={`udp-avatar-xl ${user.isActive ? '' : 'is-off'}`}
+                    style={user.avatarUrl ? { backgroundImage: `url(${user.avatarUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', color: 'transparent', cursor: 'pointer', border: 0, padding: 0 } : { cursor: 'pointer', border: 0, padding: 0 }}
+                    onClick={() => fileInputRef.current?.click()}
+                    title={uploading ? 'Загрузка…' : 'Сменить аватар'}
+                    disabled={uploading}>
+                    {user.avatarUrl ? '' : initials(user.fullName)}
                     <span className="udp-presence" aria-hidden />
-                  </div>
+                  </button>
+                  <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" hidden onChange={onAvatarPick} />
+                  {uploadErr && <div className="udp-state udp-state--err" style={{ marginTop: 6 }}>{uploadErr}</div>}
                   <div className="udp-name-block">
                     <div className="udp-name">{user.fullName}</div>
                     <div className="udp-position">{user.position ?? '— должность не указана —'}</div>
@@ -120,19 +173,22 @@ export function UserDetailPage() {
 
                 <div className="udp-contact-list">
                   <Contact icon={<EnvelopeIcon />} label="Email"          value={user.email} />
-                  <Contact icon={<BuildingIcon />} label="Подразделение"  value={user.unitId != null ? `№${user.unitId}` : '—'} />
-                  <Contact icon={<CalendarIcon />} label="В компании с"   value={`${formatRuDate(user.createdAt)}${yearsSince(user.createdAt)}`} />
+                  {user.phone && <Contact icon={<PhoneIcon />} label="Телефон" value={user.phone} />}
+                  {user.employeeNumber && <Contact icon={<IdIcon />} label="Табельный №" value={user.employeeNumber} />}
+                  <Contact icon={<BuildingIcon />} label="Подразделение"  value={unitName ?? (user.unitId != null ? `№${user.unitId}` : '—')} />
+                  <Contact icon={<CalendarIcon />} label="В компании с"   value={`${formatRuDate(user.hireDate ?? user.createdAt)}${yearsSince(user.hireDate ?? user.createdAt)}`} />
+                  {user.terminationDate && <Contact icon={<CalendarIcon />} label="Уволен" value={formatRuDate(user.terminationDate)} />}
                   <Contact icon={<ClockIcon />}    label="Часовой пояс"   value="Asia/Bishkek (UTC+6)" />
                 </div>
 
                 <div>
                   <div className="udp-eyebrow">Прямой руководитель</div>
                   <div className="udp-manager">
-                    <span className="udp-manager-avatar">{user.managerId != null ? `#${user.managerId}` : '—'}</span>
+                    <span className="udp-manager-avatar">{managerName ? initials(managerName) : '—'}</span>
                     <div className="udp-manager-info">
                       <div className="udp-manager-label">MANAGER</div>
                       <div className="udp-manager-name">
-                        {user.managerId != null ? `Руководитель #${user.managerId}` : 'Не назначен'}
+                        {managerName ?? (user.managerId != null ? `#${user.managerId}` : 'Не назначен')}
                       </div>
                     </div>
                   </div>
@@ -253,6 +309,13 @@ export function UserDetailPage() {
                     <Card title="Системная информация" icon={<GearIcon />}>
                       <div className="udp-kv">
                         <KVRow k="ID пользователя" v={`USR-${String(user.id).padStart(6, '0')}`} mono />
+                        {user.employeeNumber && <KVRow k="Табельный номер" v={user.employeeNumber} mono />}
+                        {(user.lastName || user.firstName || user.middleName) && (
+                          <KVRow k="ФИО" v={[user.lastName, user.firstName, user.middleName].filter(Boolean).join(' ')} />
+                        )}
+                        {user.employmentType && <KVRow k="Тип занятости" v={user.employmentType} mono />}
+                        {user.hireDate && <KVRow k="Дата приёма" v={formatRuDate(user.hireDate)} />}
+                        {user.terminationDate && <KVRow k="Дата увольнения" v={formatRuDate(user.terminationDate)} />}
                         <KVRow k="Роль в системе"  v={user.role} mono />
                         <KVRow k="Статус"          v={user.isActive ? 'Активен' : 'Заблокирован'} />
                         <KVRow k="Создан"          v={formatRuDate(user.createdAt)} />
@@ -329,6 +392,8 @@ function KVRow({ k, v, mono }: { k: string; v: string; mono?: boolean }) {
 
 const svgCommon = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
 function EnvelopeIcon() { return <svg {...svgCommon}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> }
+function PhoneIcon()    { return <svg {...svgCommon}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> }
+function IdIcon()       { return <svg {...svgCommon}><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="12" r="2.5"/><line x1="14" y1="10" x2="19" y2="10"/><line x1="14" y1="14" x2="17" y2="14"/></svg> }
 function BuildingIcon() { return <svg {...svgCommon}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> }
 function CalendarIcon() { return <svg {...svgCommon}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> }
 function ClockIcon()    { return <svg {...svgCommon}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> }

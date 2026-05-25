@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="051-add-user-hr-fields" author="gfh">
+        <addColumn tableName="users">
+            <column name="employee_number" type="VARCHAR(32)"/>
+            <column name="first_name" type="VARCHAR(128)"/>
+            <column name="last_name" type="VARCHAR(128)"/>
+            <column name="middle_name" type="VARCHAR(128)"/>
+            <column name="phone" type="VARCHAR(32)"/>
+            <column name="avatar_url" type="VARCHAR(512)"/>
+            <column name="hire_date" type="DATE"/>
+            <column name="termination_date" type="DATE"/>
+            <column name="employment_type" type="VARCHAR(32)"/>
+        </addColumn>
+
+        <addUniqueConstraint tableName="users"
+                             columnNames="employee_number"
+                             constraintName="uq_users_employee_number"/>
+
+        <createIndex tableName="users" indexName="idx_users_employee_number">
+            <column name="employee_number"/>
+        </createIndex>
+        <createIndex tableName="users" indexName="idx_users_employment_type">
+            <column name="employment_type"/>
+        </createIndex>
+        <createIndex tableName="users" indexName="idx_users_hire_date">
+            <column name="hire_date"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

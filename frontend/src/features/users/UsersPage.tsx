@@ -21,8 +21,7 @@ export function UsersPage() {
       { value: 'ADMIN',                   label: t('v2.rolesShort.ADMIN') },
       { value: 'CHAIRMAN',                label: t('v2.rolesShort.CHAIRMAN') },
       { value: 'DEPUTY_CHAIRMAN',         label: t('v2.rolesShort.DEPUTY_CHAIRMAN') },
-      { value: 'HEAD_OF_DEPARTMENT',      label: t('v2.rolesShort.HEAD_OF_DEPARTMENT') },
-      { value: 'HEAD_OF_DEPARTMENT_UNIT', label: t('v2.rolesShort.HEAD_OF_DEPARTMENT_UNIT') },
+      { value: 'ORG_HEAD',                label: t('v2.rolesShort.ORG_HEAD') },
       { value: 'EMPLOYEE',                label: t('v2.rolesShort.EMPLOYEE') },
     ]
     const statusOptions = [
@@ -125,8 +124,15 @@ export function UsersPage() {
       key: 'name', header: t('v2.users.colName'), sortable: true, hideable: false,
       render: (u) => (
         <div className="flex items-center gap-3">
-          <Avatar name={u.fullName} role={u.role} active={u.isActive} size={34} />
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{u.fullName}</span>
+          <Avatar name={u.fullName} role={u.role} active={u.isActive} size={34} src={u.avatarUrl} />
+          <div className="flex flex-col" style={{ minWidth: 0 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{u.fullName}</span>
+            {u.employeeNumber && (
+              <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'var(--font-mono)' }}>
+                #{u.employeeNumber}
+              </span>
+            )}
+          </div>
         </div>
       ),
     },
@@ -143,6 +149,14 @@ export function UsersPage() {
       render: (u) => (
         <span style={{ fontSize: 13, color: u.position ? 'var(--ink-soft)' : 'var(--ink-dim)' }}>
           {u.position ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'employmentType', header: t('v2.users.colEmploymentType', 'Тип'), sortable: true,
+      render: (u) => (
+        <span style={{ fontSize: 12, color: u.employmentType ? 'var(--ink-soft)' : 'var(--ink-dim)', fontFamily: 'var(--font-mono)' }}>
+          {u.employmentType ? t(`v2.users.employmentType.${u.employmentType}`, u.employmentType) : '—'}
         </span>
       ),
     },
@@ -174,6 +188,7 @@ export function UsersPage() {
       case 'email':    return a.email.localeCompare(b.email)
       case 'role':     return (ROLE_RANK[a.role] ?? 99) - (ROLE_RANK[b.role] ?? 99)
       case 'position': return (a.position ?? '').localeCompare(b.position ?? '', 'ru')
+      case 'employmentType': return (a.employmentType ?? '').localeCompare(b.employmentType ?? '')
       case 'status':   return Number(b.isActive) - Number(a.isActive)
       default:         return a.fullName.localeCompare(b.fullName, 'ru')
     }
@@ -196,7 +211,7 @@ export function UsersPage() {
       }}
     >
       <div className="flex items-start gap-3">
-        <Avatar name={u.fullName} role={u.role} active={u.isActive} size={44} />
+        <Avatar name={u.fullName} role={u.role} active={u.isActive} size={44} src={u.avatarUrl} />
         <div className="min-w-0 flex-1">
           <div className="truncate" style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>
             {u.fullName}
@@ -278,11 +293,14 @@ export function UsersPage() {
       <UserFormModal
         open={showCreateModal || !!editingUser}
         user={editingUser}
+        allUsers={users}
         onClose={() => { setShowCreateModal(false); setEditingUser(null) }}
         onSave={async (data) => {
-          if (editingUser) await usersApi.update(editingUser.id, data)
-          else await usersApi.create(data)
+          const saved = editingUser
+            ? await usersApi.update(editingUser.id, data)
+            : await usersApi.create(data)
           loadUsers()
+          return saved
         }}
       />
 

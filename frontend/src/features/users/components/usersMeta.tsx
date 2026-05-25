@@ -9,9 +9,8 @@ export const ROLE_RANK: Record<string, number> = {
   ADMIN: 0,
   CHAIRMAN: 1,
   DEPUTY_CHAIRMAN: 2,
-  HEAD_OF_DEPARTMENT: 3,
-  HEAD_OF_DEPARTMENT_UNIT: 4,
-  EMPLOYEE: 5,
+  ORG_HEAD: 3,
+  EMPLOYEE: 4,
 }
 
 interface RoleAccent { bg: string; fg: string; border: string }
@@ -20,8 +19,7 @@ export const ROLE_ACCENT: Record<string, RoleAccent> = {
   ADMIN:                   { bg: 'var(--gold-soft)',        fg: 'var(--gold)', border: 'color-mix(in srgb,var(--gold) 30%,transparent)' },
   CHAIRMAN:                { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
   DEPUTY_CHAIRMAN:         { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
-  HEAD_OF_DEPARTMENT:      { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
-  HEAD_OF_DEPARTMENT_UNIT: { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
+  ORG_HEAD:                { bg: 'rgba(120,150,200,0.14)',  fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)' },
   EMPLOYEE:                { bg: 'rgba(120,200,150,0.14)',  fg: '#2f9e6d',     border: 'rgba(120,200,150,0.32)' },
 }
 
@@ -35,10 +33,22 @@ export function initials(name: string): string {
 }
 
 // Round avatar — role-tinted fill, deactivated users render muted.
-export function Avatar({ name, role, active, size = 34 }: {
-  name: string; role?: string; active: boolean; size?: number
+export function Avatar({ name, role, active, size = 34, src }: {
+  name: string; role?: string; active: boolean; size?: number; src?: string | null
 }) {
   const a = role ? roleAccent(role) : null
+  if (src) {
+    return (
+      <img src={src} alt={name}
+        className="inline-block flex-shrink-0 object-cover"
+        style={{
+          width: size, height: size, borderRadius: '50%',
+          filter: active ? undefined : 'grayscale(1)',
+          border: `1px solid ${!active ? 'var(--line)' : a ? a.border : 'var(--accent-soft)'}`,
+        }}
+      />
+    )
+  }
   return (
     <span
       className="inline-flex items-center justify-center flex-shrink-0"
