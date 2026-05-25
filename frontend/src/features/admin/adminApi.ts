@@ -24,6 +24,7 @@ export interface AuditSearchParams {
   actorId?: number
   action?: string
   entityType?: string
+  entityId?: number
   from?: string
   to?: string
   page?: number

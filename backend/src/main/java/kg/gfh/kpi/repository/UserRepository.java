@@ -23,4 +23,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("select u.unitId, count(u) from User u where u.isActive = true and u.unitId is not null group by u.unitId")
     List<Object[]> countActiveByUnit();
+
+    long countByPositionId(Long positionId);
 }

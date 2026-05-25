@@ -143,7 +143,9 @@ export function DataPanel<T>({
   const [view, setView] = useState<ViewKind>(
     () => persisted?.view ?? loadView(viewStorageKey, views),
   )
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>(persisted?.hiddenColumns ?? [])
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>(
+    persisted?.hiddenColumns ?? columns.filter(c => c.defaultHidden).map(c => c.key),
+  )
   const [savedViews, setSavedViews] = useState<SavedView[]>(
     () => (panelStorageKey ? loadSavedViews(panelStorageKey) : []),
   )

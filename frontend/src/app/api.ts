@@ -16,9 +16,9 @@ api.interceptors.request.use((config) => {
       ?.split('=')[1]
     if (csrfToken) {
       try {
-        config.headers['X-CSRF-TOKEN'] = decodeURIComponent(csrfToken)
+        config.headers['X-XSRF-TOKEN'] = decodeURIComponent(csrfToken)
       } catch {
-        config.headers['X-CSRF-TOKEN'] = csrfToken
+        config.headers['X-XSRF-TOKEN'] = csrfToken
       }
     }
   }

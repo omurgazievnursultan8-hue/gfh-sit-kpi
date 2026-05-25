@@ -27,6 +27,15 @@
     "noticePre": "Продолжая, вы соглашаетесь с",
     "noticeLink": "правилами использования"
   },
+  "forgot": {
+    "title": "Восстановление пароля",
+    "submit": "Отправить ссылку",
+    "successTitle": "Письмо отправлено.",
+    "successBody": "Если аккаунт с таким email существует, ссылка для сброса пароля придёт в течение минуты.",
+    "errorTitle": "Не удалось отправить письмо.",
+    "errorBody": "Проверьте email и попробуйте позже.",
+    "back": "Вернуться к входу"
+  },
   "nav": {
     "dashboard": "Дашборд",
     "dashboardV2": "Дашборд V2",
@@ -351,7 +360,92 @@
     "calendarYear": "Год",
     "calendarMonth": "Месяц",
     "workingDays": "Рабочих дней",
-    "addCalendarEntry": "Добавить запись"
+    "addCalendarEntry": "Добавить запись",
+    "dashboard": {
+      "tabsAria": "Разделы дашборда",
+      "tabInventory": "Обзор",
+      "tabSystem": "Система",
+      "tabAttention": "Внимание",
+      "cards": {
+        "users":       { "title": "Сотрудники",    "label": "сотрудников",         "bdActive": "активны",   "bdInactive": "неактивны" },
+        "periods":     { "title": "Периоды",       "label": "периодов",            "bdActive": "активны",   "bdInactive": "неактивны" },
+        "evaluations": { "title": "Оценки",        "label": "оценок",              "bdPending": "в работе", "bdCompleted": "завершено" },
+        "appeals":     { "title": "Апелляции",     "label": "апелляций",           "bdOpen": "ждут",        "bdClosed": "закрыты" },
+        "org":         { "title": "Структура",     "label": "узлов структуры",     "bdBlocks": "блоки",     "bdDepartments": "департаменты", "bdUnits": "отделы" },
+        "criteria":    { "title": "Критерии",      "label": "в каталоге",          "bdActive": "активны",   "bdInactive": "отключены" },
+        "delegations": { "title": "Делегирования", "label": "делегирований",       "bdActive": "активны",   "bdExpiring": "истекают ≤7д" },
+        "jobs":        { "title": "Задачи",        "label": "фоновых задач",       "bdRunning": "работают", "bdPaused": "на паузе", "bdErrors": "ошибки" },
+        "errors":      { "title": "Ошибки",        "label": "строк в логе ошибок", "emptyNote": "нет ошибок" },
+        "completed":   { "title": "Завершено",     "label": "оценок завершено",    "ariaPct": "{{pct}}% завершено" },
+        "overdue":     { "title": "Просрочено",    "label": "просрочены",          "emptyNote": "нет просроченных" },
+        "avgRating":   { "title": "Ср.рейтинг",    "label": "из {{count}} оценок", "emptyNote": "нет данных" },
+        "deadline":    { "title": "Срок",          "label": "дней до конца периода", "emptyNote": "нет активных периодов" }
+      }
+    },
+    "statCards": {
+      "systemState": "Состояние системы",
+      "users": {
+        "title": "Пользователи",
+        "pillActive": "Активные",
+        "progressLabel": "Активность",
+        "footer": "Зарегистрировано <1>{{total}}</1> · активных <2>{{active}}</2>"
+      },
+      "evaluations": {
+        "title": "Оценки",
+        "pillInProgress": "В работе",
+        "pillDone": "Готово",
+        "progressLabel": "Заполнено",
+        "footer": "В ожидании <1>{{pending}}</1> · завершено <2>{{completed}}</2>",
+        "footerEmpty": "Оценки ещё не создавались",
+        "noData": "Нет данных по оценкам."
+      },
+      "periods": {
+        "title": "Периоды",
+        "pillRunning": "Идут",
+        "pillNone": "Нет",
+        "subtitle": "месячных и квартальных",
+        "footer": "Активных периодов оценки: <1>{{count}}</1>",
+        "footerEmpty": "Создайте новый период для запуска оценок."
+      },
+      "appeals": {
+        "title": "Апелляции",
+        "pillOpen": "Открыто",
+        "pillNone": "Нет",
+        "subtitle": "ждут рассмотрения",
+        "footer": "Требуют решения · <1>{{count}}</1>",
+        "footerEmpty": "Открытых апелляций нет."
+      },
+      "audit": {
+        "title": "Аудит",
+        "pill": "24ч",
+        "subtitle": "записей",
+        "footer": "Событий за последние 24 часа"
+      },
+      "criteria": {
+        "title": "Критерии",
+        "pillActive": "Активные",
+        "pillNone": "Нет",
+        "subtitle": "в каталоге",
+        "footer": "Действующих критериев оценки: <1>{{count}}</1>",
+        "footerEmpty": "Добавьте критерии для запуска оценок."
+      },
+      "delegations": {
+        "title": "Делегирования",
+        "pillExpiring": "Истекают",
+        "pillActive": "Активные",
+        "pillNone": "Нет",
+        "subtitle": "действуют сейчас",
+        "footerExpiring": "Истекают за 7 дней · <1>{{count}}</1>",
+        "footerActive": "Активных передач полномочий: <1>{{count}}</1>",
+        "footerEmpty": "Делегирований нет."
+      },
+      "org": {
+        "title": "Оргструктура",
+        "pill": "Узлы",
+        "subtitle": "узлов структуры",
+        "footer": "Подразделений и должностей в дереве"
+      }
+    }
   },
   "audit": {
     "actor": "Пользователь",
@@ -416,6 +510,10 @@
       "activateMsg": "Активировать {{name}}?",
       "resetPwTitle": "Сбросить пароль",
       "resetPwMsg": "Сбросить пароль для {{name}}? Пользователю будет выдан временный пароль.",
+      "tempPwTitle": "Временный пароль",
+      "tempPwNote": "Скопируйте сейчас — пароль больше не будет показан. Пользователь должен сменить его при первом входе.",
+      "copy": "Копировать",
+      "copied": "Скопировано",
       "savedAll": "Все",
       "savedActive": "Активные",
       "savedBlocked": "Заблокированные",

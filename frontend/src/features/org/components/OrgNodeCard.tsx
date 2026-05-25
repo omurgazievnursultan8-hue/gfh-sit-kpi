@@ -73,8 +73,8 @@ function OrgNodeCardImpl({ data }: NodeProps<Data>) {
           <div className="org-card-meta">
             <span className="org-card-type" style={{ color: rail }}>{TYPE_LABEL[unit.type]}</span>
             <span className="org-card-dot">·</span>
-            <span className="org-card-children">
-              <Users size={10} /> {unit.children.length}
+            <span className="org-card-children" title="Сотрудников (всего)">
+              <Users size={10} /> {unit.headcountTotal}
             </span>
             {vacant && (
               <>
@@ -110,6 +110,10 @@ function OrgNodeCardImpl({ data }: NodeProps<Data>) {
         </div>
         <div className="org-card-pop-row">
           <span>Дочерних</span><span>{unit.children.length}</span>
+        </div>
+        <div className="org-card-pop-row">
+          <span>Сотрудников</span>
+          <span>{unit.headcountDirect} / {unit.headcountTotal}</span>
         </div>
       </div>
 

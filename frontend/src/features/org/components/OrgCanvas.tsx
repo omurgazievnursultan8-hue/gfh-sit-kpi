@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -15,14 +15,39 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { Search, X, ChevronRight } from 'lucide-react'
-import { OrgUnit } from '../orgApi'
+import { OrgUnit, OrgUnitType } from '../orgApi'
 import { OrgNodeCard, ORG_NODE_CSS } from './OrgNodeCard'
 
 interface Props {
   tree: OrgUnit[]
   selectedId: number | null
   onSelect: (id: number) => void
+  onOpenDetail?: (id: number) => void
   headLookup: Map<number, string>
+  isAdmin?: boolean
+  onReparent?: (id: number, parentId: number | null) => Promise<void> | void
+}
+
+const ALLOWED_PARENTS: Record<OrgUnitType, OrgUnitType[]> = {
+  BLOCK: [],
+  DEPARTMENT: ['BLOCK'],
+  SLUZHBA: ['BLOCK'],
+  OTDEL: ['BLOCK', 'DEPARTMENT', 'SLUZHBA'],
+  SEKTOR: ['BLOCK', 'DEPARTMENT', 'SLUZHBA'],
+}
+
+function collectDescendants(unit: OrgUnit, into: Set<number>) {
+  into.add(unit.id)
+  for (const c of unit.children) collectDescendants(c, into)
+}
+
+function findInTree(tree: OrgUnit[], id: number): OrgUnit | null {
+  for (const n of tree) {
+    if (n.id === id) return n
+    const f = findInTree(n.children, id)
+    if (f) return f
+  }
+  return null
 }
 
 type TypeFilter = 'ALL' | 'BLOCK' | 'DEPARTMENT' | 'SLUZHBA' | 'OTDEL' | 'SEKTOR' | 'VACANT' | 'ARCHIVED'
@@ -192,22 +217,40 @@ function buildGraph({ tree, selectedId, headLookup, query, filter }: BuildArgs):
 
 const nodeTypes = { orgCard: OrgNodeCard }
 
-function OrgCanvasInner({ tree, selectedId, onSelect, headLookup }: Props) {
+function OrgCanvasInner({ tree, selectedId, onSelect, onOpenDetail, headLookup, isAdmin, onReparent }: Props) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<TypeFilter>('ALL')
+  const [dropTargetId, setDropTargetId] = useState<number | null>(null)
+  const dropTargetRef = useRef<number | null>(null)
+  const reparentError = useRef<string | null>(null)
 
   const graph = useMemo(
     () => buildGraph({ tree, selectedId, headLookup, query, filter }),
     [tree, selectedId, headLookup, query, filter],
   )
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes)
+
+  const dragAllowedFlag = !!isAdmin && !!onReparent
+  const displayedNodes = useMemo(() => {
+    return graph.nodes.map(n => {
+      const draggable = dragAllowedFlag && !n.data?.archived
+      const isTarget = dropTargetId != null && Number(n.id) === dropTargetId
+      if (!isTarget && n.draggable === draggable) return n
+      return {
+        ...n,
+        draggable,
+        data: isTarget ? { ...n.data, highlighted: true, dimmed: false } : n.data,
+      }
+    })
+  }, [graph.nodes, dropTargetId, dragAllowedFlag])
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(displayedNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(graph.edges)
   const { fitView, setCenter, getNode } = useReactFlow()
 
   useEffect(() => {
-    setNodes(graph.nodes)
+    setNodes(displayedNodes)
     setEdges(graph.edges)
-  }, [graph, setNodes, setEdges])
+  }, [displayedNodes, graph.edges, setNodes, setEdges])
 
   useEffect(() => {
     const t = setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 80)
@@ -234,6 +277,67 @@ function OrgCanvasInner({ tree, selectedId, onSelect, headLookup }: Props) {
   }, [graph.matchIds, query, filter, getNode, setCenter])
 
   const breadcrumbs = selectedId != null ? ancestorPath(tree, selectedId) : []
+
+  const dragAllowed = dragAllowedFlag
+
+  const computeDropTarget = useCallback((draggedId: number, draggedX: number, draggedY: number): number | null => {
+    const dragged = findInTree(tree, draggedId)
+    if (!dragged || dragged.archivedAt) return null
+    const allowed = ALLOWED_PARENTS[dragged.type]
+    const forbidden = new Set<number>()
+    collectDescendants(dragged, forbidden)
+    const cx = draggedX + NODE_W / 2
+    const cy = draggedY + NODE_H / 2
+    for (const n of nodes) {
+      const nid = Number(n.id)
+      if (forbidden.has(nid)) continue
+      const target = findInTree(tree, nid)
+      if (!target || target.archivedAt) continue
+      if (!allowed.includes(target.type)) continue
+      const nx = n.position.x
+      const ny = n.position.y
+      if (cx >= nx && cx <= nx + NODE_W && cy >= ny && cy <= ny + NODE_H) {
+        return nid
+      }
+    }
+    return null
+  }, [tree, nodes])
+
+  const handleNodeDrag = useCallback((_: unknown, node: Node) => {
+    if (!dragAllowed) return
+    const t = computeDropTarget(Number(node.id), node.position.x, node.position.y)
+    if (t !== dropTargetRef.current) {
+      dropTargetRef.current = t
+      setDropTargetId(t)
+    }
+  }, [dragAllowed, computeDropTarget])
+
+  const handleNodeDragStop = useCallback(async (_: unknown, node: Node) => {
+    if (!dragAllowed) {
+      return
+    }
+    const id = Number(node.id)
+    const target = computeDropTarget(id, node.position.x, node.position.y)
+    dropTargetRef.current = null
+    setDropTargetId(null)
+    if (target == null) {
+      // snap back via rebuild
+      setNodes(displayedNodes)
+      return
+    }
+    const moved = findInTree(tree, id)
+    if (moved && moved.parentId === target) {
+      setNodes(displayedNodes)
+      return
+    }
+    try {
+      await onReparent!(id, target)
+      reparentError.current = null
+    } catch (e: any) {
+      reparentError.current = e?.response?.data?.messageRu ?? 'Не удалось переместить'
+      setNodes(displayedNodes)
+    }
+  }, [dragAllowed, computeDropTarget, onReparent, tree, displayedNodes, setNodes])
 
   return (
     <div className="org-canvas-wrap">
@@ -303,6 +407,7 @@ function OrgCanvasInner({ tree, selectedId, onSelect, headLookup }: Props) {
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         onNodeClick={(_, n) => onSelect(Number(n.id))}
+        onNodeDoubleClick={(_, n) => onOpenDetail?.(Number(n.id))}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.3}
@@ -310,9 +415,11 @@ function OrgCanvasInner({ tree, selectedId, onSelect, headLookup }: Props) {
         proOptions={{ hideAttribution: true }}
         panOnScroll
         panOnDrag
-        nodesDraggable={false}
+        nodesDraggable={dragAllowed}
         nodesConnectable={false}
         elementsSelectable
+        onNodeDrag={handleNodeDrag}
+        onNodeDragStop={handleNodeDragStop}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--dv3-border2)" />
         <Controls showInteractive={false} className="org-canvas-controls" />

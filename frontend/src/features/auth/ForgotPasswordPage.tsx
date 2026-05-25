@@ -1,8 +1,19 @@
-import { useState, FormEvent, useId } from 'react'
+import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import api from '../../app/api'
 import type { AxiosError } from 'axios'
+import api from '../../app/api'
+import { LangSwitcher } from '../../shared/layout/LangSwitcher'
+import { BrandPanel } from './components/BrandPanel'
+import { LoginField } from './components/LoginField'
+import { LoginBanner } from './components/LoginBanner'
+
+const MailIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="M3 7l9 6 9-6" />
+  </svg>
+)
 
 export function ForgotPasswordPage() {
   const { t } = useTranslation()
@@ -10,10 +21,12 @@ export function ForgotPasswordPage() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const emailId = useId()
+
+  const isFormValid = email.trim().length > 0
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!isFormValid || loading || sent) return
     setError('')
     setLoading(true)
     try {
@@ -22,67 +35,91 @@ export function ForgotPasswordPage() {
     } catch (err) {
       const ax = err as AxiosError<{ messageRu?: string; message_ru?: string }>
       const data = ax.response?.data
-      setError(data?.messageRu ?? data?.message_ru ?? (t('auth.forgotFailed', 'Не удалось отправить письмо. Попробуйте позже.') as string))
+      setError(data?.messageRu ?? data?.message_ru ?? (t('forgot.errorBody') as string))
     } finally {
       setLoading(false)
     }
   }
 
-  if (sent) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full text-center">
-          <p
-            className="text-green-600 font-medium mb-4"
-            role="status"
-            aria-live="polite"
-          >
-            {t('auth.forgotSent', 'Если аккаунт с таким email существует, письмо со ссылкой для сброса пароля было отправлено.')}
-          </p>
-          <Link to="/login" className="text-primary hover:underline">
-            ← {t('auth.backToLogin', 'Вернуться к входу')}
-          </Link>
-        </div>
-      </div>
-    )
-  }
+  const clearErr = () => { if (error) setError('') }
+  const isError = !!error && !loading && !sent
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          {t('auth.forgotTitle', 'Восстановление пароля')}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <div>
-            <label htmlFor={emailId} className="block text-sm text-gray-700 mb-1">
-              {t('auth.email', 'Email')}
-            </label>
-            <input
-              id={emailId}
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
-            />
+    <div className="login-bg">
+      <LangSwitcher />
+
+      <main className="login-card">
+        <BrandPanel />
+
+        <section className="login-form-panel" aria-label={t('forgot.title') as string}>
+          <div className="login-form-head">
+            <h1 className="login-form-title">{t('forgot.title')}</h1>
+            <div className="login-form-rule" aria-hidden="true"><span>◆</span></div>
           </div>
-          {error && (
-            <p className="text-sm text-red-600" role="alert" aria-live="assertive">{error}</p>
+
+          {isError && (
+            <LoginBanner
+              id="forgot-error"
+              variant="error"
+              title={t('forgot.errorTitle')}
+              body={error}
+            />
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 bg-primary text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? t('common.sending', 'Отправка...') : t('auth.sendResetLink', 'Отправить ссылку')}
-          </button>
-        </form>
-        <Link to="/login" className="block mt-4 text-center text-sm text-primary hover:underline">
-          ← {t('auth.backToLogin', 'Вернуться к входу')}
-        </Link>
-      </div>
+
+          {sent && (
+            <LoginBanner
+              variant="success"
+              title={t('forgot.successTitle')}
+              body={t('forgot.successBody')}
+            />
+          )}
+
+          {!sent && (
+            <form onSubmit={handleSubmit} noValidate autoComplete="on">
+              <LoginField
+                id="fp-email"
+                label={`01 — ${t('login.email')}`}
+                icon={<MailIcon />}
+                type="email"
+                placeholder={t('login.emailPh')}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onBlur={clearErr}
+                required
+                autoComplete="email"
+                inputMode="email"
+                spellCheck={false}
+                autoCapitalize="none"
+                aria-required="true"
+                aria-describedby={isError ? 'forgot-error' : undefined}
+                autoFocus
+                error={isError}
+              />
+
+              <button
+                type="submit"
+                disabled={loading || !isFormValid}
+                className="login-btn-submit"
+              >
+                {loading ? (
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="login-spinner">
+                    <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.25)" strokeWidth="3" />
+                    <path d="M21 12a9 9 0 0 0-9-9" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                ) : (
+                  <span>{t('forgot.submit')}</span>
+                )}
+              </button>
+            </form>
+          )}
+
+          <p className="login-notice">
+            <Link to="/login" className="login-notice-link">
+              ← {t('forgot.back')}
+            </Link>
+          </p>
+        </section>
+      </main>
     </div>
   )
 }

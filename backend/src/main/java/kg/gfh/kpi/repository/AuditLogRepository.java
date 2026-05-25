@@ -19,6 +19,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         WHERE (CAST(:userId AS bigint)        IS NULL OR user_id     = CAST(:userId AS bigint))
           AND (CAST(:action AS varchar)       IS NULL OR action      = CAST(:action AS varchar))
           AND (CAST(:entityType AS varchar)   IS NULL OR entity_type = CAST(:entityType AS varchar))
+          AND (CAST(:entityId AS bigint)      IS NULL OR entity_id   = CAST(:entityId AS bigint))
           AND (CAST(:from AS timestamp)       IS NULL OR timestamp  >= CAST(:from AS timestamp))
           AND (CAST(:to   AS timestamp)       IS NULL OR timestamp  <= CAST(:to   AS timestamp))
         """,
@@ -27,6 +28,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         WHERE (CAST(:userId AS bigint)      IS NULL OR user_id     = CAST(:userId AS bigint))
           AND (CAST(:action AS varchar)     IS NULL OR action      = CAST(:action AS varchar))
           AND (CAST(:entityType AS varchar) IS NULL OR entity_type = CAST(:entityType AS varchar))
+          AND (CAST(:entityId AS bigint)    IS NULL OR entity_id   = CAST(:entityId AS bigint))
           AND (CAST(:from AS timestamp)     IS NULL OR timestamp  >= CAST(:from AS timestamp))
           AND (CAST(:to   AS timestamp)     IS NULL OR timestamp  <= CAST(:to   AS timestamp))
         """,
@@ -35,6 +37,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
         @Param("userId") Long userId,
         @Param("action") String action,
         @Param("entityType") String entityType,
+        @Param("entityId") Long entityId,
         @Param("from") LocalDateTime from,
         @Param("to") LocalDateTime to,
         Pageable pageable

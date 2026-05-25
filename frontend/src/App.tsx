@@ -17,6 +17,7 @@ import { UsersPage } from './features/users/UsersPage'
 import { UserDetailPage } from './features/users/UserDetailPage'
 import { CriteriaPage } from './features/criteria/CriteriaPage'
 import { OrgPage } from './features/org/OrgPage'
+import { OrgUnitDetailPage } from './features/org/OrgUnitDetailPage'
 import { DelegationsPage } from './features/org/DelegationsPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
@@ -59,6 +60,7 @@ export default function App() {
       <Route path="/criteria-v2" element={<Navigate to="/criteria" replace />} />
       <Route path="/org" element={<ProtectedRoute allowedRoles={['ADMIN']}><OrgPage /></ProtectedRoute>} />
       <Route path="/org/delegations" element={<ProtectedRoute allowedRoles={['ADMIN']}><DelegationsPage /></ProtectedRoute>} />
+      <Route path="/org/:id" element={<ProtectedRoute allowedRoles={['ADMIN']}><OrgUnitDetailPage /></ProtectedRoute>} />
       <Route path="/criteria" element={
         <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'ORG_HEAD']}>
           <CriteriaPage />
@@ -107,6 +109,7 @@ export default function App() {
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="org" element={<OrgPage />} />
+        <Route path="org/:id" element={<OrgUnitDetailPage />} />
         <Route path="delegations" element={<DelegationsPage />} />
         <Route path="criteria" element={<CriteriaPage />} />
         <Route path="periods" element={<PeriodsPage />} />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { adminApi, AdminStats, QuartzJobInfo } from './adminApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
@@ -11,6 +12,7 @@ type DashTab = 'inventory' | 'system' | 'attention'
 
 export function AdminDashboardPage() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [jobs, setJobs] = useState<QuartzJobInfo[] | null>(null)
   const [errorLines, setErrorLines] = useState<number | null>(null)
@@ -134,11 +136,11 @@ export function AdminDashboardPage() {
       <style>{STAT_CARD_CSS}</style>
 
       <div className="dv3-terminal" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div className="flex gap-1" role="tablist" aria-label="Разделы дашборда">
+        <div className="flex gap-1" role="tablist" aria-label={t('admin.dashboard.tabsAria')}>
           {([
-            { key: 'inventory', label: 'ОБЗОР' },
-            { key: 'system',    label: 'СИСТЕМА' },
-            { key: 'attention', label: 'ВНИМАНИЕ' },
+            { key: 'inventory', label: t('admin.dashboard.tabInventory').toUpperCase() },
+            { key: 'system',    label: t('admin.dashboard.tabSystem').toUpperCase() },
+            { key: 'attention', label: t('admin.dashboard.tabAttention').toUpperCase() },
           ] as Array<{ key: DashTab; label: string }>).map(it => {
             const active = tab === it.key
             return (
@@ -171,81 +173,81 @@ export function AdminDashboardPage() {
         <div className="dv3-grid">
           <StatCard
             className="dv3-col-3"
-            title="СОТРУДНИКИ" id="U01" loading={loading}
-            value={totalUsers} label="сотрудников"
+            title={t('admin.dashboard.cards.users.title').toUpperCase()} id="U01" loading={loading}
+            value={totalUsers} label={t('admin.dashboard.cards.users.label')}
             onClick={() => navigate('/admin/users')}
             delta={{ value: usersDelta }}
             breakdown={[
-              { label: 'активны',   value: activeUsers,              tone: 'up',      delta: usersActiveDelta },
-              { label: 'неактивны', value: totalUsers - activeUsers, tone: 'neutral', delta: usersInactiveDelta },
+              { label: t('admin.dashboard.cards.users.bdActive'),   value: activeUsers,              tone: 'up',      delta: usersActiveDelta },
+              { label: t('admin.dashboard.cards.users.bdInactive'), value: totalUsers - activeUsers, tone: 'neutral', delta: usersInactiveDelta },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="ПЕРИОДЫ" id="P01" loading={loading}
-            value={totalPeriods} label="периодов"
+            title={t('admin.dashboard.cards.periods.title').toUpperCase()} id="P01" loading={loading}
+            value={totalPeriods} label={t('admin.dashboard.cards.periods.label')}
             onClick={() => navigate('/admin/periods')}
             delta={{ value: periodsDelta }}
             breakdown={[
-              { label: 'активны',   value: periods,                 tone: 'up',      delta: periodsActiveDelta },
-              { label: 'неактивны', value: totalPeriods - periods,  tone: 'neutral', delta: periodsInactiveDelta },
+              { label: t('admin.dashboard.cards.periods.bdActive'),   value: periods,                 tone: 'up',      delta: periodsActiveDelta },
+              { label: t('admin.dashboard.cards.periods.bdInactive'), value: totalPeriods - periods,  tone: 'neutral', delta: periodsInactiveDelta },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="ОЦЕНКИ" id="E01" loading={loading}
-            value={totalEvals} label="оценок"
+            title={t('admin.dashboard.cards.evaluations.title').toUpperCase()} id="E01" loading={loading}
+            value={totalEvals} label={t('admin.dashboard.cards.evaluations.label')}
             onClick={() => navigate('/admin/evaluations')}
             delta={{ value: evalsDelta }}
             breakdown={[
-              { label: 'в работе',  value: pendingEvals,   tone: 'warn', delta: evalsPendingDelta },
-              { label: 'завершено', value: completedEvals, tone: 'up',   delta: evalsCompletedDelta },
+              { label: t('admin.dashboard.cards.evaluations.bdPending'),   value: pendingEvals,   tone: 'warn', delta: evalsPendingDelta },
+              { label: t('admin.dashboard.cards.evaluations.bdCompleted'), value: completedEvals, tone: 'up',   delta: evalsCompletedDelta },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="АПЕЛЛЯЦИИ" id="X01" loading={loading}
-            value={totalAppeals} label="апелляций"
+            title={t('admin.dashboard.cards.appeals.title').toUpperCase()} id="X01" loading={loading}
+            value={totalAppeals} label={t('admin.dashboard.cards.appeals.label')}
             zoneScore={appeals > 0 ? 40 : 100}
             onClick={() => navigate('/admin/appeals')}
             delta={{ value: appealsDelta }}
             breakdown={[
-              { label: 'ждут',    value: appeals,       tone: 'warn', delta: appealsOpenDelta },
-              { label: 'закрыты', value: closedAppeals, tone: 'up',   delta: appealsClosedDelta },
+              { label: t('admin.dashboard.cards.appeals.bdOpen'),   value: appeals,       tone: 'warn', delta: appealsOpenDelta },
+              { label: t('admin.dashboard.cards.appeals.bdClosed'), value: closedAppeals, tone: 'up',   delta: appealsClosedDelta },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="СТРУКТУРА" id="O01" loading={loading}
-            value={orgUnits} label="узлов структуры"
+            title={t('admin.dashboard.cards.org.title').toUpperCase()} id="O01" loading={loading}
+            value={orgUnits} label={t('admin.dashboard.cards.org.label')}
             onClick={() => navigate('/admin/org')}
             delta={{ value: orgUnitsDelta }}
             breakdown={[
-              { label: 'блоки',        value: orgBlocks,      tone: 'up',      delta: orgBlocksDelta },
-              { label: 'департаменты', value: orgDepartments, tone: 'warn',    delta: orgDepartmentsDelta },
-              { label: 'отделы',       value: orgUnitsLeaf,   tone: 'neutral', delta: orgUnitsLeafDelta },
+              { label: t('admin.dashboard.cards.org.bdBlocks'),      value: orgBlocks,      tone: 'up',      delta: orgBlocksDelta },
+              { label: t('admin.dashboard.cards.org.bdDepartments'), value: orgDepartments, tone: 'warn',    delta: orgDepartmentsDelta },
+              { label: t('admin.dashboard.cards.org.bdUnits'),       value: orgUnitsLeaf,   tone: 'neutral', delta: orgUnitsLeafDelta },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="КРИТЕРИИ" id="C01" loading={loading}
-            value={totalCriteria} label="в каталоге"
+            title={t('admin.dashboard.cards.criteria.title').toUpperCase()} id="C01" loading={loading}
+            value={totalCriteria} label={t('admin.dashboard.cards.criteria.label')}
             onClick={() => navigate('/admin/criteria')}
             delta={{ value: criteriaDelta }}
             breakdown={[
-              { label: 'активны',   value: criteria,                 tone: 'up',      delta: criteriaActiveDelta },
-              { label: 'отключены', value: totalCriteria - criteria, tone: 'neutral', delta: criteriaInactiveDelta },
+              { label: t('admin.dashboard.cards.criteria.bdActive'),   value: criteria,                 tone: 'up',      delta: criteriaActiveDelta },
+              { label: t('admin.dashboard.cards.criteria.bdInactive'), value: totalCriteria - criteria, tone: 'neutral', delta: criteriaInactiveDelta },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="ДЕЛЕГИРОВАНИЯ" id="D01" loading={loading}
-            value={delegationsActive} label="делегирований"
+            title={t('admin.dashboard.cards.delegations.title').toUpperCase()} id="D01" loading={loading}
+            value={delegationsActive} label={t('admin.dashboard.cards.delegations.label')}
             zoneScore={delegationsExpiring > 0 ? 60 : 100}
             onClick={() => navigate('/admin/delegations')}
             breakdown={[
-              { label: 'активны',     value: delegationsActive,   tone: 'up' },
-              { label: 'истекают ≤7д', value: delegationsExpiring, tone: 'warn' },
+              { label: t('admin.dashboard.cards.delegations.bdActive'),   value: delegationsActive,   tone: 'up' },
+              { label: t('admin.dashboard.cards.delegations.bdExpiring'), value: delegationsExpiring, tone: 'warn' },
             ]}
           />
         </div>
@@ -256,23 +258,23 @@ export function AdminDashboardPage() {
         <div className="dv3-grid">
           <StatCard
             className="dv3-col-3"
-            title="ЗАДАЧИ" id="J01" loading={jobsLoading}
-            value={jobsTotal} label="фоновых задач"
+            title={t('admin.dashboard.cards.jobs.title').toUpperCase()} id="J01" loading={jobsLoading}
+            value={jobsTotal} label={t('admin.dashboard.cards.jobs.label')}
             zoneScore={jobsZone}
             onClick={() => navigate('/admin/monitoring')}
             breakdown={[
-              { label: 'работают', value: jobsRunning, tone: 'up' },
-              { label: 'на паузе', value: jobsPaused,  tone: 'warn' },
-              { label: 'ошибки',   value: jobsBroken,  tone: 'down' },
+              { label: t('admin.dashboard.cards.jobs.bdRunning'), value: jobsRunning, tone: 'up' },
+              { label: t('admin.dashboard.cards.jobs.bdPaused'),  value: jobsPaused,  tone: 'warn' },
+              { label: t('admin.dashboard.cards.jobs.bdErrors'),  value: jobsBroken,  tone: 'down' },
             ]}
           />
           <StatCard
             className="dv3-col-3"
-            title="ОШИБКИ" id="J02" loading={errorsLoading}
-            value={errorsCount} label="строк в логе ошибок"
+            title={t('admin.dashboard.cards.errors.title').toUpperCase()} id="J02" loading={errorsLoading}
+            value={errorsCount} label={t('admin.dashboard.cards.errors.label')}
             zoneScore={errorsZone}
             onClick={() => navigate('/admin/monitoring')}
-            emptyNote={errorsCount === 0 ? 'нет ошибок' : undefined}
+            emptyNote={errorsCount === 0 ? t('admin.dashboard.cards.errors.emptyNote') : undefined}
           />
         </div>
         )}
@@ -282,8 +284,8 @@ export function AdminDashboardPage() {
         <div className="dv3-grid">
           <StatCard
             className="dv3-col-3"
-            title="ЗАВЕРШЕНО" id="A01" loading={loading}
-            value={completionPct} unit="%" label="оценок завершено"
+            title={t('admin.dashboard.cards.completed.title').toUpperCase()} id="A01" loading={loading}
+            value={completionPct} unit="%" label={t('admin.dashboard.cards.completed.label')}
             zoneScore={completionZone}
             onClick={() => navigate('/admin/evaluations')}
             gauge={{
@@ -292,34 +294,34 @@ export function AdminDashboardPage() {
               left: '0%',
               center: `${completionPct}%`,
               right: '100%',
-              ariaLabel: `${completionPct}% завершено`,
+              ariaLabel: t('admin.dashboard.cards.completed.ariaPct', { pct: completionPct }),
             }}
           />
           <StatCard
             className="dv3-col-3"
-            title="ПРОСРОЧЕНО" id="A02" loading={loading}
-            value={overdueEvals} label="просрочены"
+            title={t('admin.dashboard.cards.overdue.title').toUpperCase()} id="A02" loading={loading}
+            value={overdueEvals} label={t('admin.dashboard.cards.overdue.label')}
             zoneScore={overdueZone}
             onClick={() => navigate('/admin/evaluations')}
-            emptyNote={overdueEvals === 0 ? 'нет просроченных' : undefined}
+            emptyNote={overdueEvals === 0 ? t('admin.dashboard.cards.overdue.emptyNote') : undefined}
           />
           <StatCard
             className="dv3-col-3"
-            title="СР.РЕЙТИНГ" id="A03" loading={loading}
+            title={t('admin.dashboard.cards.avgRating.title').toUpperCase()} id="A03" loading={loading}
             value={avgRatingRounded}
-            label={`из ${ratedCount} оценок`}
+            label={t('admin.dashboard.cards.avgRating.label', { count: ratedCount })}
             zoneScore={avgRatingRounded ?? null}
-            emptyNote={avgRatingRounded == null ? 'нет данных' : undefined}
+            emptyNote={avgRatingRounded == null ? t('admin.dashboard.cards.avgRating.emptyNote') : undefined}
             onClick={() => navigate('/admin/evaluations')}
           />
           <StatCard
             className="dv3-col-3"
-            title="СРОК" id="A04" loading={loading}
+            title={t('admin.dashboard.cards.deadline.title').toUpperCase()} id="A04" loading={loading}
             value={nextDeadlineDate ? daysUntilNext : null}
-            label={nextDeadlineDate ? 'дней до конца периода' : undefined}
+            label={nextDeadlineDate ? t('admin.dashboard.cards.deadline.label') : undefined}
             subtitle={nextDeadlineLabel ?? undefined}
             zoneScore={deadlineZone}
-            emptyNote={nextDeadlineDate ? undefined : 'нет активных периодов'}
+            emptyNote={nextDeadlineDate ? undefined : t('admin.dashboard.cards.deadline.emptyNote')}
             onClick={() => navigate('/admin/periods')}
           />
         </div>

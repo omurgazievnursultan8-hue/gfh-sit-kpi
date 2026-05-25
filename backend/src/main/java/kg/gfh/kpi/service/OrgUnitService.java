@@ -143,6 +143,27 @@ public class OrgUnitService {
         return OrgUnitResponse.from(unit);
     }
 
+    @Audited(action = "REPARENT_ORG_UNIT", entityType = "ORG_UNIT")
+    @Transactional
+    public OrgUnitResponse reparentUnit(Long id, Long newParentId) {
+        OrgUnit unit = findOrThrow(id);
+        if (unit.getArchivedAt() != null) {
+            throw new ApiException("ORG_UNIT_ARCHIVED",
+                    "Архивные подразделения нельзя перемещать",
+                    "Архивдик бөлүмдөрдү жылдырууга болбойт");
+        }
+        if (Objects.equals(unit.getParentId(), newParentId)) {
+            return OrgUnitResponse.from(unit);
+        }
+        validateParentType(unit.getType(), newParentId);
+        if (newParentId != null) {
+            validateNoNewCycle(id, newParentId);
+        }
+        unit.setParentId(newParentId);
+        orgUnitRepository.save(unit);
+        return OrgUnitResponse.from(unit);
+    }
+
     @Audited(action = "DELETE_ORG_UNIT", entityType = "ORG_UNIT")
     @Transactional
     public void deleteUnit(Long id) {
@@ -172,10 +193,14 @@ public class OrgUnitService {
         Map<Long, List<OrgUnit>> byParent = all.stream()
                 .filter(u -> u.getParentId() != null)
                 .collect(Collectors.groupingBy(OrgUnit::getParentId));
+        Map<Long, Integer> directCounts = userRepository.countActiveByUnit().stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> ((Number) row[1]).intValue()));
         return all.stream()
                 .filter(u -> u.getParentId() == null)
                 .sorted(ORDER_THEN_NAME)
-                .map(u -> buildTree(u, byParent))
+                .map(u -> buildTree(u, byParent, directCounts))
                 .collect(Collectors.toList());
     }
 
@@ -183,16 +208,21 @@ public class OrgUnitService {
             Comparator.comparing((OrgUnit u) -> u.getDisplayOrder() == null ? 0 : u.getDisplayOrder())
                     .thenComparing(OrgUnit::getNameRu, Comparator.nullsLast(String::compareTo));
 
-    private OrgUnitResponse buildTree(OrgUnit unit, Map<Long, List<OrgUnit>> byParent) {
+    private OrgUnitResponse buildTree(OrgUnit unit, Map<Long, List<OrgUnit>> byParent,
+                                       Map<Long, Integer> directCounts) {
         List<OrgUnitResponse> children = byParent.getOrDefault(unit.getId(), List.of())
                 .stream()
                 .sorted(ORDER_THEN_NAME)
-                .map(child -> buildTree(child, byParent))
+                .map(child -> buildTree(child, byParent, directCounts))
                 .collect(Collectors.toList());
+        int direct = directCounts.getOrDefault(unit.getId(), 0);
+        int total = direct;
+        for (OrgUnitResponse c : children) total += c.headcountTotal();
         return new OrgUnitResponse(unit.getId(), unit.getNameRu(), unit.getNameKg(),
                 unit.getType(), unit.getParentId(), unit.getHeadUserId(),
                 unit.getCode(), unit.getNameRuShort(), unit.getNameKgShort(),
-                unit.getDisplayOrder(), unit.getArchivedAt(), children);
+                unit.getDisplayOrder(), unit.getArchivedAt(),
+                direct, total, children);
     }
 
     private void validateParentType(OrgUnitType childType, Long parentId) {

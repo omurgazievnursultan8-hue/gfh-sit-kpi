@@ -1,9 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { usersApi, type User } from './usersApi'
+import {
+  usersApi, userDetailApi,
+  type User, type EvaluationListItem, type ScoreItem, type CriteriaItem, type PeriodItem,
+} from './usersApi'
 import { orgApi, type OrgUnit } from '../org/orgApi'
 import { initials } from './components/usersMeta'
+import { UserFormModal } from './components/UserFormModal'
 
 function flattenUnits(roots: OrgUnit[]): OrgUnit[] {
   const out: OrgUnit[] = []
@@ -14,32 +20,27 @@ function flattenUnits(roots: OrgUnit[]): OrgUnit[] {
 
 type TabKey = 'criteria' | 'team' | 'periods' | 'info'
 
-interface CriterionRow { name: string; scope: 'GLOBAL' | 'DEPARTMENT' | 'UNIT'; score: number; weight: number }
-interface TeamMember   { name: string; role: string; score: number }
-interface PeriodRow    { date: string; title: string; detail: string; closed: boolean }
+interface CriterionRow {
+  id: number
+  name: string
+  scope: string
+  type: 'POSITIVE' | 'ANTI_BONUS'
+  value: number
+  weight: number
+  contribution: number
+}
 
-const MOCK_CRITERIA: CriterionRow[] = [
-  { name: 'Качество анализа',         scope: 'GLOBAL',     score: 85, weight: 30 },
-  { name: 'Надёжность работы',        scope: 'GLOBAL',     score: 80, weight: 30 },
-  { name: 'Лидерство и управление',   scope: 'DEPARTMENT', score: 72, weight: 20 },
-  { name: 'Профессиональное развитие', scope: 'UNIT',      score: 74, weight: 20 },
-]
+function periodLabel(p: PeriodItem | undefined): string {
+  if (!p) return '—'
+  const year = p.endDate?.slice(0, 4) ?? ''
+  return `${p.type} ${year}`.trim()
+}
 
-const MOCK_TEAM: TeamMember[] = [
-  { name: 'Алена Кульбаева',          role: 'Аналитик данных',     score: 88 },
-  { name: 'Нурай Исаева',             role: 'Старший аналитик',    score: 91 },
-  { name: 'Темиркан Туруспекбаев',    role: 'Аналитик',            score: 79 },
-  { name: 'Молдира Сулейменова',      role: 'Аналитик BI',         score: 85 },
-  { name: 'Роман Аниканов',           role: 'Инженер данных',      score: 82 },
-  { name: 'Дарья Литвинова',          role: 'Аналитик данных',     score: 86 },
-]
-
-const MOCK_PERIODS: PeriodRow[] = [
-  { date: '31.12.2024', title: 'ANNUAL 2024',        detail: 'Годовая оценка завершена · Рейтинг 82/100',    closed: true },
-  { date: '31.12.2024', title: 'QUARTERLY Q4/2024',  detail: 'Квартальная оценка · Рейтинг 85/100',           closed: true },
-  { date: '30.06.2024', title: 'SEMI_ANNUAL H1/2024',detail: 'Полугодовая оценка · Рейтинг 79/100',           closed: true },
-  { date: '31.12.2023', title: 'ANNUAL 2023',        detail: 'Годовая оценка · Рейтинг 74/100',               closed: true },
-]
+function periodDate(p: PeriodItem | undefined): string {
+  if (!p?.endDate) return '—'
+  const [y, m, d] = p.endDate.split('-')
+  return `${d}.${m}.${y}`
+}
 
 function ratingHeadline(score: number): string {
   if (score >= 90) return 'Отличный уровень'
@@ -64,6 +65,7 @@ function yearsSince(iso: string): string {
 }
 
 export function UserDetailPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const [user, setUser] = useState<User | null>(null)
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -71,9 +73,49 @@ export function UserDetailPage() {
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
   const [tab, setTab] = useState<TabKey>('criteria')
+  const [evaluations, setEvaluations] = useState<EvaluationListItem[]>([])
+  const [latestScores, setLatestScores] = useState<ScoreItem[]>([])
+  const [criteria, setCriteria] = useState<CriteriaItem[]>([])
+  const [periods, setPeriods] = useState<PeriodItem[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadErr, setUploadErr] = useState<string | null>(null)
+  const [showEdit, setShowEdit] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean; title: string; description: string; variant: 'danger' | 'default'; onConfirm: () => void
+  }>({ open: false, title: '', description: '', variant: 'danger', onConfirm: () => {} })
+  const [tempPw, setTempPw] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const closeConfirm = () => setConfirmDialog(d => ({ ...d, open: false }))
+  const ask = (title: string, description: string, variant: 'danger' | 'default', onConfirm: () => void) =>
+    setConfirmDialog({ open: true, title, description, variant, onConfirm })
+
+  const onToggleActive = () => {
+    if (!user) return
+    if (user.isActive) {
+      ask(t('v2.users.deactivateTitle'), t('v2.users.deactivateMsg', { name: user.fullName }), 'danger', async () => {
+        try { await usersApi.deactivate(user.id); setUser({ ...user, isActive: false }) }
+        finally { closeConfirm() }
+      })
+    } else {
+      ask(t('v2.users.activateTitle'), t('v2.users.activateMsg', { name: user.fullName }), 'default', async () => {
+        try { await usersApi.reactivate(user.id); setUser({ ...user, isActive: true }) }
+        finally { closeConfirm() }
+      })
+    }
+  }
+  const onResetPassword = () => {
+    if (!user) return
+    ask(t('v2.users.resetPwTitle'), t('v2.users.resetPwMsg', { name: user.fullName }), 'default', async () => {
+      try {
+        const updated = await usersApi.resetPassword(user.id)
+        if (updated?.tempPassword) {
+          setTempPw(updated.tempPassword)
+          setCopied(false)
+        }
+      } finally { closeConfirm() }
+    })
+  }
 
   const onAvatarPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
@@ -95,17 +137,48 @@ export function UserDetailPage() {
   useEffect(() => {
     let cancel = false
     setLoading(true); setFailed(false)
-    Promise.all([usersApi.list(0, 500), orgApi.getStructure().catch(() => [])])
-      .then(([r, u]) => {
+    Promise.all([
+      usersApi.list(0, 500),
+      orgApi.getStructure().catch(() => []),
+      userDetailApi.listCriteria().catch(() => [] as CriteriaItem[]),
+      userDetailApi.listPeriods().catch(() => [] as PeriodItem[]),
+    ])
+      .then(([r, u, crit, per]) => {
         if (cancel) return
         setAllUsers(r.content)
         setUnits(flattenUnits(u as OrgUnit[]))
         setUser(r.content.find(u2 => String(u2.id) === id) ?? null)
+        setCriteria(crit)
+        setPeriods(per)
       })
       .catch(() => { if (!cancel) setFailed(true) })
       .finally(() => { if (!cancel) setLoading(false) })
     return () => { cancel = true }
   }, [id])
+
+  useEffect(() => {
+    if (!user) { setEvaluations([]); setLatestScores([]); return }
+    let cancel = false
+    userDetailApi.listEvaluations(user.id)
+      .then(async page => {
+        if (cancel) return
+        const evals = page.content
+        setEvaluations(evals)
+        const latest = evals.find(e => e.status === 'SUBMITTED') ?? evals[0]
+        if (latest) {
+          try {
+            const scores = await userDetailApi.getScores(latest.id)
+            if (!cancel) setLatestScores(scores)
+          } catch {
+            if (!cancel) setLatestScores([])
+          }
+        } else {
+          setLatestScores([])
+        }
+      })
+      .catch(() => { if (!cancel) { setEvaluations([]); setLatestScores([]) } })
+    return () => { cancel = true }
+  }, [user?.id])
 
   const managerName = useMemo(() => {
     if (!user?.managerId) return null
@@ -117,10 +190,66 @@ export function UserDetailPage() {
     return units.find(u => u.id === user.unitId)?.nameRu ?? null
   }, [user, units])
 
+  const latestEvaluation = useMemo<EvaluationListItem | undefined>(() => {
+    return evaluations.find(e => e.status === 'SUBMITTED') ?? evaluations[0]
+  }, [evaluations])
+
+  const previousEvaluation = useMemo<EvaluationListItem | undefined>(() => {
+    if (!latestEvaluation) return undefined
+    return evaluations.find(e => e.id !== latestEvaluation.id && e.status === 'SUBMITTED')
+  }, [evaluations, latestEvaluation])
+
+  const criteriaById = useMemo(() => {
+    const m = new Map<number, CriteriaItem>()
+    criteria.forEach(c => m.set(c.id, c))
+    return m
+  }, [criteria])
+
+  const periodById = useMemo(() => {
+    const m = new Map<number, PeriodItem>()
+    periods.forEach(p => m.set(p.id, p))
+    return m
+  }, [periods])
+
+  const criterionRows = useMemo<CriterionRow[]>(() => {
+    return latestScores.map(s => {
+      const c = criteriaById.get(s.criteriaId)
+      const value = Number(s.value ?? 0)
+      const weight = Number(c?.weight ?? 0)
+      return {
+        id: s.criteriaId,
+        name: c?.nameRu ?? `#${s.criteriaId}`,
+        scope: c?.orgUnitNameRu ?? 'GLOBAL',
+        type: (c?.type ?? 'POSITIVE') as 'POSITIVE' | 'ANTI_BONUS',
+        value,
+        weight,
+        contribution: (value * weight) / 100,
+      }
+    })
+  }, [latestScores, criteriaById])
+
+  const positiveRows = useMemo(() => criterionRows.filter(r => r.type === 'POSITIVE'), [criterionRows])
+  const penaltyRows  = useMemo(() => criterionRows.filter(r => r.type === 'ANTI_BONUS' && r.value !== 0), [criterionRows])
+  const positiveWeightTotal = useMemo(() => positiveRows.reduce((s, r) => s + r.weight, 0), [positiveRows])
+
   const rating = useMemo(() => {
-    if (!user) return 0
-    return Math.round(MOCK_CRITERIA.reduce((s, c) => s + (c.score * c.weight) / 100, 0))
-  }, [user])
+    if (latestEvaluation?.finalScore != null) return Math.round(Number(latestEvaluation.finalScore))
+    if (criterionRows.length === 0) return 0
+    return Math.max(0, Math.round(criterionRows.reduce((s, r) => s + r.contribution, 0)))
+  }, [latestEvaluation, criterionRows])
+
+  const ratingTrend = useMemo(() => {
+    if (!latestEvaluation || !previousEvaluation) return null
+    const a = Number(latestEvaluation.finalScore ?? 0)
+    const b = Number(previousEvaluation.finalScore ?? 0)
+    return { delta: Math.round(a - b), prevPeriod: periodById.get(previousEvaluation.periodId) }
+  }, [latestEvaluation, previousEvaluation, periodById])
+
+  const subordinates = useMemo(() => {
+    if (!user) return []
+    return allUsers.filter(u => u.managerId === user.id && u.isActive)
+  }, [user, allUsers])
+
 
   return (
     <div className="dv3-root">
@@ -146,7 +275,7 @@ export function UserDetailPage() {
                     title={uploading ? 'Загрузка…' : 'Сменить аватар'}
                     disabled={uploading}>
                     {user.avatarUrl ? '' : initials(user.fullName)}
-                    <span className="udp-presence" aria-hidden />
+                    {user.isActive && <span className="udp-presence" aria-hidden />}
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/png,image/jpeg" hidden onChange={onAvatarPick} />
                   {uploadErr && <div className="udp-state udp-state--err" style={{ marginTop: 6 }}>{uploadErr}</div>}
@@ -156,19 +285,42 @@ export function UserDetailPage() {
                   </div>
                   <div className="udp-role-row">
                     <span className="udp-role-badge">{user.role}</span>
-                    <button type="button" className="udp-edit-icon" aria-label="Редактировать профиль" title="Редактировать">
+                    <button type="button" className="udp-action-icon" aria-label={t('v2.menuEdit')} title={t('v2.menuEdit')} onClick={() => setShowEdit(true)}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className={`udp-action-icon ${user.isActive ? 'is-danger' : 'is-ok'}`}
+                      aria-label={user.isActive ? t('v2.menuDeactivate') : t('v2.menuActivate')}
+                      title={user.isActive ? t('v2.menuDeactivate') : t('v2.menuActivate')}
+                      onClick={onToggleActive}
+                    >
+                      {user.isActive ? (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      )}
+                    </button>
+                    <button type="button" className="udp-action-icon is-warn" aria-label={t('v2.menuResetPw')} title={t('v2.menuResetPw')} onClick={onResetPassword}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                       </svg>
                     </button>
                   </div>
                 </div>
 
                 <div className="udp-quick-stats">
-                  <QuickStat value={rating} label="KPI" />
-                  <QuickStat value={MOCK_TEAM.length} label="В команде" />
-                  <QuickStat value={0} label="Штрафов" />
+                  <QuickStat value={latestEvaluation ? rating : '—'} label="KPI" />
+                  <QuickStat value={subordinates.length} label="В команде" />
+                  <QuickStat value={penaltyRows.length} label="Штрафов" />
                 </div>
 
                 <div className="udp-contact-list">
@@ -178,7 +330,7 @@ export function UserDetailPage() {
                   <Contact icon={<BuildingIcon />} label="Подразделение"  value={unitName ?? (user.unitId != null ? `№${user.unitId}` : '—')} />
                   <Contact icon={<CalendarIcon />} label="В компании с"   value={`${formatRuDate(user.hireDate ?? user.createdAt)}${yearsSince(user.hireDate ?? user.createdAt)}`} />
                   {user.terminationDate && <Contact icon={<CalendarIcon />} label="Уволен" value={formatRuDate(user.terminationDate)} />}
-                  <Contact icon={<ClockIcon />}    label="Часовой пояс"   value="Asia/Bishkek (UTC+6)" />
+                  {user.employmentType && <Contact icon={<IdIcon />} label="Тип занятости" value={user.employmentType} />}
                 </div>
 
                 <div>
@@ -201,21 +353,31 @@ export function UserDetailPage() {
                 <div className="udp-hero">
                   <div className="udp-hero-bg" aria-hidden />
                   <div className="udp-hero-circle">
-                    <div className="udp-hero-number">{rating}</div>
+                    <div className="udp-hero-number">{latestEvaluation ? rating : '—'}</div>
                     <div className="udp-hero-max">/ 100</div>
                   </div>
                   <div className="udp-hero-info">
                     <div className="udp-hero-title">Итоговый рейтинг</div>
-                    <div className="udp-hero-headline">{ratingHeadline(rating)}</div>
-                    <div className="udp-hero-period">
-                      <CalendarIcon />
-                      ANNUAL 2024 · Закрыт
+                    <div className="udp-hero-headline">
+                      {latestEvaluation ? ratingHeadline(rating) : 'Нет оценок'}
                     </div>
+                    {latestEvaluation && (
+                      <div className="udp-hero-period">
+                        <CalendarIcon />
+                        {periodLabel(periodById.get(latestEvaluation.periodId))}
+                        {' · '}
+                        {latestEvaluation.status === 'SUBMITTED' ? 'Закрыт' : 'Черновик'}
+                      </div>
+                    )}
                   </div>
-                  <div className="udp-hero-trend">
-                    <div className="udp-hero-trend-value">↑ +8</div>
-                    <div className="udp-hero-trend-label">vs ANNUAL 2023</div>
-                  </div>
+                  {ratingTrend && (
+                    <div className="udp-hero-trend">
+                      <div className="udp-hero-trend-value">
+                        {ratingTrend.delta >= 0 ? '↑ +' : '↓ '}{ratingTrend.delta}
+                      </div>
+                      <div className="udp-hero-trend-label">vs {periodLabel(ratingTrend.prevPeriod)}</div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Tabs */}
@@ -224,7 +386,7 @@ export function UserDetailPage() {
                     Критерии оценки
                   </TabBtn>
                   <TabBtn active={tab === 'team'} onClick={() => setTab('team')} icon={<UsersIcon />}>
-                    Команда ({MOCK_TEAM.length})
+                    Команда ({subordinates.length})
                   </TabBtn>
                   <TabBtn active={tab === 'periods'} onClick={() => setTab('periods')} icon={<CalendarIcon />}>
                     История периодов
@@ -236,98 +398,219 @@ export function UserDetailPage() {
 
                 {tab === 'criteria' && (
                   <>
-                    <Card title="Положительные критерии (вес 100%)" meta={`${MOCK_CRITERIA.length} критерия`} icon={<CheckIcon />} noPad>
-                      {MOCK_CRITERIA.map(c => (
-                        <div className="udp-cri-row" key={c.name}>
-                          <div className="udp-cri-info">
-                            <div className="udp-cri-name">{c.name}</div>
-                            <div className="udp-cri-scope">{c.scope}</div>
+                    {!latestEvaluation && (
+                      <Card title="Положительные критерии" icon={<CheckIcon />}>
+                        <div className="udp-empty-ok" style={{ background: 'var(--bg-soft)', color: 'var(--ink-soft)' }}>
+                          Сотрудник пока не оценивался
+                        </div>
+                      </Card>
+                    )}
+                    {latestEvaluation && (
+                      <Card
+                        title={`Положительные критерии (вес ${positiveWeightTotal}%)`}
+                        meta={`${positiveRows.length} критерия`}
+                        icon={<CheckIcon />}
+                        noPad
+                      >
+                        {positiveRows.length === 0 && (
+                          <div className="udp-empty-ok" style={{ margin: 20, background: 'var(--bg-soft)', color: 'var(--ink-soft)' }}>
+                            Нет данных по положительным критериям
                           </div>
-                          <div className="udp-cri-barcell">
-                            <div className="udp-cri-bar">
-                              <div className="udp-cri-fill" style={{ width: `${c.score}%` }} />
+                        )}
+                        {positiveRows.map(c => (
+                          <div className="udp-cri-row" key={c.id}>
+                            <div className="udp-cri-info">
+                              <div className="udp-cri-name">{c.name}</div>
+                              <div className="udp-cri-scope">{c.scope}</div>
+                            </div>
+                            <div className="udp-cri-barcell">
+                              <div className="udp-cri-bar">
+                                <div className="udp-cri-fill" style={{ width: `${Math.max(0, Math.min(100, c.value))}%` }} />
+                              </div>
+                            </div>
+                            <div className="udp-cri-score">
+                              <div className="udp-cri-points">+{c.contribution.toFixed(1)}</div>
+                              <div className="udp-cri-weight">{c.value} × {c.weight}%</div>
                             </div>
                           </div>
-                          <div className="udp-cri-score">
-                            <div className="udp-cri-points">+{((c.score * c.weight) / 100).toFixed(1)}</div>
-                            <div className="udp-cri-weight">{c.score} × {c.weight}%</div>
+                        ))}
+                      </Card>
+                    )}
+                    {latestEvaluation && (
+                      <Card
+                        title="Антибонусы (штрафы)"
+                        meta={
+                          <span style={{ color: penaltyRows.length === 0 ? 'var(--accent)' : 'var(--danger)', fontWeight: 600 }}>
+                            {penaltyRows.length} {penaltyRows.length === 1 ? 'нарушение' : 'нарушений'}
+                          </span>
+                        }
+                        icon={<AlertIcon />}
+                        noPad={penaltyRows.length > 0}
+                      >
+                        {penaltyRows.length === 0 ? (
+                          <div className="udp-empty-ok">
+                            ✓ За период {periodLabel(periodById.get(latestEvaluation.periodId))} нарушений не выявлено
                           </div>
-                        </div>
-                      ))}
-                    </Card>
-                    <Card title="Антибонусы (штрафы)" meta={<span style={{ color: 'var(--accent)', fontWeight: 600 }}>0 нарушений</span>} icon={<AlertIcon />}>
-                      <div className="udp-empty-ok">
-                        ✓ За весь период ANNUAL 2024 нарушений не выявлено
-                      </div>
-                    </Card>
+                        ) : (
+                          penaltyRows.map(c => (
+                            <div className="udp-cri-row" key={c.id}>
+                              <div className="udp-cri-info">
+                                <div className="udp-cri-name">{c.name}</div>
+                                <div className="udp-cri-scope">{c.scope}</div>
+                              </div>
+                              <div className="udp-cri-barcell" />
+                              <div className="udp-cri-score">
+                                <div className="udp-cri-points" style={{ color: 'var(--danger)' }}>
+                                  {c.contribution.toFixed(1)}
+                                </div>
+                                <div className="udp-cri-weight">{c.value} × {c.weight}%</div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </Card>
+                    )}
                   </>
                 )}
 
                 {tab === 'team' && (
-                  <Card title="Прямые подчинённые" meta={`${MOCK_TEAM.length} сотрудников`} icon={<UsersIcon />} noPad>
-                    <div className="udp-team-grid">
-                      {MOCK_TEAM.map(m => (
-                        <div className="udp-team-card" key={m.name}>
-                          <span className="udp-team-avatar">{initials(m.name)}</span>
-                          <div className="udp-team-info">
-                            <div className="udp-team-name">{m.name}</div>
-                            <div className="udp-team-role">{m.role}</div>
+                  <Card title="Прямые подчинённые" meta={`${subordinates.length} сотрудников`} icon={<UsersIcon />} noPad>
+                    {subordinates.length === 0 ? (
+                      <div className="udp-empty-ok" style={{ margin: 20, background: 'var(--bg-soft)', color: 'var(--ink-soft)' }}>
+                        Нет прямых подчинённых
+                      </div>
+                    ) : (
+                      <div className="udp-team-grid">
+                        {subordinates.map(m => (
+                          <div className="udp-team-card" key={m.id}>
+                            <span className="udp-team-avatar">{initials(m.fullName)}</span>
+                            <div className="udp-team-info">
+                              <div className="udp-team-name">{m.fullName}</div>
+                              <div className="udp-team-role">{m.position ?? m.role}</div>
+                            </div>
                           </div>
-                          <div className="udp-team-score">{m.score}</div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </Card>
                 )}
 
                 {tab === 'periods' && (
                   <Card title="История периодов оценки" icon={<CalendarIcon />} noPad>
-                    <div className="udp-timeline">
-                      {MOCK_PERIODS.map(p => (
-                        <div className="udp-tl-item" key={p.title}>
-                          <div className="udp-tl-date">{p.date}</div>
-                          <div className="udp-tl-content">
-                            <div className="udp-tl-title">{p.title}</div>
-                            <div className="udp-tl-detail">{p.detail}</div>
-                            <div className="udp-tl-pill">Закрыт ✓</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    {evaluations.length === 0 ? (
+                      <div className="udp-empty-ok" style={{ margin: 20, background: 'var(--bg-soft)', color: 'var(--ink-soft)' }}>
+                        Нет оценок за прошлые периоды
+                      </div>
+                    ) : (
+                      <div className="udp-timeline">
+                        {evaluations.map(e => {
+                          const p = periodById.get(e.periodId)
+                          const closed = e.status === 'SUBMITTED'
+                          const score = e.finalScore != null ? Math.round(Number(e.finalScore)) : null
+                          return (
+                            <div className="udp-tl-item" key={e.id}>
+                              <div className="udp-tl-date">{periodDate(p)}</div>
+                              <div className="udp-tl-content">
+                                <div className="udp-tl-title">{periodLabel(p)}</div>
+                                <div className="udp-tl-detail">
+                                  {closed ? 'Оценка завершена' : e.status === 'DRAFT' ? 'Черновик' : 'Отменено'}
+                                  {score != null && ` · Рейтинг ${score}/100`}
+                                  {e.evaluatorName && ` · ${e.evaluatorName}`}
+                                </div>
+                                <div className="udp-tl-pill">
+                                  {closed ? 'Закрыт ✓' : e.status === 'DRAFT' ? 'В работе' : 'Отменено'}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </Card>
                 )}
 
                 {tab === 'info' && (
-                  <div className="udp-two-col">
-                    <Card title="Документы" icon={<DocIcon />}>
-                      <div className="udp-kv">
-                        <KVRow k="Трудовой договор"        v="contract.pdf" mono />
-                        <KVRow k="Должностная инструкция"  v="ji.pdf"       mono />
-                        <KVRow k="Соглашение о НДА"        v="nda.pdf"      mono />
-                      </div>
-                    </Card>
-                    <Card title="Системная информация" icon={<GearIcon />}>
-                      <div className="udp-kv">
-                        <KVRow k="ID пользователя" v={`USR-${String(user.id).padStart(6, '0')}`} mono />
-                        {user.employeeNumber && <KVRow k="Табельный номер" v={user.employeeNumber} mono />}
-                        {(user.lastName || user.firstName || user.middleName) && (
-                          <KVRow k="ФИО" v={[user.lastName, user.firstName, user.middleName].filter(Boolean).join(' ')} />
-                        )}
-                        {user.employmentType && <KVRow k="Тип занятости" v={user.employmentType} mono />}
-                        {user.hireDate && <KVRow k="Дата приёма" v={formatRuDate(user.hireDate)} />}
-                        {user.terminationDate && <KVRow k="Дата увольнения" v={formatRuDate(user.terminationDate)} />}
-                        <KVRow k="Роль в системе"  v={user.role} mono />
-                        <KVRow k="Статус"          v={user.isActive ? 'Активен' : 'Заблокирован'} />
-                        <KVRow k="Создан"          v={formatRuDate(user.createdAt)} />
-                      </div>
-                    </Card>
-                  </div>
+                  <Card title="Системная информация" icon={<GearIcon />}>
+                    <div className="udp-kv">
+                      <KVRow k="ID пользователя" v={`USR-${String(user.id).padStart(6, '0')}`} mono />
+                      {user.employeeNumber && <KVRow k="Табельный номер" v={user.employeeNumber} mono />}
+                      {(user.lastName || user.firstName || user.middleName) && (
+                        <KVRow k="ФИО" v={[user.lastName, user.firstName, user.middleName].filter(Boolean).join(' ')} />
+                      )}
+                      {user.employmentType && <KVRow k="Тип занятости" v={user.employmentType} mono />}
+                      {user.hireDate && <KVRow k="Дата приёма" v={formatRuDate(user.hireDate)} />}
+                      {user.terminationDate && <KVRow k="Дата увольнения" v={formatRuDate(user.terminationDate)} />}
+                      <KVRow k="Роль в системе"  v={user.role} mono />
+                      <KVRow k="Статус"          v={user.isActive ? 'Активен' : 'Заблокирован'} />
+                      <KVRow k="Создан"          v={formatRuDate(user.createdAt)} />
+                    </div>
+                  </Card>
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {user && (
+        <UserFormModal
+          open={showEdit}
+          user={user}
+          allUsers={allUsers}
+          onClose={() => setShowEdit(false)}
+          onSave={async (data) => {
+            const saved = await usersApi.update(user.id, data)
+            setUser(saved)
+            return saved
+          }}
+        />
+      )}
+      <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} />
+      {tempPw && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+          onClick={() => setTempPw(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface, #fff)', borderRadius: 12, padding: 24,
+              maxWidth: 440, width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+            }}
+          >
+            <h3 style={{ marginTop: 0, fontSize: 16, fontWeight: 600 }}>
+              {t('v2.users.tempPwTitle', { defaultValue: 'Временный пароль' })}
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--ink-faint)' }}>
+              {t('v2.users.tempPwNote', { defaultValue: 'Скопируйте сейчас — пароль больше не будет показан. Пользователь должен сменить его при первом входе.' })}
+            </p>
+            <div style={{
+              fontFamily: 'monospace', fontSize: 16, padding: '12px 14px',
+              background: 'var(--surface-2, #f5f5f7)', borderRadius: 8,
+              userSelect: 'all', wordBreak: 'break-all', margin: '12px 0',
+            }}>{tempPw}</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try { await navigator.clipboard.writeText(tempPw); setCopied(true) } catch { /* noop */ }
+                }}
+                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer' }}
+              >{copied ? t('v2.users.copied', { defaultValue: 'Скопировано' }) : t('v2.users.copy', { defaultValue: 'Копировать' })}</button>
+              <button
+                type="button"
+                onClick={() => setTempPw(null)}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--accent, #4f46e5)', color: '#fff', cursor: 'pointer' }}
+              >{t('common.close', { defaultValue: 'Закрыть' })}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -456,15 +739,18 @@ const PAGE_CSS = `
   background: var(--accent-mute); color: var(--accent-ink);
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
-.udp-edit-icon {
+.udp-action-icon {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: 8px; cursor: pointer;
   background: var(--surface); color: var(--ink-soft);
   border: 1px solid var(--line);
   transition: background .12s ease, color .12s ease, border-color .12s ease;
 }
-.udp-edit-icon svg { width: 14px; height: 14px; }
-.udp-edit-icon:hover { background: var(--accent); color: #fff; border-color: var(--accent-ink); }
+.udp-action-icon svg { width: 14px; height: 14px; }
+.udp-action-icon:hover { background: var(--accent); color: #fff; border-color: var(--accent-ink); }
+.udp-action-icon.is-danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+.udp-action-icon.is-ok:hover { background: var(--success); color: #fff; border-color: var(--success); }
+.udp-action-icon.is-warn:hover { background: var(--warn); color: #fff; border-color: var(--warn); }
 
 .udp-quick-stats {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;

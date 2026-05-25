@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useId, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { Download, X } from 'lucide-react'
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
 import { DataPanel, type Column, type FilterDef, type PanelState } from '../../components/DataPanel'
 import { Badge, type BadgeTone } from '../../components/Badge'
@@ -30,9 +31,24 @@ export function AuditLogPage() {
   const [seenActions, setSeenActions] = useState<string[]>([])
   const [seenEntityTypes, setSeenEntityTypes] = useState<string[]>([])
 
+  const [searchParams, setSearchParams] = useSearchParams()
+
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
-  const [filterValues, setFilterValuesState] = useState<Record<string, string>>({})
+  const [filterValues, setFilterValuesState] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {}
+    const et = searchParams.get('entityType')
+    const ac = searchParams.get('action')
+    if (et) init.entityType = et
+    if (ac) init.action = ac
+    return init
+  })
+  const [entityIdFilter, setEntityIdFilter] = useState<number | null>(() => {
+    const raw = searchParams.get('entityId')
+    if (!raw) return null
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : null
+  })
 
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -66,11 +82,12 @@ export function AuditLogPage() {
   const buildParams = useCallback((): AuditSearchParams => ({
     action: filterValues.action || undefined,
     entityType: filterValues.entityType || undefined,
+    entityId: entityIdFilter ?? undefined,
     from: from ? `${from}T00:00:00` : undefined,
     to: to ? `${to}T23:59:59` : undefined,
     page,
     size: pageSize,
-  }), [filterValues, from, to, page, pageSize])
+  }), [filterValues, entityIdFilter, from, to, page, pageSize])
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -103,7 +120,22 @@ export function AuditLogPage() {
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return }
     setPage(0)
-  }, [filterValues, from, to])
+  }, [filterValues, entityIdFilter, from, to])
+
+  useEffect(() => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (filterValues.entityType) next.set('entityType', filterValues.entityType)
+      else next.delete('entityType')
+      if (filterValues.action) next.set('action', filterValues.action)
+      else next.delete('action')
+      if (entityIdFilter != null) next.set('entityId', String(entityIdFilter))
+      else next.delete('entityId')
+      return next
+    }, { replace: true })
+  }, [filterValues, entityIdFilter, setSearchParams])
+
+  const clearEntityIdFilter = useCallback(() => setEntityIdFilter(null), [])
 
   const handleStateChange = useCallback((s: PanelState) => {
     setPage(s.page)
@@ -120,8 +152,32 @@ export function AuditLogPage() {
     height: 38,
   }
 
+  const entityIdPill = entityIdFilter != null ? (
+    <div
+      className="inline-flex items-center gap-1.5"
+      style={{
+        fontSize: 12, height: 38, padding: '0 10px', borderRadius: 8,
+        background: 'var(--accent-bg, rgba(80,140,200,0.12))',
+        color: 'var(--accent-ink, #2c6ea4)',
+        border: '1px solid var(--accent, #5896c8)',
+      }}
+      title="Фильтр по ID сущности"
+    >
+      <span className="font-mono">entityId = {entityIdFilter}</span>
+      <button
+        type="button"
+        onClick={clearEntityIdFilter}
+        aria-label="Очистить"
+        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', display: 'inline-flex' }}
+      >
+        <X size={12} />
+      </button>
+    </div>
+  ) : null
+
   const dateSlot = (
     <div className="flex items-center gap-2">
+      {entityIdPill}
       <label htmlFor={fromId} className="text-xs font-medium" style={{ color: 'var(--ink-faint)' }}>
         {t('audit.filterFrom')}
       </label>

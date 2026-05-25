@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { Trans, useTranslation } from 'react-i18next'
 import type { AdminStats } from './adminApi'
 
 interface AdminStatsCardsProps {
@@ -127,6 +128,8 @@ function StatCardShell({ title, pill, accent, stripe, to, children, footer }: St
 }
 
 export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
+  const { t } = useTranslation()
+
   const totalUsers = stats?.totalUsers ?? 0
   const activeUsers = stats?.activeUsers ?? 0
   const activePct = totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0
@@ -149,6 +152,9 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
   const WARN = 'var(--warn)'
   const DANGER = 'var(--danger)'
 
+  const strongSoft = <strong style={{ color: 'var(--ink-soft)' }} />
+  const strongWarn = <strong style={{ color: 'var(--warn)' }} />
+
   return (
     <div className="mb-5">
       <div className="flex items-baseline justify-between mb-3">
@@ -156,7 +162,7 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
           className="font-mono uppercase font-semibold tracking-widest"
           style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}
         >
-          Состояние системы
+          {t('admin.statCards.systemState')}
         </span>
       </div>
 
@@ -166,19 +172,21 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
       >
         {/* Users */}
         <StatCardShell
-          title="Пользователи"
-          pill={{ kind: 'ok', text: 'Активные' }}
+          title={t('admin.statCards.users.title')}
+          pill={{ kind: 'ok', text: t('admin.statCards.users.pillActive') }}
           accent={{ text: `${activeUsers}/${totalUsers}`, color: SAFE }}
           stripe={SAFE}
           to="/admin/users"
           footer={
-            <>
-              Зарегистрировано <strong style={{ color: 'var(--ink-soft)' }}>{totalUsers}</strong> · активных <strong style={{ color: 'var(--ink-soft)' }}>{activeUsers}</strong>
-            </>
+            <Trans
+              i18nKey="admin.statCards.users.footer"
+              values={{ total: totalUsers, active: activeUsers }}
+              components={[<span />, strongSoft, strongSoft]}
+            />
           }
         >
           <ProgressBar
-            label="Активность"
+            label={t('admin.statCards.users.progressLabel')}
             percent={activePct}
             caption={`${Math.round(activePct)}%`}
             color={SAFE}
@@ -187,46 +195,62 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
 
         {/* Evaluations */}
         <StatCardShell
-          title="Оценки"
-          pill={{ kind: pendingEvals > 0 ? 'warn' : 'ok', text: pendingEvals > 0 ? 'В работе' : 'Готово' }}
+          title={t('admin.statCards.evaluations.title')}
+          pill={{
+            kind: pendingEvals > 0 ? 'warn' : 'ok',
+            text: pendingEvals > 0
+              ? t('admin.statCards.evaluations.pillInProgress')
+              : t('admin.statCards.evaluations.pillDone'),
+          }}
           accent={{ text: `${completedEvals}/${totalEvals}`, color: pendingEvals > 0 ? WARN : SAFE }}
           stripe={pendingEvals > 0 ? WARN : SAFE}
           footer={
             totalEvals > 0 ? (
-              <>
-                В ожидании <strong style={{ color: 'var(--ink-soft)' }}>{pendingEvals}</strong> · завершено <strong style={{ color: 'var(--ink-soft)' }}>{completedEvals}</strong>
-              </>
+              <Trans
+                i18nKey="admin.statCards.evaluations.footer"
+                values={{ pending: pendingEvals, completed: completedEvals }}
+                components={[<span />, strongSoft, strongSoft]}
+              />
             ) : (
-              <>Оценки ещё не создавались</>
+              <>{t('admin.statCards.evaluations.footerEmpty')}</>
             )
           }
         >
           {totalEvals > 0 ? (
             <ProgressBar
-              label="Заполнено"
+              label={t('admin.statCards.evaluations.progressLabel')}
               percent={completedPct}
               caption={`${Math.round(completedPct)}%`}
               color={completedPct >= 80 ? SAFE : completedPct >= 40 ? WARN : DANGER}
             />
           ) : (
             <div className="font-mono mb-2.5" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-              Нет данных по оценкам.
+              {t('admin.statCards.evaluations.noData')}
             </div>
           )}
         </StatCardShell>
 
         {/* Periods */}
         <StatCardShell
-          title="Периоды"
-          pill={{ kind: periods > 0 ? 'ok' : 'idle', text: periods > 0 ? 'Идут' : 'Нет' }}
+          title={t('admin.statCards.periods.title')}
+          pill={{
+            kind: periods > 0 ? 'ok' : 'idle',
+            text: periods > 0
+              ? t('admin.statCards.periods.pillRunning')
+              : t('admin.statCards.periods.pillNone'),
+          }}
           accent={{ text: String(periods), color: periods > 0 ? SAFE : 'var(--ink-faint)' }}
           stripe={periods > 0 ? SAFE : 'var(--line-strong)'}
           to="/admin/periods"
           footer={
             periods > 0 ? (
-              <>Активных периодов оценки: <strong style={{ color: 'var(--ink-soft)' }}>{periods}</strong></>
+              <Trans
+                i18nKey="admin.statCards.periods.footer"
+                values={{ count: periods }}
+                components={[<span />, strongSoft]}
+              />
             ) : (
-              <>Создайте новый период для запуска оценок.</>
+              <>{t('admin.statCards.periods.footerEmpty')}</>
             )
           }
         >
@@ -235,22 +259,31 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
               {periods}
             </span>
             <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              месячных и квартальных
+              {t('admin.statCards.periods.subtitle')}
             </span>
           </div>
         </StatCardShell>
 
         {/* Appeals */}
         <StatCardShell
-          title="Апелляции"
-          pill={{ kind: appeals > 0 ? 'danger' : 'idle', text: appeals > 0 ? 'Открыто' : 'Нет' }}
+          title={t('admin.statCards.appeals.title')}
+          pill={{
+            kind: appeals > 0 ? 'danger' : 'idle',
+            text: appeals > 0
+              ? t('admin.statCards.appeals.pillOpen')
+              : t('admin.statCards.appeals.pillNone'),
+          }}
           accent={{ text: String(appeals), color: appeals > 0 ? DANGER : 'var(--ink-faint)' }}
           stripe={appeals > 0 ? DANGER : 'var(--line-strong)'}
           footer={
             appeals > 0 ? (
-              <>Требуют решения · <strong style={{ color: 'var(--ink-soft)' }}>{appeals}</strong></>
+              <Trans
+                i18nKey="admin.statCards.appeals.footer"
+                values={{ count: appeals }}
+                components={[<span />, strongSoft]}
+              />
             ) : (
-              <>Открытых апелляций нет.</>
+              <>{t('admin.statCards.appeals.footerEmpty')}</>
             )
           }
         >
@@ -259,42 +292,51 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
               {appeals}
             </span>
             <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              ждут рассмотрения
+              {t('admin.statCards.appeals.subtitle')}
             </span>
           </div>
         </StatCardShell>
 
         {/* Audit */}
         <StatCardShell
-          title="Аудит"
-          pill={{ kind: 'info', text: '24ч' }}
+          title={t('admin.statCards.audit.title')}
+          pill={{ kind: 'info', text: t('admin.statCards.audit.pill') }}
           accent={{ text: String(audit24), color: INFO }}
           stripe={INFO}
           to="/admin/audit"
-          footer={<>Событий за последние 24 часа</>}
+          footer={<>{t('admin.statCards.audit.footer')}</>}
         >
           <div className="flex items-baseline gap-3">
             <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
               {audit24}
             </span>
             <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              записей
+              {t('admin.statCards.audit.subtitle')}
             </span>
           </div>
         </StatCardShell>
 
         {/* Criteria */}
         <StatCardShell
-          title="Критерии"
-          pill={{ kind: criteria > 0 ? 'ok' : 'idle', text: criteria > 0 ? 'Активные' : 'Нет' }}
+          title={t('admin.statCards.criteria.title')}
+          pill={{
+            kind: criteria > 0 ? 'ok' : 'idle',
+            text: criteria > 0
+              ? t('admin.statCards.criteria.pillActive')
+              : t('admin.statCards.criteria.pillNone'),
+          }}
           accent={{ text: String(criteria), color: criteria > 0 ? SAFE : 'var(--ink-faint)' }}
           stripe={criteria > 0 ? SAFE : 'var(--line-strong)'}
           to="/admin/criteria"
           footer={
             criteria > 0 ? (
-              <>Действующих критериев оценки: <strong style={{ color: 'var(--ink-soft)' }}>{criteria}</strong></>
+              <Trans
+                i18nKey="admin.statCards.criteria.footer"
+                values={{ count: criteria }}
+                components={[<span />, strongSoft]}
+              />
             ) : (
-              <>Добавьте критерии для запуска оценок.</>
+              <>{t('admin.statCards.criteria.footerEmpty')}</>
             )
           }
         >
@@ -303,17 +345,21 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
               {criteria}
             </span>
             <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              в каталоге
+              {t('admin.statCards.criteria.subtitle')}
             </span>
           </div>
         </StatCardShell>
 
         {/* Delegations */}
         <StatCardShell
-          title="Делегирования"
+          title={t('admin.statCards.delegations.title')}
           pill={{
             kind: delegationsExpiring > 0 ? 'warn' : delegations > 0 ? 'ok' : 'idle',
-            text: delegationsExpiring > 0 ? 'Истекают' : delegations > 0 ? 'Активные' : 'Нет',
+            text: delegationsExpiring > 0
+              ? t('admin.statCards.delegations.pillExpiring')
+              : delegations > 0
+                ? t('admin.statCards.delegations.pillActive')
+                : t('admin.statCards.delegations.pillNone'),
           }}
           accent={{
             text: String(delegations),
@@ -323,11 +369,19 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
           to="/admin/delegations"
           footer={
             delegationsExpiring > 0 ? (
-              <>Истекают за 7 дней · <strong style={{ color: 'var(--warn)' }}>{delegationsExpiring}</strong></>
+              <Trans
+                i18nKey="admin.statCards.delegations.footerExpiring"
+                values={{ count: delegationsExpiring }}
+                components={[<span />, strongWarn]}
+              />
             ) : delegations > 0 ? (
-              <>Активных передач полномочий: <strong style={{ color: 'var(--ink-soft)' }}>{delegations}</strong></>
+              <Trans
+                i18nKey="admin.statCards.delegations.footerActive"
+                values={{ count: delegations }}
+                components={[<span />, strongSoft]}
+              />
             ) : (
-              <>Делегирований нет.</>
+              <>{t('admin.statCards.delegations.footerEmpty')}</>
             )
           }
         >
@@ -336,26 +390,26 @@ export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
               {delegations}
             </span>
             <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              действуют сейчас
+              {t('admin.statCards.delegations.subtitle')}
             </span>
           </div>
         </StatCardShell>
 
         {/* Org units */}
         <StatCardShell
-          title="Оргструктура"
-          pill={{ kind: 'info', text: 'Узлы' }}
+          title={t('admin.statCards.org.title')}
+          pill={{ kind: 'info', text: t('admin.statCards.org.pill') }}
           accent={{ text: String(orgUnits), color: INFO }}
           stripe={INFO}
           to="/admin/org"
-          footer={<>Подразделений и должностей в дереве</>}
+          footer={<>{t('admin.statCards.org.footer')}</>}
         >
           <div className="flex items-baseline gap-3">
             <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
               {orgUnits}
             </span>
             <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              узлов структуры
+              {t('admin.statCards.org.subtitle')}
             </span>
           </div>
         </StatCardShell>

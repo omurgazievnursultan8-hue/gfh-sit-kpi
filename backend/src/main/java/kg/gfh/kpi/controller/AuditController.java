@@ -35,6 +35,7 @@ public class AuditController {
             @RequestParam(required = false) Long actorId,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) Long entityId,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false)
@@ -44,7 +45,7 @@ public class AuditController {
     ) {
         LocalDateTime fromBound = from != null ? from : LocalDateTime.of(1970, 1, 1, 0, 0);
         LocalDateTime toBound   = to   != null ? to   : LocalDateTime.of(9999, 1, 1, 0, 0);
-        return auditLogRepository.search(actorId, action, entityType, fromBound, toBound, pageable)
+        return auditLogRepository.search(actorId, action, entityType, entityId, fromBound, toBound, pageable)
                 .map(this::toResponse);
     }
 
@@ -53,6 +54,7 @@ public class AuditController {
             @RequestParam(required = false) Long actorId,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) Long entityId,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam(required = false)
@@ -61,7 +63,7 @@ public class AuditController {
         LocalDateTime fromBound = from != null ? from : LocalDateTime.of(1970, 1, 1, 0, 0);
         LocalDateTime toBound   = to   != null ? to   : LocalDateTime.of(9999, 1, 1, 0, 0);
         List<AuditLog> rows = auditLogRepository
-                .search(actorId, action, entityType, fromBound, toBound, Pageable.ofSize(10_000))
+                .search(actorId, action, entityType, entityId, fromBound, toBound, Pageable.ofSize(10_000))
                 .getContent();
 
         try (XSSFWorkbook wb = new XSSFWorkbook()) {

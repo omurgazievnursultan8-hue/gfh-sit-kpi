@@ -62,6 +62,13 @@ public class OrgUnitController {
         return ResponseEntity.ok(orgUnitService.restoreUnit(id));
     }
 
+    @PutMapping("/units/{id}/parent")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrgUnitResponse> reparentUnit(@PathVariable Long id,
+                                                         @RequestParam(required = false) Long parentId) {
+        return ResponseEntity.ok(orgUnitService.reparentUnit(id, parentId));
+    }
+
     @PostMapping("/units/{id}/move")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<OrgUnitResponse> moveUnit(@PathVariable Long id,

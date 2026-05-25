@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { useSelector } from 'react-redux'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Trash2, Plus, X, Table2, Network, Archive, ArchiveRestore, ChevronUp, ChevronDown } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Table2, Network, Archive, ArchiveRestore, ChevronUp, ChevronDown, Download, History } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { RootState } from '../../app/store'
 import { orgApi, OrgUnit, OrgUnitRequest } from './orgApi'
 import { OrgCanvas } from './components/OrgCanvas'
@@ -43,6 +45,65 @@ interface UsersPage {
 
 const PANEL_KEY = 'gfh_org_units'
 
+const CSV_HEADERS = [
+  'ID', 'Тип', 'Код', 'Название (рус)', 'Название (кыр)',
+  'Сокр. (рус)', 'Сокр. (кыр)', 'Родитель ID', 'Руководитель ID',
+  'Уровень', 'Порядок', 'Сотрудников (прямо)', 'Сотрудников (всего)',
+  'Архивирован', 'Путь',
+]
+
+function csvEscape(v: string | number | null | undefined): string {
+  if (v == null) return ''
+  const s = String(v)
+  if (/[",\n\r;]/.test(s)) return `"${s.replace(/"/g, '""')}"`
+  return s
+}
+
+interface CsvRow {
+  unit: OrgUnit
+  depth: number
+  path: string
+}
+
+function flattenForCsv(nodes: OrgUnit[], depth: number, parentPath: string, acc: CsvRow[]): void {
+  for (const n of nodes) {
+    const path = parentPath ? `${parentPath} / ${n.nameRu}` : n.nameRu
+    acc.push({ unit: n, depth, path })
+    if (n.children.length > 0) flattenForCsv(n.children, depth + 1, path, acc)
+  }
+}
+
+function buildCsv(tree: OrgUnit[], headLookup: Map<number, string>): string {
+  const rows: CsvRow[] = []
+  flattenForCsv(tree, 0, '', rows)
+  const lines: string[] = [CSV_HEADERS.map(csvEscape).join(',')]
+  for (const r of rows) {
+    const u = r.unit
+    const head = u.headUserId ? (headLookup.get(u.headUserId) ?? `ID ${u.headUserId}`) : ''
+    lines.push([
+      u.id, u.type, u.code ?? '', u.nameRu, u.nameKg ?? '',
+      u.nameRuShort ?? '', u.nameKgShort ?? '',
+      u.parentId ?? '', head,
+      r.depth, u.displayOrder ?? 0,
+      u.headcountDirect, u.headcountTotal,
+      u.archivedAt ? 'да' : '', r.path,
+    ].map(csvEscape).join(','))
+  }
+  return lines.join('\r\n')
+}
+
+function downloadCsv(filename: string, content: string): void {
+  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 const TYPE_LABEL: Record<OrgUnit['type'], string> = {
   BLOCK: 'Блок',
   DEPARTMENT: 'Департамент',
@@ -73,6 +134,8 @@ interface FlatUnit {
   archivedAt: string | null
   displayOrder: number
   code: string | null
+  headcountDirect: number
+  headcountTotal: number
 }
 
 function flatten(nodes: OrgUnit[], acc: FlatUnit[] = []): FlatUnit[] {
@@ -88,6 +151,8 @@ function flatten(nodes: OrgUnit[], acc: FlatUnit[] = []): FlatUnit[] {
       archivedAt: n.archivedAt,
       displayOrder: n.displayOrder,
       code: n.code,
+      headcountDirect: n.headcountDirect,
+      headcountTotal: n.headcountTotal,
     })
     if (n.children.length > 0) flatten(n.children, acc)
   }
@@ -135,15 +200,40 @@ export function OrgPage() {
   const [defaultParent, setDefaultParent] = useState<OrgUnit | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<FlatUnit | null>(null)
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+
   const [viewMode, setViewMode] = useState<'table' | 'canvas'>(() => {
+    const urlView = searchParams.get('view')
+    if (urlView === 'canvas' || urlView === 'table') return urlView
     const saved = localStorage.getItem('gfh_org_view_mode')
     return saved === 'canvas' ? 'canvas' : 'table'
   })
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const selectedId = useMemo(() => {
+    const raw = searchParams.get('unit')
+    if (!raw) return null
+    const n = Number(raw)
+    return Number.isFinite(n) ? n : null
+  }, [searchParams])
+
+  const setSelectedId = useCallback((id: number | null) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (id == null) next.delete('unit')
+      else next.set('unit', String(id))
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   useEffect(() => {
     localStorage.setItem('gfh_org_view_mode', viewMode)
-  }, [viewMode])
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (viewMode === 'table') next.delete('view')
+      else next.set('view', viewMode)
+      return next
+    }, { replace: true })
+  }, [viewMode, setSearchParams])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -211,6 +301,17 @@ export function OrgPage() {
     await load()
   }
 
+  const handleReparent = async (id: number, parentId: number | null) => {
+    try {
+      await orgApi.reparentUnit(id, parentId)
+      setLoadError(null)
+    } catch (e: any) {
+      setLoadError(e?.response?.data?.messageRu ?? 'Не удалось переместить')
+    } finally {
+      await load()
+    }
+  }
+
   const openEdit = (u: FlatUnit) => {
     const node = findById(tree, u.id)
     if (!node) return
@@ -253,7 +354,15 @@ export function OrgPage() {
     {
       key: 'name', header: 'Подразделение', sortable: true, hideable: false,
       render: (u) => (
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>{displayName(u)}</span>
+        <Link
+          to={`/admin/org/${u.id}`}
+          onClick={e => e.stopPropagation()}
+          style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--ink)')}
+        >
+          {displayName(u)}
+        </Link>
       ),
     },
     {
@@ -297,6 +406,20 @@ export function OrgPage() {
       render: (u) => (
         <span className="font-mono" style={{ fontSize: 12, color: u.childCount > 0 ? 'var(--ink-soft)' : 'var(--ink-faint)' }}>
           {u.childCount}
+        </span>
+      ),
+    },
+    {
+      key: 'headcount', header: 'Чел.', align: 'right', sortable: true,
+      render: (u) => (
+        <span
+          className="font-mono"
+          style={{ fontSize: 12, color: u.headcountTotal > 0 ? 'var(--ink-soft)' : 'var(--ink-faint)' }}
+          title={`Прямо: ${u.headcountDirect}, всего: ${u.headcountTotal}`}
+        >
+          {u.headcountDirect === u.headcountTotal
+            ? u.headcountTotal
+            : `${u.headcountDirect} / ${u.headcountTotal}`}
         </span>
       ),
     },
@@ -363,6 +486,7 @@ export function OrgPage() {
         return an.localeCompare(bn, 'ru')
       }
       case 'children': return a.childCount - b.childCount
+      case 'headcount': return a.headcountTotal - b.headcountTotal
       default:         return displayName(a).localeCompare(displayName(b), lang)
     }
   }
@@ -379,7 +503,12 @@ export function OrgPage() {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>{displayName(u)}</div>
+            <Link
+              to={`/admin/org/${u.id}`}
+              style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none' }}
+            >
+              {displayName(u)}
+            </Link>
           </div>
           <TypePill type={u.type} />
         </div>
@@ -437,6 +566,29 @@ export function OrgPage() {
       </div>
     )
   }
+
+  const handleExport = () => {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    downloadCsv(`org-structure-${stamp}.csv`, buildCsv(tree, headLookup))
+  }
+
+  const exportButton = (
+    <button
+      onClick={handleExport}
+      disabled={tree.length === 0}
+      className="inline-flex items-center gap-2 transition-colors"
+      style={{
+        fontSize: 13.5, fontWeight: 500, height: 38, padding: '0 14px', borderRadius: 10,
+        background: 'transparent', color: 'var(--ink-soft)',
+        border: '1px solid var(--line)', cursor: tree.length === 0 ? 'not-allowed' : 'pointer',
+        opacity: tree.length === 0 ? 0.5 : 1,
+      }}
+      title="Экспорт CSV"
+    >
+      <Download size={14} />
+      CSV
+    </button>
+  )
 
   const addButton = isAdmin ? (
     <button
@@ -499,7 +651,10 @@ export function OrgPage() {
                   <span className="org-panel-head-label">Граф · {flat.length} узлов</span>
                   {viewSwitch}
                 </div>
-                {addButton}
+                <div className="flex items-center gap-2">
+                  {exportButton}
+                  {addButton}
+                </div>
               </div>
 
               <div className="org-stage">
@@ -516,7 +671,10 @@ export function OrgPage() {
                     tree={tree}
                     selectedId={selectedId}
                     onSelect={setSelectedId}
+                    onOpenDetail={(uid) => navigate(`/admin/org/${uid}`)}
                     headLookup={headLookup}
+                    isAdmin={isAdmin}
+                    onReparent={handleReparent}
                   />
                 )}
 
@@ -646,6 +804,10 @@ export function OrgPage() {
                           label="Дочерних"
                           value={selectedNode.children.length === 0 ? 'нет' : `${selectedNode.children.length}`}
                         />
+                        <SpecRow
+                          label="Сотрудников"
+                          value={`${selectedNode.headcountDirect} прямо / ${selectedNode.headcountTotal} всего`}
+                        />
                         {selectedNode.archivedAt && (
                           <SpecRow
                             label="Архивировано"
@@ -676,6 +838,20 @@ export function OrgPage() {
 
                       {isAdmin && (
                         <div className="dv3-btn-row" style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--dv3-border)' }}>
+                          <Link
+                            to={`/admin/org/${selectedNode.id}`}
+                            className="dv3-btn"
+                            title="Открыть страницу подразделения"
+                          >
+                            Открыть страницу
+                          </Link>
+                          <Link
+                            to={`/admin/audit?entityType=ORG_UNIT&entityId=${selectedNode.id}`}
+                            className="dv3-btn"
+                            title="История изменений"
+                          >
+                            <History size={12} /> История
+                          </Link>
                           <button
                             className="dv3-btn dv3-btn--primary"
                             onClick={() => { setEditing(null); setDefaultParent(selectedNode); setModalOpen(true) }}
@@ -709,6 +885,8 @@ export function OrgPage() {
                               archivedAt: selectedNode.archivedAt,
                               displayOrder: selectedNode.displayOrder,
                               code: selectedNode.code,
+                              headcountDirect: selectedNode.headcountDirect,
+                              headcountTotal: selectedNode.headcountTotal,
                             })}
                           >
                             <Trash2 size={12} /> Удалить
@@ -743,6 +921,7 @@ export function OrgPage() {
             toolbarActions={
               <div className="flex items-center gap-2">
                 {viewSwitch}
+                {exportButton}
                 {addButton}
               </div>
             }

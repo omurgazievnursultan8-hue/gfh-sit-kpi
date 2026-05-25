@@ -27,6 +27,15 @@
     "noticePre": "Улантуу менен сиз макул болосуз",
     "noticeLink": "колдонуу эрежелерине"
   },
+  "forgot": {
+    "title": "Сырсөздү калыбына келтирүү",
+    "submit": "Шилтеме жөнөтүү",
+    "successTitle": "Кат жөнөтүлдү.",
+    "successBody": "Эгер ушундай email менен аккаунт бар болсо, сырсөздү калыбына келтирүү шилтемеси бир мүнөттүн ичинде келет.",
+    "errorTitle": "Катты жөнөтүү ийгиликсиз болду.",
+    "errorBody": "Email'ди текшерип, кайра аракет кылыңыз.",
+    "back": "Кирүүгө кайтуу"
+  },
   "nav": {
     "dashboard": "Башкы бет",
     "dashboardV2": "Башкы бет V2",
@@ -351,7 +360,92 @@
     "calendarYear": "Жыл",
     "calendarMonth": "Ай",
     "workingDays": "Жумуш күндөрү",
-    "addCalendarEntry": "Жазуу кошуу"
+    "addCalendarEntry": "Жазуу кошуу",
+    "dashboard": {
+      "tabsAria": "Башкаруу панелинин бөлүмдөрү",
+      "tabInventory": "Жалпы",
+      "tabSystem": "Система",
+      "tabAttention": "Көңүл буруу",
+      "cards": {
+        "users":       { "title": "Кызматкерлер",   "label": "кызматкер",                 "bdActive": "активдүү",   "bdInactive": "пассивдүү" },
+        "periods":     { "title": "Мезгилдер",      "label": "мезгил",                    "bdActive": "активдүү",   "bdInactive": "пассивдүү" },
+        "evaluations": { "title": "Баалоолор",      "label": "баалоо",                    "bdPending": "иште",      "bdCompleted": "аяктаган" },
+        "appeals":     { "title": "Апелляциялар",   "label": "апелляция",                 "bdOpen": "күтүүдө",      "bdClosed": "жабылган" },
+        "org":         { "title": "Түзүм",          "label": "түзүм түйүндөрү",           "bdBlocks": "блоктор",    "bdDepartments": "департаменттер", "bdUnits": "бөлүмдөр" },
+        "criteria":    { "title": "Критерийлер",    "label": "каталогдо",                 "bdActive": "активдүү",   "bdInactive": "өчүрүлгөн" },
+        "delegations": { "title": "Делегациялар",   "label": "делегация",                 "bdActive": "активдүү",   "bdExpiring": "бүтөт ≤7к" },
+        "jobs":        { "title": "Тапшырмалар",    "label": "фон тапшырмалары",          "bdRunning": "иштеп жатат", "bdPaused": "тындырылган", "bdErrors": "каталар" },
+        "errors":      { "title": "Каталар",        "label": "ката журналындагы саптар",  "emptyNote": "каталар жок" },
+        "completed":   { "title": "Аяктаган",       "label": "баалоо аяктады",            "ariaPct": "{{pct}}% аяктаган" },
+        "overdue":     { "title": "Мөөнөтү өттү",   "label": "мөөнөтү өткөн",             "emptyNote": "мөөнөтү өткөндөр жок" },
+        "avgRating":   { "title": "Орт.рейтинг",    "label": "{{count}} баалоодон",       "emptyNote": "маалымат жок" },
+        "deadline":    { "title": "Мөөнөт",         "label": "мезгилдин аягына чейин күн", "emptyNote": "активдүү мезгилдер жок" }
+      }
+    },
+    "statCards": {
+      "systemState": "Системанын абалы",
+      "users": {
+        "title": "Колдонуучулар",
+        "pillActive": "Активдүү",
+        "progressLabel": "Активдүүлүк",
+        "footer": "Катталган <1>{{total}}</1> · активдүү <2>{{active}}</2>"
+      },
+      "evaluations": {
+        "title": "Баалоолор",
+        "pillInProgress": "Иште",
+        "pillDone": "Даяр",
+        "progressLabel": "Толтурулган",
+        "footer": "Күтүүдө <1>{{pending}}</1> · аяктаган <2>{{completed}}</2>",
+        "footerEmpty": "Баалоолор азырынча түзүлгөн эмес",
+        "noData": "Баалоолор боюнча маалымат жок."
+      },
+      "periods": {
+        "title": "Мезгилдер",
+        "pillRunning": "Жүрүүдө",
+        "pillNone": "Жок",
+        "subtitle": "айлык жана кварталдык",
+        "footer": "Активдүү баалоо мезгилдери: <1>{{count}}</1>",
+        "footerEmpty": "Баалоону баштоо үчүн жаңы мезгил түзүңүз."
+      },
+      "appeals": {
+        "title": "Апелляциялар",
+        "pillOpen": "Ачык",
+        "pillNone": "Жок",
+        "subtitle": "каралышын күтүүдө",
+        "footer": "Чечим талап кылынат · <1>{{count}}</1>",
+        "footerEmpty": "Ачык апелляциялар жок."
+      },
+      "audit": {
+        "title": "Аудит",
+        "pill": "24с",
+        "subtitle": "жазуулар",
+        "footer": "Акыркы 24 сааттагы окуялар"
+      },
+      "criteria": {
+        "title": "Критерийлер",
+        "pillActive": "Активдүү",
+        "pillNone": "Жок",
+        "subtitle": "каталогдо",
+        "footer": "Колдонуудагы баалоо критерийлери: <1>{{count}}</1>",
+        "footerEmpty": "Баалоону баштоо үчүн критерийлерди кошуңуз."
+      },
+      "delegations": {
+        "title": "Делегациялар",
+        "pillExpiring": "Бүтөт",
+        "pillActive": "Активдүү",
+        "pillNone": "Жок",
+        "subtitle": "учурда колдонулууда",
+        "footerExpiring": "7 күндө бүтөт · <1>{{count}}</1>",
+        "footerActive": "Активдүү ыйгарым укуктарды өткөрүп берүү: <1>{{count}}</1>",
+        "footerEmpty": "Делегациялар жок."
+      },
+      "org": {
+        "title": "Уюштуруу түзүмү",
+        "pill": "Түйүндөр",
+        "subtitle": "түзүм түйүндөрү",
+        "footer": "Дарактагы бөлүмдөр жана кызмат орундары"
+      }
+    }
   },
   "audit": {
     "actor": "Колдонуучу",
@@ -514,6 +608,10 @@
       "activateMsg": "{{name}} активдештирилсинби?",
       "resetPwTitle": "Сырсөздү баштапкы абалга келтирүү",
       "resetPwMsg": "{{name}} үчүн сырсөз баштапкы абалга келтирилсинби? Колдонуучуга убактылуу сырсөз берилет.",
+      "tempPwTitle": "Убактылуу сырсөз",
+      "tempPwNote": "Азыр көчүрүп алыңыз — сырсөз кайра көрсөтүлбөйт. Колдонуучу биринчи кирүүдө аны алмаштырышы керек.",
+      "copy": "Көчүрүү",
+      "copied": "Көчүрүлдү",
       "savedAll": "Баары",
       "savedActive": "Активдүү",
       "savedBlocked": "Бөгөттөлгөн",

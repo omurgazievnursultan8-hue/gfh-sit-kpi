@@ -28,6 +28,8 @@ export interface Column<T> {
   /** When false, the column cannot be hidden via the columns config menu
    *  and is omitted from that menu's checklist. Default true. */
   hideable?: boolean
+  /** Hidden on first load (no persisted state). User can still toggle on. */
+  defaultHidden?: boolean
 }
 
 export interface DataTableProps<T> {

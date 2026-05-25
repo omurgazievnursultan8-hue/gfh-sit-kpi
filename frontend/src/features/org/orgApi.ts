@@ -14,6 +14,8 @@ export interface OrgUnit {
   nameKgShort: string | null
   displayOrder: number
   archivedAt: string | null
+  headcountDirect: number
+  headcountTotal: number
   children: OrgUnit[]
 }
 
@@ -38,4 +40,8 @@ export const orgApi = {
   restoreUnit: (id: number) => api.post<OrgUnit>(`/org/units/${id}/restore`).then(r => r.data),
   moveUnit: (id: number, direction: 'up' | 'down') =>
     api.post<OrgUnit>(`/org/units/${id}/move`, null, { params: { direction } }).then(r => r.data),
+  reparentUnit: (id: number, parentId: number | null) =>
+    api.put<OrgUnit>(`/org/units/${id}/parent`, null, {
+      params: parentId == null ? {} : { parentId },
+    }).then(r => r.data),
 }

@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
 import { UserFormModal } from './components/UserFormModal'
-import { UserRowMenu, type UserActions } from './components/UserRowMenu'
 import { Avatar, RoleBadge, StatusPill, ROLE_RANK } from './components/usersMeta'
 import { User, usersApi } from './usersApi'
 
@@ -36,11 +34,9 @@ export function UsersPage() {
   }, [t])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [confirmDialog, setConfirmDialog] = useState<{
-    open: boolean; title: string; description: string; onConfirm: () => void
-  }>({ open: false, title: '', description: '', onConfirm: () => {} })
+  const [tempPw, setTempPw] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const [failed, setFailed] = useState(false)
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
@@ -86,39 +82,6 @@ export function UsersPage() {
 
   const openDetail = (user: User) => navigate(`/admin/users/${user.id}`)
 
-  const confirm = (title: string, description: string, onConfirm: () => void) => {
-    setConfirmDialog({ open: true, title, description, onConfirm })
-  }
-  const closeConfirm = () => setConfirmDialog(d => ({ ...d, open: false }))
-
-  const actions: UserActions = {
-    onEdit: (user) => { setEditingUser(user) },
-    onDeactivate: (user) => confirm(
-      t('v2.users.deactivateTitle'),
-      t('v2.users.deactivateMsg', { name: user.fullName }),
-      async () => {
-        try { await usersApi.deactivate(user.id); loadUsers() }
-        finally { closeConfirm() }
-      },
-    ),
-    onReactivate: (user) => confirm(
-      t('v2.users.activateTitle'),
-      t('v2.users.activateMsg', { name: user.fullName }),
-      async () => {
-        try { await usersApi.reactivate(user.id); loadUsers() }
-        finally { closeConfirm() }
-      },
-    ),
-    onResetPassword: (user) => confirm(
-      t('v2.users.resetPwTitle'),
-      t('v2.users.resetPwMsg', { name: user.fullName }),
-      async () => {
-        try { await usersApi.resetPassword(user.id) }
-        finally { closeConfirm() }
-      },
-    ),
-  }
-
   const columns: Column<User>[] = [
     {
       key: 'name', header: t('v2.users.colName'), sortable: true, hideable: false,
@@ -153,7 +116,7 @@ export function UsersPage() {
       ),
     },
     {
-      key: 'employmentType', header: t('v2.users.colEmploymentType', 'Тип'), sortable: true,
+      key: 'employmentType', header: t('v2.users.colEmploymentType', 'Тип'), sortable: true, defaultHidden: true,
       render: (u) => (
         <span style={{ fontSize: 12, color: u.employmentType ? 'var(--ink-soft)' : 'var(--ink-dim)', fontFamily: 'var(--font-mono)' }}>
           {u.employmentType ? t(`v2.users.employmentType.${u.employmentType}`, u.employmentType) : '—'}
@@ -163,14 +126,6 @@ export function UsersPage() {
     {
       key: 'status', header: t('v2.users.colStatus'), sortable: true,
       render: (u) => <StatusPill active={u.isActive} />,
-    },
-    {
-      key: 'actions', header: t('v2.menuActions'), align: 'right', srOnlyHeader: true, hideable: false,
-      render: (u) => (
-        <div onClick={e => e.stopPropagation()}>
-          <UserRowMenu user={u} actions={actions} />
-        </div>
-      ),
     },
   ]
 
@@ -219,9 +174,6 @@ export function UsersPage() {
           <div className="truncate" style={{ fontSize: 12.5, color: 'var(--ink-faint)', marginTop: 2 }}>
             {u.email}
           </div>
-        </div>
-        <div onClick={e => e.stopPropagation()}>
-          <UserRowMenu user={u} actions={actions} />
         </div>
       </div>
       <div className="flex flex-col gap-2.5" style={{ paddingTop: 12, borderTop: '1px dashed var(--line)' }}>
@@ -291,20 +243,65 @@ export function UsersPage() {
       </div>
 
       <UserFormModal
-        open={showCreateModal || !!editingUser}
-        user={editingUser}
+        open={showCreateModal}
+        user={null}
         allUsers={users}
-        onClose={() => { setShowCreateModal(false); setEditingUser(null) }}
+        onClose={() => setShowCreateModal(false)}
         onSave={async (data) => {
-          const saved = editingUser
-            ? await usersApi.update(editingUser.id, data)
-            : await usersApi.create(data)
+          const saved = await usersApi.create(data)
           loadUsers()
+          if (saved?.tempPassword) {
+            setTempPw(saved.tempPassword)
+            setCopied(false)
+          }
           return saved
         }}
       />
-
-      <ConfirmDialog {...confirmDialog} onCancel={closeConfirm} variant="danger" />
+      {tempPw && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+          onClick={() => setTempPw(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'var(--surface, #fff)', borderRadius: 12, padding: 24,
+              maxWidth: 440, width: '90%', boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+            }}
+          >
+            <h3 style={{ marginTop: 0, fontSize: 16, fontWeight: 600 }}>
+              {t('v2.users.tempPwTitle', { defaultValue: 'Временный пароль' })}
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--ink-faint)' }}>
+              {t('v2.users.tempPwNote', { defaultValue: 'Скопируйте сейчас — пароль больше не будет показан. Пользователь должен сменить его при первом входе.' })}
+            </p>
+            <div style={{
+              fontFamily: 'monospace', fontSize: 16, padding: '12px 14px',
+              background: 'var(--surface-2, #f5f5f7)', borderRadius: 8,
+              userSelect: 'all', wordBreak: 'break-all', margin: '12px 0',
+            }}>{tempPw}</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  try { await navigator.clipboard.writeText(tempPw); setCopied(true) } catch { /* noop */ }
+                }}
+                style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer' }}
+              >{copied ? t('v2.users.copied', { defaultValue: 'Скопировано' }) : t('v2.users.copy', { defaultValue: 'Копировать' })}</button>
+              <button
+                type="button"
+                onClick={() => setTempPw(null)}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: 'var(--accent, #4f46e5)', color: '#fff', cursor: 'pointer' }}
+              >{t('common.close', { defaultValue: 'Закрыть' })}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
