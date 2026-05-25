@@ -1,7 +1,7 @@
 import type { ElementType } from 'react'
 import {
   Home, BarChart2, Shield,
-  LayoutDashboard, Target, FileCheck, ClipboardCheck, CheckSquare,
+  LayoutDashboard, Target, FileCheck, CheckSquare,
   ListChecks, TrendingUp, Building2, BarChart3,
   Users, GitBranch, Settings, CalendarDays, ClipboardList, Activity, Calendar,
   AlertTriangle,
@@ -11,8 +11,7 @@ export type Role =
   | 'ADMIN'
   | 'CHAIRMAN'
   | 'DEPUTY_CHAIRMAN'
-  | 'HEAD_OF_DEPARTMENT'
-  | 'HEAD_OF_DEPARTMENT_UNIT'
+  | 'ORG_HEAD'
   | 'EMPLOYEE'
 
 export type SectionKey = 'cabinet' | 'analytics' | 'admin'
@@ -45,8 +44,8 @@ export interface NavSection {
   accent: string
 }
 
-const ALL_ROLES: Role[] = ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'EMPLOYEE']
-const MANAGERS: Role[] = ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT']
+const ALL_ROLES: Role[] = ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'ORG_HEAD', 'EMPLOYEE']
+const MANAGERS: Role[] = ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'ORG_HEAD']
 const TOP: Role[] = ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN']
 const ADMIN_ONLY: Role[] = ['ADMIN']
 
@@ -64,9 +63,8 @@ export const NAV_SECTIONS: NavSection[] = [
         groupKey: 'nav.groupMain',
         items: [
           { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true, roles: ALL_ROLES, chord: 'd' },
-          { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'HEAD_OF_DEPARTMENT_UNIT', 'HEAD_OF_DEPARTMENT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'], chord: 'm' },
+          { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'ORG_HEAD', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'], chord: 'm' },
           { to: '/my-evaluations', labelKey: 'nav.myEvaluations', icon: FileCheck, roles: ALL_ROLES, chord: 'e' },
-          { to: '/evaluations', labelKey: 'nav.evaluations', icon: ClipboardCheck, roles: MANAGERS, chord: 'v' },
         ],
       },
       {
@@ -93,7 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/manager-dashboard', labelKey: 'nav.managerDashboard', icon: TrendingUp, roles: MANAGERS },
           { to: '/analytics', labelKey: 'nav.analytics', icon: BarChart2, end: true, roles: MANAGERS, chord: 'a' },
           { to: '/analytics/hierarchical', labelKey: 'nav.hierarchical', icon: Building2, roles: TOP, chord: 'h' },
-          { to: '/analytics/anti-bonus', labelKey: 'nav.antiBonusAnalytics', icon: BarChart3, roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT'] },
+          { to: '/analytics/anti-bonus', labelKey: 'nav.antiBonusAnalytics', icon: BarChart3, roles: ['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'ORG_HEAD'] },
         ],
       },
     ],

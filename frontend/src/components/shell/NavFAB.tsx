@@ -18,11 +18,7 @@ const ACTIONS_BY_ROLE: Record<Role, FABAction[]> = {
     { key: 'my-evals', labelKey: 'nav.fabMyEvals', icon: FileCheck, to: '/my-evaluations' },
     { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
   ],
-  HEAD_OF_DEPARTMENT_UNIT: [
-    { key: 'my-tasks', labelKey: 'nav.fabMyTasks', icon: CheckSquare, to: '/my-tasks' },
-    { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
-  ],
-  HEAD_OF_DEPARTMENT: [
+  ORG_HEAD: [
     { key: 'my-tasks', labelKey: 'nav.fabMyTasks', icon: CheckSquare, to: '/my-tasks' },
     { key: 'palette', labelKey: 'nav.fabPalette', icon: Search, action: 'palette' },
   ],

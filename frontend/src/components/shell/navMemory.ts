@@ -11,8 +11,7 @@ const DEFAULT_FAVS_BY_ROLE: Record<string, string[]> = {
   ADMIN: ['/admin/users', '/admin/audit', '/admin/monitoring'],
   CHAIRMAN: ['/my-tasks', '/manager-dashboard', '/analytics'],
   DEPUTY_CHAIRMAN: ['/my-tasks', '/manager-dashboard', '/analytics'],
-  HEAD_OF_DEPARTMENT: ['/my-tasks', '/manager-dashboard', '/my-evaluations'],
-  HEAD_OF_DEPARTMENT_UNIT: ['/my-tasks', '/manager-dashboard', '/my-evaluations'],
+  ORG_HEAD: ['/my-tasks', '/manager-dashboard', '/my-evaluations'],
   EMPLOYEE: ['/my-kpi', '/my-evaluations'],
 }
 

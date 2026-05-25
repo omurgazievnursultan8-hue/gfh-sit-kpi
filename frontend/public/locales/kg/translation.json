@@ -97,8 +97,7 @@
     "roleAdmin": "Администратор",
     "roleChairman": "Төрага",
     "roleDeputyChairman": "Төраганын орун басары",
-    "roleHeadOfDepartment": "Бөлүм башчысы",
-    "roleHeadOfDepartmentUnit": "Бөлүкчө башчысы",
+    "roleOrgHead": "Жетекчи",
     "roleEmployee": "Кызматкер"
   },
   "palette": {
@@ -193,8 +192,7 @@
     "ADMIN": "Администратор",
     "CHAIRMAN": "Төрага",
     "DEPUTY_CHAIRMAN": "Төраганын орун басары",
-    "HEAD_OF_DEPARTMENT": "Бөлүм башчысы",
-    "HEAD_OF_DEPARTMENT_UNIT": "Бөлүмчө башчысы",
+    "ORG_HEAD": "Бөлүм жетекчиси",
     "EMPLOYEE": "Кызматкер"
   },
   "org": {
@@ -479,8 +477,7 @@
       "ADMIN": "Администратор",
       "CHAIRMAN": "Төрага",
       "DEPUTY_CHAIRMAN": "Төр. орун басары",
-      "HEAD_OF_DEPARTMENT": "Бөлүм башчысы",
-      "HEAD_OF_DEPARTMENT_UNIT": "Бөлүмчө башчысы",
+      "ORG_HEAD": "Жетекчи",
       "EMPLOYEE": "Кызматкер"
     },
     "statusActive": "Активдүү",
@@ -535,6 +532,25 @@
       "formEmail": "Email *",
       "formRole": "Ролу *",
       "formPosition": "Кызматы",
+      "formUnit": "Бөлүм",
+      "formUnitNone": "Тандалган жок",
+      "formManager": "Жетекчи",
+      "formManagerNone": "Тандалган жок",
+      "formLastName": "Фамилиясы",
+      "formFirstName": "Аты",
+      "formMiddleName": "Атасынын аты",
+      "formEmployeeNumber": "Табелдик номер",
+      "formPhone": "Телефон",
+      "formHireDate": "Кабыл алынган күн",
+      "formTerminationDate": "Иштен бошотулган күн",
+      "formEmploymentType": "Иштөө түрү",
+      "colEmploymentType": "Түр",
+      "employmentType": {
+        "PERMANENT": "Туруктуу",
+        "CONTRACT": "Келишим",
+        "INTERN": "Стажёр",
+        "ACTING": "ВРИО"
+      },
       "formCancel": "Жокко чыгаруу",
       "formSave": "Сактоо",
       "formSaving": "Сакталууда...",

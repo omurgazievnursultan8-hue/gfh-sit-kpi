@@ -97,8 +97,7 @@
     "roleAdmin": "Администратор",
     "roleChairman": "Председатель",
     "roleDeputyChairman": "Зам. председателя",
-    "roleHeadOfDepartment": "Нач. отдела",
-    "roleHeadOfDepartmentUnit": "Нач. подотдела",
+    "roleOrgHead": "Руководитель",
     "roleEmployee": "Сотрудник"
   },
   "palette": {
@@ -193,8 +192,7 @@
     "ADMIN": "Администратор",
     "CHAIRMAN": "Председатель",
     "DEPUTY_CHAIRMAN": "Заместитель председателя",
-    "HEAD_OF_DEPARTMENT": "Начальник отдела",
-    "HEAD_OF_DEPARTMENT_UNIT": "Начальник подотдела",
+    "ORG_HEAD": "Руководитель подразделения",
     "EMPLOYEE": "Сотрудник"
   },
   "org": {
@@ -381,8 +379,7 @@
       "ADMIN": "Администратор",
       "CHAIRMAN": "Председатель",
       "DEPUTY_CHAIRMAN": "Зам. председателя",
-      "HEAD_OF_DEPARTMENT": "Нач. департамента",
-      "HEAD_OF_DEPARTMENT_UNIT": "Нач. отдела",
+      "ORG_HEAD": "Руководитель",
       "EMPLOYEE": "Сотрудник"
     },
     "statusActive": "Активен",
@@ -437,6 +434,25 @@
       "formEmail": "Email *",
       "formRole": "Роль *",
       "formPosition": "Должность",
+      "formUnit": "Подразделение",
+      "formUnitNone": "Не выбрано",
+      "formManager": "Руководитель",
+      "formManagerNone": "Не выбрано",
+      "formLastName": "Фамилия",
+      "formFirstName": "Имя",
+      "formMiddleName": "Отчество",
+      "formEmployeeNumber": "Табельный номер",
+      "formPhone": "Телефон",
+      "formHireDate": "Дата приёма",
+      "formTerminationDate": "Дата увольнения",
+      "formEmploymentType": "Тип занятости",
+      "colEmploymentType": "Тип",
+      "employmentType": {
+        "PERMANENT": "Постоянный",
+        "CONTRACT": "Договор",
+        "INTERN": "Стажёр",
+        "ACTING": "Врио"
+      },
       "formCancel": "Отмена",
       "formSave": "Сохранить",
       "formSaving": "Сохранение...",

@@ -20,8 +20,7 @@ const ROLE_KEY: Record<string, string> = {
   ADMIN: 'nav.roleAdmin',
   CHAIRMAN: 'nav.roleChairman',
   DEPUTY_CHAIRMAN: 'nav.roleDeputyChairman',
-  HEAD_OF_DEPARTMENT: 'nav.roleHeadOfDepartment',
-  HEAD_OF_DEPARTMENT_UNIT: 'nav.roleHeadOfDepartmentUnit',
+  ORG_HEAD: 'nav.roleOrgHead',
   EMPLOYEE: 'nav.roleEmployee',
 }
 
