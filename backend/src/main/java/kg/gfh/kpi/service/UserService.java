@@ -2,8 +2,10 @@ package kg.gfh.kpi.service;
 
 import kg.gfh.kpi.annotation.Audited;
 import kg.gfh.kpi.dto.*;
+import kg.gfh.kpi.entity.Position;
 import kg.gfh.kpi.entity.User;
 import kg.gfh.kpi.exception.ApiException;
+import kg.gfh.kpi.repository.PositionRepository;
 import kg.gfh.kpi.repository.RefreshTokenRepository;
 import kg.gfh.kpi.repository.UserRepository;
 import kg.gfh.kpi.security.PasswordPolicyValidator;
@@ -43,6 +45,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PositionRepository positionRepository;
     private final PasswordEncoder passwordEncoder;
     private final PasswordPolicyValidator passwordPolicyValidator;
 
@@ -77,13 +80,28 @@ public class UserService {
         user.setEmploymentType(req.employmentType());
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         user.setRole(req.role());
-        user.setPosition(req.position());
+        applyPosition(user, req.positionId(), req.position());
         user.setUnitId(req.unitId());
         user.setManagerId(req.managerId());
         user.setActive(true);
         user.setPasswordUpdatedAt(null);
         userRepository.save(user);
-        return UserResponse.from(user);
+        return UserResponse.from(user, tempPassword);
+    }
+
+    @Transactional
+    public UserResponse resetPassword(Long id) {
+        User user = findOrThrow(id);
+        String tempPassword = generateTempPassword();
+        var result = passwordPolicyValidator.validate(tempPassword, List.of());
+        if (!result.valid()) {
+            tempPassword = "TempPass123!@#";
+        }
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        user.setPasswordUpdatedAt(null);
+        userRepository.save(user);
+        refreshTokenRepository.revokeAllByUserId(id);
+        return UserResponse.from(user, tempPassword);
     }
 
     @Transactional
@@ -100,11 +118,21 @@ public class UserService {
         if (req.terminationDate() != null) user.setTerminationDate(req.terminationDate());
         if (req.employmentType() != null) user.setEmploymentType(req.employmentType());
         if (req.role() != null) user.setRole(req.role());
-        if (req.position() != null) user.setPosition(req.position());
+        applyPosition(user, req.positionId(), req.position());
         if (req.unitId() != null) user.setUnitId(req.unitId());
         if (req.managerId() != null) user.setManagerId(req.managerId());
         userRepository.save(user);
         return UserResponse.from(user);
+    }
+
+    private void applyPosition(User user, Long positionId, String fallbackText) {
+        user.setPositionId(positionId);
+        if (positionId != null) {
+            Position p = positionRepository.findById(positionId).orElse(null);
+            user.setPosition(p != null ? p.getNameRu() : fallbackText);
+        } else {
+            user.setPosition(fallbackText != null && !fallbackText.isBlank() ? fallbackText : null);
+        }
     }
 
     @Audited(action = "DEACTIVATE_USER", entityType = "USER")

@@ -22,17 +22,23 @@ public record UserResponse(
     EmploymentType employmentType,
     Role role,
     String position,
+    Long positionId,
     Long unitId,
     Long managerId,
     boolean isActive,
-    LocalDateTime createdAt
+    LocalDateTime createdAt,
+    String tempPassword
 ) {
     public static UserResponse from(User u) {
+        return from(u, null);
+    }
+
+    public static UserResponse from(User u, String tempPassword) {
         return new UserResponse(u.getId(), u.getFullName(),
             u.getFirstName(), u.getLastName(), u.getMiddleName(),
             u.getEmployeeNumber(), u.getEmail(), u.getPhone(), u.getAvatarUrl(),
             u.getHireDate(), u.getTerminationDate(), u.getEmploymentType(),
-            u.getRole(), u.getPosition(), u.getUnitId(), u.getManagerId(),
-            u.isActive(), u.getCreatedAt());
+            u.getRole(), u.getPosition(), u.getPositionId(), u.getUnitId(), u.getManagerId(),
+            u.isActive(), u.getCreatedAt(), tempPassword);
     }
 }

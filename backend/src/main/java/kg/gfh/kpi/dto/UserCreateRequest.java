@@ -24,6 +24,7 @@ public record UserCreateRequest(
     EmploymentType employmentType,
     @NotNull Role role,
     String position,
+    Long positionId,
     Long unitId,
     Long managerId
 ) {}

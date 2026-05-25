@@ -64,4 +64,5 @@
     <include file="db/changelog/m6/052-extend-org-units.xml"/>
     <include file="db/changelog/m6/053-backfill-user-names.xml"/>
     <include file="db/changelog/m6/054-backfill-org-codes.xml"/>
+    <include file="db/changelog/m6/055-create-positions.xml"/>
 </databaseChangeLog>

@@ -20,6 +20,7 @@ public record UserUpdateRequest(
     EmploymentType employmentType,
     Role role,
     String position,
+    Long positionId,
     Long unitId,
     Long managerId
 ) {}

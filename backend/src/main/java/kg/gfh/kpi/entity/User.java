@@ -71,6 +71,9 @@ public class User {
     @Column(length = 255)
     private String position;
 
+    @Column(name = "position_id")
+    private Long positionId;
+
     @Column(name = "unit_id")
     private Long unitId;
 

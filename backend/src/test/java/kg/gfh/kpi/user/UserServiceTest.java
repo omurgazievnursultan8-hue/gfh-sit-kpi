@@ -35,7 +35,7 @@ class UserServiceTest {
         return new UserCreateRequest(
                 "Test User", null, null, null, null,
                 email, null, null, null, null, null,
-                Role.EMPLOYEE, null, null, null);
+                Role.EMPLOYEE, null, null, null, null);
     }
 
     @Test
@@ -59,7 +59,7 @@ class UserServiceTest {
                 "Иванов Иван Иванович", "Иван", "Иванов", "Иванович", "EMP-001",
                 "new@b.com", "+996700123456", "https://cdn/a.png",
                 LocalDate.of(2020, 1, 15), null, EmploymentType.PERMANENT,
-                Role.EMPLOYEE, "Аналитик", 5L, 7L);
+                Role.EMPLOYEE, "Аналитик", null, 5L, 7L);
 
         var resp = userService.createUser(req);
 
