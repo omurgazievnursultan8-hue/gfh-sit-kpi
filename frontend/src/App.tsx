@@ -22,8 +22,7 @@ import { SettingsPage } from './features/settings/SettingsPage'
 import { CalendarPage } from './features/calendar/CalendarPage'
 import { EvaluationFormPage } from './features/evaluations/EvaluationFormPage'
 import { MyTasksPage } from './features/evaluations/MyTasksPage'
-import { MyEvaluationsPage } from './features/evaluations/MyEvaluationsPage'
-import { EvaluatorEvaluationsPage } from './features/evaluations/EvaluatorEvaluationsPage'
+import { EvaluationsPage } from './features/evaluations/EvaluationsPage'
 import { EvaluationDetailPage } from './features/evaluations/EvaluationDetailPage'
 import { AppealPage } from './features/appeals/AppealPage'
 import { NotificationsPage } from './features/notifications/NotificationsPage'
@@ -61,26 +60,26 @@ export default function App() {
       <Route path="/org" element={<ProtectedRoute allowedRoles={['ADMIN']}><OrgPage /></ProtectedRoute>} />
       <Route path="/org/delegations" element={<ProtectedRoute allowedRoles={['ADMIN']}><DelegationsPage /></ProtectedRoute>} />
       <Route path="/criteria" element={
-        <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT']}>
+        <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'ORG_HEAD']}>
           <CriteriaPage />
         </ProtectedRoute>
       } />
       <Route path="/my-tasks" element={
-        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+        <ProtectedRoute allowedRoles={['ORG_HEAD', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
           <MyTasksPage />
         </ProtectedRoute>
       } />
       <Route path="/evaluations/:id" element={
-        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+        <ProtectedRoute allowedRoles={['ORG_HEAD', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
           <EvaluationFormPage />
         </ProtectedRoute>
       } />
       <Route path="/evaluations" element={
-        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
-          <EvaluatorEvaluationsPage />
+        <ProtectedRoute allowedRoles={['ORG_HEAD', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+          <EvaluationsPage defaultMode="given" />
         </ProtectedRoute>
       } />
-      <Route path="/my-evaluations" element={<ProtectedRoute><MyEvaluationsPage /></ProtectedRoute>} />
+      <Route path="/my-evaluations" element={<ProtectedRoute><EvaluationsPage defaultMode="received" /></ProtectedRoute>} />
       <Route path="/my-evaluations/:id" element={<ProtectedRoute><EvaluationDetailPage /></ProtectedRoute>} />
       <Route path="/appeals/new" element={<ProtectedRoute><AppealPage /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
@@ -91,12 +90,12 @@ export default function App() {
         </ProtectedRoute>
       } />
       <Route path="/analytics/anti-bonus" element={
-        <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'HEAD_OF_DEPARTMENT']}>
+        <ProtectedRoute allowedRoles={['ADMIN', 'CHAIRMAN', 'DEPUTY_CHAIRMAN', 'ORG_HEAD']}>
           <AntiBonusAnalyticsPage />
         </ProtectedRoute>
       } />
       <Route path="/manager-dashboard" element={
-        <ProtectedRoute allowedRoles={['HEAD_OF_DEPARTMENT', 'HEAD_OF_DEPARTMENT_UNIT', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
+        <ProtectedRoute allowedRoles={['ORG_HEAD', 'DEPUTY_CHAIRMAN', 'CHAIRMAN', 'ADMIN']}>
           <ManagerDashboardPage />
         </ProtectedRoute>
       } />
