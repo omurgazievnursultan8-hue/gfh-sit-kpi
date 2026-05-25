@@ -25,14 +25,17 @@ interface Props {
   headLookup: Map<number, string>
 }
 
-type TypeFilter = 'ALL' | 'BLOCK' | 'DEPARTMENT' | 'UNIT' | 'VACANT'
+type TypeFilter = 'ALL' | 'BLOCK' | 'DEPARTMENT' | 'SLUZHBA' | 'OTDEL' | 'SEKTOR' | 'VACANT' | 'ARCHIVED'
 
 const TYPE_FILTER_LABEL: Record<TypeFilter, string> = {
   ALL: 'Все',
   BLOCK: 'Блоки',
-  DEPARTMENT: 'Отделы',
-  UNIT: 'Подразделения',
+  DEPARTMENT: 'Департаменты',
+  SLUZHBA: 'Службы',
+  OTDEL: 'Отделы',
+  SEKTOR: 'Сектора',
   VACANT: 'Вакантные',
+  ARCHIVED: 'Архив',
 }
 
 const NODE_W = 220
@@ -101,6 +104,8 @@ function nodeMatches(unit: OrgUnit, headName: string | null, query: string, filt
   if (filter !== 'ALL') {
     if (filter === 'VACANT') {
       if (unit.headUserId) return false
+    } else if (filter === 'ARCHIVED') {
+      if (!unit.archivedAt) return false
     } else if (unit.type !== filter) return false
   }
   if (!query) return true
@@ -144,8 +149,9 @@ function buildGraph({ tree, selectedId, headLookup, query, filter }: BuildArgs):
         headName,
         selected: l.node.id === selectedId,
         depth: l.depth,
-        dimmed: filtering && !match,
+        dimmed: (filtering && !match) || !!l.node.archivedAt,
         highlighted: filtering && match,
+        archived: !!l.node.archivedAt,
       },
       sourcePosition: Position.Bottom,
       targetPosition: Position.Top,
@@ -280,7 +286,7 @@ function OrgCanvasInner({ tree, selectedId, onSelect, headLookup }: Props) {
                     onClick={() => onSelect(n.id)}
                     title={n.nameRu}
                   >
-                    {n.nameRu}
+                    {last ? n.nameRu : (n.nameRuShort || n.nameRu)}
                   </button>
                   {!last && <ChevronRight size={10} className="org-bc-sep" />}
                 </span>

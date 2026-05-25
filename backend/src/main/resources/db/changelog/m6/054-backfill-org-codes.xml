@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="054-backfill-org-codes" author="gfh">
+        <sql>UPDATE org_units SET code='CHAIR',     name_ru_short='Председ.', name_kg_short='Төрага',  display_order=0  WHERE id=1;</sql>
+        <sql>UPDATE org_units SET code='BLOCK-FIN', name_ru_short='Фин. блок', name_kg_short='Каржы блогу', display_order=10 WHERE id=2;</sql>
+        <sql>UPDATE org_units SET code='BLOCK-OPS', name_ru_short='Опер. блок', name_kg_short='Опер. блок',  display_order=20 WHERE id=3;</sql>
+        <sql>UPDATE org_units SET code='DEP-FIN',   name_ru_short='Финдеп.',    name_kg_short='Каржы деп.', display_order=10 WHERE id=4;</sql>
+        <sql>UPDATE org_units SET code='DEP-RISK',  name_ru_short='Деприсков',   name_kg_short='Тобокел деп.', display_order=20 WHERE id=5;</sql>
+        <sql>UPDATE org_units SET code='DEP-IT',    name_ru_short='ИТ-деп.',     name_kg_short='ИТ-деп.',     display_order=10 WHERE id=6;</sql>
+        <sql>UPDATE org_units SET code='DEP-LEGAL', name_ru_short='Юрдеп.',      name_kg_short='Юр. деп.',    display_order=20 WHERE id=7;</sql>
+        <sql>UPDATE org_units SET code='OTD-DEV',   name_ru_short='Разраб.',     name_kg_short='Иштеп чыг.',  display_order=10 WHERE id=8;</sql>
+        <sql>UPDATE org_units SET code='OTD-INFRA', name_ru_short='Инфра',       name_kg_short='Инфра',       display_order=20 WHERE id=9;</sql>
+        <sql>UPDATE org_units SET code='DEP-HR',    name_ru_short='HR-деп.',     name_kg_short='HR-деп.',     display_order=30 WHERE id=10;</sql>
+    </changeSet>
+</databaseChangeLog>

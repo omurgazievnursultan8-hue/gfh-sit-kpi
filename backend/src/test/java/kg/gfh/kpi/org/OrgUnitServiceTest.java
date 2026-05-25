@@ -65,7 +65,7 @@ class OrgUnitServiceTest {
         u.setParentId(parentId);
         u.setNameRu("Unit " + id);
         u.setNameKg("Unit " + id);
-        u.setType(OrgUnitType.UNIT);
+        u.setType(OrgUnitType.OTDEL);
         return u;
     }
 }

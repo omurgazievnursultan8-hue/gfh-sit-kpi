@@ -3,14 +3,18 @@ import { OrgUnit } from '../orgApi'
 
 const TYPE_LABELS: Record<OrgUnit['type'], string> = {
   BLOCK: 'Блок',
-  DEPARTMENT: 'Отдел',
-  UNIT: 'Подразд.',
+  DEPARTMENT: 'Департ.',
+  SLUZHBA: 'Служба',
+  OTDEL: 'Отдел',
+  SEKTOR: 'Сектор',
 }
 
 const TYPE_ACCENT: Record<OrgUnit['type'], { bg: string; fg: string; border: string; rail: string }> = {
   BLOCK:      { bg: 'var(--gold-soft)',       fg: 'var(--gold)', border: 'color-mix(in srgb,var(--gold) 30%,transparent)', rail: 'var(--gold)' },
   DEPARTMENT: { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7',     border: 'rgba(120,150,200,0.32)',                          rail: '#4a73c7' },
-  UNIT:       { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d',     border: 'rgba(120,200,150,0.32)',                          rail: '#2f9e6d' },
+  SLUZHBA:    { bg: 'rgba(120,100,220,0.14)', fg: '#5e4ec2',     border: 'rgba(120,100,220,0.32)',                          rail: '#5e4ec2' },
+  OTDEL:      { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d',     border: 'rgba(120,200,150,0.32)',                          rail: '#2f9e6d' },
+  SEKTOR:     { bg: 'rgba(180,100,180,0.14)', fg: '#a04ea0',     border: 'rgba(180,100,180,0.32)',                          rail: '#a04ea0' },
 }
 
 interface Props {
@@ -59,6 +63,7 @@ export function OrgTreeNode({
           cursor: 'pointer',
           background: selected ? 'var(--accent-mute)' : 'transparent',
           transition: 'background 120ms ease',
+          opacity: node.archivedAt ? 0.55 : 1,
         }}
       >
         {selected && (
@@ -115,6 +120,20 @@ export function OrgTreeNode({
         >
           {TYPE_LABELS[node.type]}
         </span>
+
+        {node.archivedAt && (
+          <span
+            className="font-mono uppercase tracking-widest flex-shrink-0"
+            style={{
+              fontSize: 9, padding: '1.5px 6px', borderRadius: 3,
+              background: 'rgba(160,160,160,0.18)', color: 'var(--ink-dim)',
+              border: '1px solid var(--line-soft)',
+            }}
+            title={`Архивировано: ${new Date(node.archivedAt).toLocaleDateString('ru-RU')}`}
+          >
+            Архив
+          </span>
+        )}
 
         <span
           className="font-display truncate flex-1"

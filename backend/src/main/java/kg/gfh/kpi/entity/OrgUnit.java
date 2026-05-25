@@ -32,6 +32,21 @@ public class OrgUnit {
     @Column(name = "head_user_id")
     private Long headUserId;
 
+    @Column(name = "code", unique = true)
+    private String code;
+
+    @Column(name = "name_ru_short")
+    private String nameRuShort;
+
+    @Column(name = "name_kg_short")
+    private String nameKgShort;
+
+    @Column(name = "display_order", nullable = false)
+    private Integer displayOrder = 0;
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

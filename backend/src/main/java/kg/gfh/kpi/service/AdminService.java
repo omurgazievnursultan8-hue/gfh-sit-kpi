@@ -88,7 +88,9 @@ public class AdminService {
             orgUnitRepository.count(),
             orgUnitRepository.countByType(OrgUnitType.BLOCK),
             orgUnitRepository.countByType(OrgUnitType.DEPARTMENT),
-            orgUnitRepository.countByType(OrgUnitType.UNIT),
+            orgUnitRepository.countByType(OrgUnitType.SLUZHBA)
+                    + orgUnitRepository.countByType(OrgUnitType.OTDEL)
+                    + orgUnitRepository.countByType(OrgUnitType.SEKTOR),
             userRepository.countByCreatedAtAfter(cutoff),
             evaluationPeriodRepository.countByCreatedAtAfter(cutoff),
             evaluationRepository.countByCreatedAtAfter(cutoff),
@@ -107,7 +109,9 @@ public class AdminService {
             criteriaRepository.countByActiveFalseAndCreatedAtAfter(cutoff),
             orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.BLOCK, cutoff),
             orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.DEPARTMENT, cutoff),
-            orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.UNIT, cutoff),
+            orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.SLUZHBA, cutoff)
+                    + orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.OTDEL, cutoff)
+                    + orgUnitRepository.countByTypeAndCreatedAtAfter(OrgUnitType.SEKTOR, cutoff),
             completionRate,
             overdue,
             avgRating,

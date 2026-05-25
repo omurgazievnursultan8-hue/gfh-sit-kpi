@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react'
 import { useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
-import { Pencil, Trash2, Plus, X, Table2, Network } from 'lucide-react'
+import { Pencil, Trash2, Plus, X, Table2, Network, Archive, ArchiveRestore, ChevronUp, ChevronDown } from 'lucide-react'
 import { RootState } from '../../app/store'
 import { orgApi, OrgUnit, OrgUnitRequest } from './orgApi'
 import { OrgCanvas } from './components/OrgCanvas'
@@ -15,7 +15,9 @@ import api from '../../app/api'
 const TYPE_RAIL: Record<OrgUnit['type'], string> = {
   BLOCK: 'var(--dv3-zone-warn)',
   DEPARTMENT: 'var(--dv3-zone-info)',
-  UNIT: 'var(--dv3-zone-up)',
+  SLUZHBA: 'var(--dv3-zone-info)',
+  OTDEL: 'var(--dv3-zone-up)',
+  SEKTOR: 'var(--dv3-zone-up)',
 }
 
 function findPath(nodes: OrgUnit[], id: number, path: OrgUnit[] = []): OrgUnit[] | null {
@@ -43,17 +45,21 @@ const PANEL_KEY = 'gfh_org_units'
 
 const TYPE_LABEL: Record<OrgUnit['type'], string> = {
   BLOCK: 'Блок',
-  DEPARTMENT: 'Отдел',
-  UNIT: 'Подразделение',
+  DEPARTMENT: 'Департамент',
+  SLUZHBA: 'Служба',
+  OTDEL: 'Отдел',
+  SEKTOR: 'Сектор',
 }
 
-const TYPE_RANK: Record<OrgUnit['type'], number> = { BLOCK: 0, DEPARTMENT: 1, UNIT: 2 }
+const TYPE_RANK: Record<OrgUnit['type'], number> = { BLOCK: 0, DEPARTMENT: 1, SLUZHBA: 1, OTDEL: 2, SEKTOR: 2 }
 
 interface TypeVisual { fg: string; bg: string; border: string }
 const TYPE_VISUAL: Record<OrgUnit['type'], TypeVisual> = {
   BLOCK:      { fg: '#9c7416', bg: 'rgba(200,150,40,0.14)',  border: 'rgba(200,150,40,0.32)' },
   DEPARTMENT: { fg: '#2c6ea4', bg: 'rgba(80,140,200,0.14)',  border: 'rgba(80,140,200,0.32)' },
-  UNIT:       { fg: '#2f9e6d', bg: 'rgba(120,200,150,0.14)', border: 'rgba(120,200,150,0.32)' },
+  SLUZHBA:    { fg: '#5e4ec2', bg: 'rgba(120,100,220,0.14)', border: 'rgba(120,100,220,0.32)' },
+  OTDEL:      { fg: '#2f9e6d', bg: 'rgba(120,200,150,0.14)', border: 'rgba(120,200,150,0.32)' },
+  SEKTOR:     { fg: '#a04ea0', bg: 'rgba(180,100,180,0.14)', border: 'rgba(180,100,180,0.32)' },
 }
 
 interface FlatUnit {
@@ -64,6 +70,9 @@ interface FlatUnit {
   headUserId: number | null
   parentId: number | null
   childCount: number
+  archivedAt: string | null
+  displayOrder: number
+  code: string | null
 }
 
 function flatten(nodes: OrgUnit[], acc: FlatUnit[] = []): FlatUnit[] {
@@ -76,6 +85,9 @@ function flatten(nodes: OrgUnit[], acc: FlatUnit[] = []): FlatUnit[] {
       headUserId: n.headUserId,
       parentId: n.parentId,
       childCount: n.children.length,
+      archivedAt: n.archivedAt,
+      displayOrder: n.displayOrder,
+      code: n.code,
     })
     if (n.children.length > 0) flatten(n.children, acc)
   }
@@ -188,6 +200,17 @@ export function OrgPage() {
     }
   }
 
+  const handleArchiveToggle = async (u: OrgUnit) => {
+    if (u.archivedAt) await orgApi.restoreUnit(u.id)
+    else await orgApi.archiveUnit(u.id)
+    await load()
+  }
+
+  const handleMove = async (id: number, direction: 'up' | 'down') => {
+    await orgApi.moveUnit(id, direction)
+    await load()
+  }
+
   const openEdit = (u: FlatUnit) => {
     const node = findById(tree, u.id)
     if (!node) return
@@ -205,16 +228,24 @@ export function OrgPage() {
       { value: '',           label: 'Все типы' },
       { value: 'BLOCK',      label: TYPE_LABEL.BLOCK },
       { value: 'DEPARTMENT', label: TYPE_LABEL.DEPARTMENT },
-      { value: 'UNIT',       label: TYPE_LABEL.UNIT },
+      { value: 'SLUZHBA',    label: TYPE_LABEL.SLUZHBA },
+      { value: 'OTDEL',      label: TYPE_LABEL.OTDEL },
+      { value: 'SEKTOR',     label: TYPE_LABEL.SEKTOR },
     ]
     const headOptions = [
       { value: '',        label: 'Любой статус' },
       { value: 'ASSIGNED', label: 'С руководителем' },
       { value: 'VACANT',   label: 'Вакантные' },
     ]
+    const stateOptions = [
+      { value: '',         label: 'Активные' },
+      { value: 'ARCHIVED', label: 'Архив' },
+      { value: 'ALL',      label: 'Все' },
+    ]
     return [
-      { key: 'type', label: 'Тип',          type: 'select', options: typeOptions },
-      { key: 'head', label: 'Руководитель', type: 'select', options: headOptions },
+      { key: 'type',  label: 'Тип',          type: 'select', options: typeOptions },
+      { key: 'head',  label: 'Руководитель', type: 'select', options: headOptions },
+      { key: 'state', label: 'Состояние',    type: 'select', options: stateOptions },
     ]
   }, [])
 
@@ -228,6 +259,20 @@ export function OrgPage() {
     {
       key: 'type', header: 'Тип', sortable: true,
       render: (u) => <TypePill type={u.type} />,
+    },
+    {
+      key: 'code', header: 'Код', sortable: true,
+      render: (u) => (
+        <span className="font-mono" style={{ fontSize: 12, color: u.code ? 'var(--ink-soft)' : 'var(--ink-faint)' }}>
+          {u.code ?? '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'order', header: '№', sortable: true,
+      render: (u) => (
+        <span className="font-mono" style={{ fontSize: 12, color: 'var(--ink-soft)' }}>{u.displayOrder ?? 0}</span>
+      ),
     },
     {
       key: 'parent', header: 'Родитель',
@@ -301,12 +346,17 @@ export function OrgPage() {
     if (v.type && u.type !== v.type) return false
     if (v.head === 'ASSIGNED' && !u.headUserId) return false
     if (v.head === 'VACANT' && u.headUserId) return false
+    const state = v.state || ''
+    if (state === '' && u.archivedAt) return false
+    if (state === 'ARCHIVED' && !u.archivedAt) return false
     return true
   }
 
   const comparator = (key: string) => (a: FlatUnit, b: FlatUnit): number => {
     switch (key) {
       case 'type':     return TYPE_RANK[a.type] - TYPE_RANK[b.type]
+      case 'code':     return (a.code ?? '').localeCompare(b.code ?? '')
+      case 'order':    return (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
       case 'head': {
         const an = a.headUserId ? headLookup.get(a.headUserId) ?? '' : ''
         const bn = b.headUserId ? headLookup.get(b.headUserId) ?? '' : ''
@@ -512,6 +562,76 @@ export function OrgPage() {
                       <div style={{ marginTop: 18, borderTop: '1px solid var(--dv3-border)' }}>
                         <SpecRow label="Тип" value={TYPE_LABEL[selectedNode.type]} />
                         <SpecRow
+                          label="Код"
+                          value={selectedNode.code}
+                          placeholder="—"
+                        />
+                        <SpecRow
+                          label="Сокр. (рус)"
+                          value={selectedNode.nameRuShort}
+                          placeholder="—"
+                        />
+                        <SpecRow
+                          label="Сокр. (кыр)"
+                          value={selectedNode.nameKgShort}
+                          placeholder="—"
+                        />
+                        {(() => {
+                          const siblings = (selectedNode.parentId
+                            ? (findById(tree, selectedNode.parentId)?.children ?? [])
+                            : tree
+                          ).filter(s => !s.archivedAt)
+                            .slice()
+                            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)
+                              || a.nameRu.localeCompare(b.nameRu))
+                          const idx = siblings.findIndex(s => s.id === selectedNode.id)
+                          const canUp = idx > 0
+                          const canDown = idx >= 0 && idx < siblings.length - 1
+                          const disabled = !!selectedNode.archivedAt
+                          return (
+                            <div
+                              className="flex items-baseline justify-between gap-3"
+                              style={{ padding: '10px 0', borderBottom: '1px solid var(--dv3-border)' }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase',
+                                  color: 'var(--dv3-text3)', fontWeight: 600, flexShrink: 0,
+                                }}
+                              >
+                                Порядок
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <span style={{ fontSize: 12, color: 'var(--dv3-text)', fontVariantNumeric: 'tabular-nums' }}>
+                                  {selectedNode.displayOrder ?? 0}
+                                </span>
+                                {isAdmin && (
+                                  <>
+                                    <button
+                                      className="dv3-btn dv3-btn--icon"
+                                      disabled={disabled || !canUp}
+                                      onClick={() => handleMove(selectedNode.id, 'up')}
+                                      title="Выше"
+                                      aria-label="Переместить выше"
+                                    >
+                                      <ChevronUp size={12} />
+                                    </button>
+                                    <button
+                                      className="dv3-btn dv3-btn--icon"
+                                      disabled={disabled || !canDown}
+                                      onClick={() => handleMove(selectedNode.id, 'down')}
+                                      title="Ниже"
+                                      aria-label="Переместить ниже"
+                                    >
+                                      <ChevronDown size={12} />
+                                    </button>
+                                  </>
+                                )}
+                              </span>
+                            </div>
+                          )
+                        })()}
+                        <SpecRow
                           label="Руководитель"
                           value={selectedNode.headUserId ? (headLookup.get(selectedNode.headUserId) ?? `ID ${selectedNode.headUserId}`) : null}
                           placeholder="не назначен"
@@ -526,6 +646,13 @@ export function OrgPage() {
                           label="Дочерних"
                           value={selectedNode.children.length === 0 ? 'нет' : `${selectedNode.children.length}`}
                         />
+                        {selectedNode.archivedAt && (
+                          <SpecRow
+                            label="Архивировано"
+                            value={new Date(selectedNode.archivedAt).toLocaleString('ru-RU')}
+                            tone="warn"
+                          />
+                        )}
                       </div>
 
                       {selectedNode.children.length > 0 && (
@@ -562,6 +689,14 @@ export function OrgPage() {
                             <Pencil size={12} /> Изменить
                           </button>
                           <button
+                            className="dv3-btn"
+                            onClick={() => handleArchiveToggle(selectedNode)}
+                          >
+                            {selectedNode.archivedAt
+                              ? (<><ArchiveRestore size={12} /> Восстановить</>)
+                              : (<><Archive size={12} /> Архивировать</>)}
+                          </button>
+                          <button
                             className="dv3-btn dv3-btn--danger"
                             onClick={() => setDeleteTarget({
                               id: selectedNode.id,
@@ -571,6 +706,9 @@ export function OrgPage() {
                               headUserId: selectedNode.headUserId,
                               parentId: selectedNode.parentId,
                               childCount: selectedNode.children.length,
+                              archivedAt: selectedNode.archivedAt,
+                              displayOrder: selectedNode.displayOrder,
+                              code: selectedNode.code,
                             })}
                           >
                             <Trash2 size={12} /> Удалить

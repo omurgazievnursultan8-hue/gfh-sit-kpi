@@ -37,7 +37,7 @@ class EvaluatorResolverTest {
                 .thenReturn(Optional.of(delegation));
         when(delegationRepository.findActiveDelegation(30L, periodStart))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(30L)).thenReturn(Optional.of(user(30L, Role.HEAD_OF_DEPARTMENT_UNIT, null, true)));
+        when(userRepository.findById(30L)).thenReturn(Optional.of(user(30L, Role.ORG_HEAD, null, true)));
 
         assertThat(resolver.resolve(10L, periodStart)).isEqualTo(30L);
     }
@@ -54,7 +54,7 @@ class EvaluatorResolverTest {
     @Test
     void step3_activeManagerReturnsManager() {
         User employee = user(10L, Role.EMPLOYEE, 20L, true);
-        User manager = user(20L, Role.HEAD_OF_DEPARTMENT_UNIT, null, true);
+        User manager = user(20L, Role.ORG_HEAD, null, true);
 
         when(userRepository.findById(10L)).thenReturn(Optional.of(employee));
         when(delegationRepository.findActiveDelegation(10L, periodStart)).thenReturn(Optional.empty());
@@ -66,8 +66,8 @@ class EvaluatorResolverTest {
     @Test
     void step4_inactiveManagerWalksUpHierarchy() {
         User employee = user(10L, Role.EMPLOYEE, 20L, true);
-        User inactiveManager = user(20L, Role.HEAD_OF_DEPARTMENT_UNIT, 30L, false);
-        User grandparent = user(30L, Role.HEAD_OF_DEPARTMENT, null, true);
+        User inactiveManager = user(20L, Role.ORG_HEAD, 30L, false);
+        User grandparent = user(30L, Role.ORG_HEAD, null, true);
 
         when(userRepository.findById(10L)).thenReturn(Optional.of(employee));
         when(delegationRepository.findActiveDelegation(10L, periodStart)).thenReturn(Optional.empty());
@@ -80,7 +80,7 @@ class EvaluatorResolverTest {
     @Test
     void step5_noActiveEvaluatorReturnsNull() {
         User employee = user(10L, Role.EMPLOYEE, 20L, true);
-        User inactiveManager = user(20L, Role.HEAD_OF_DEPARTMENT_UNIT, null, false);
+        User inactiveManager = user(20L, Role.ORG_HEAD, null, false);
 
         when(userRepository.findById(10L)).thenReturn(Optional.of(employee));
         when(delegationRepository.findActiveDelegation(10L, periodStart)).thenReturn(Optional.empty());
@@ -102,7 +102,7 @@ class EvaluatorResolverTest {
                 .thenReturn(Optional.of(delBtoC));
         when(delegationRepository.findActiveDelegation(40L, periodStart))
                 .thenReturn(Optional.empty());
-        when(userRepository.findById(40L)).thenReturn(Optional.of(user(40L, Role.HEAD_OF_DEPARTMENT, null, true)));
+        when(userRepository.findById(40L)).thenReturn(Optional.of(user(40L, Role.ORG_HEAD, null, true)));
 
         assertThat(resolver.resolve(10L, periodStart)).isEqualTo(40L);
     }

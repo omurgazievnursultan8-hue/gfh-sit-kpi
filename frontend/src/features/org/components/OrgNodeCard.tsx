@@ -6,13 +6,17 @@ import { OrgUnit } from '../orgApi'
 const TYPE_LABEL: Record<OrgUnit['type'], string> = {
   BLOCK: 'BLOCK',
   DEPARTMENT: 'DEPT',
-  UNIT: 'UNIT',
+  SLUZHBA: 'SLUZH',
+  OTDEL: 'OTDEL',
+  SEKTOR: 'SECT',
 }
 
 const TYPE_COLOR: Record<OrgUnit['type'], string> = {
   BLOCK: 'var(--dv3-zone-warn)',
   DEPARTMENT: 'var(--dv3-zone-info)',
-  UNIT: 'var(--dv3-zone-up)',
+  SLUZHBA: 'var(--dv3-zone-info)',
+  OTDEL: 'var(--dv3-zone-up)',
+  SEKTOR: 'var(--dv3-zone-up)',
 }
 
 interface Data {
@@ -65,7 +69,7 @@ function OrgNodeCardImpl({ data }: NodeProps<Data>) {
         </div>
 
         <div className="org-card-main">
-          <div className="org-card-name" title={unit.nameRu}>{unit.nameRu}</div>
+          <div className="org-card-name" title={unit.nameRu}>{unit.nameRuShort || unit.nameRu}</div>
           <div className="org-card-meta">
             <span className="org-card-type" style={{ color: rail }}>{TYPE_LABEL[unit.type]}</span>
             <span className="org-card-dot">·</span>
@@ -93,6 +97,11 @@ function OrgNodeCardImpl({ data }: NodeProps<Data>) {
         <div className="org-card-pop-row">
           <span>Тип</span><span style={{ color: rail }}>{TYPE_LABEL[unit.type]}</span>
         </div>
+        {unit.code && (
+          <div className="org-card-pop-row">
+            <span>Код</span><span style={{ fontFamily: 'monospace' }}>{unit.code}</span>
+          </div>
+        )}
         <div className="org-card-pop-row">
           <span>Руководитель</span>
           <span style={{ color: vacant ? 'var(--dv3-zone-warn)' : 'var(--dv3-text)' }}>

@@ -49,4 +49,23 @@ public class OrgUnitController {
         orgUnitService.deleteUnit(id);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/units/{id}/archive")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrgUnitResponse> archiveUnit(@PathVariable Long id) {
+        return ResponseEntity.ok(orgUnitService.archiveUnit(id));
+    }
+
+    @PostMapping("/units/{id}/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrgUnitResponse> restoreUnit(@PathVariable Long id) {
+        return ResponseEntity.ok(orgUnitService.restoreUnit(id));
+    }
+
+    @PostMapping("/units/{id}/move")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrgUnitResponse> moveUnit(@PathVariable Long id,
+                                                     @RequestParam String direction) {
+        return ResponseEntity.ok(orgUnitService.moveUnit(id, direction));
+    }
 }

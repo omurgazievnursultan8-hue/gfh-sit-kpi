@@ -1,5 +1,5 @@
 package kg.gfh.kpi.enums;
 
 public enum OrgUnitType {
-    BLOCK, DEPARTMENT, UNIT
+    BLOCK, DEPARTMENT, SLUZHBA, OTDEL, SEKTOR
 }

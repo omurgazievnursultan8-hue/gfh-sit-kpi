@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="052-extend-org-units" author="gfh">
+        <addColumn tableName="org_units">
+            <column name="code" type="VARCHAR(32)"/>
+            <column name="name_ru_short" type="VARCHAR(64)"/>
+            <column name="name_kg_short" type="VARCHAR(64)"/>
+            <column name="display_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="archived_at" type="TIMESTAMP"/>
+        </addColumn>
+
+        <addUniqueConstraint tableName="org_units"
+                             columnNames="code"
+                             constraintName="uq_org_units_code"/>
+
+        <createIndex tableName="org_units" indexName="idx_org_units_code">
+            <column name="code"/>
+        </createIndex>
+        <createIndex tableName="org_units" indexName="idx_org_units_archived_at">
+            <column name="archived_at"/>
+        </createIndex>
+        <createIndex tableName="org_units" indexName="idx_org_units_parent_order">
+            <column name="parent_id"/>
+            <column name="display_order"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

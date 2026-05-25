@@ -18,9 +18,17 @@ interface Props {
   onClose: () => void
 }
 
-const ORG_TYPES: OrgUnit['type'][] = ['BLOCK', 'DEPARTMENT', 'UNIT']
+const ORG_TYPES: OrgUnit['type'][] = ['BLOCK', 'DEPARTMENT', 'SLUZHBA', 'OTDEL', 'SEKTOR']
 const TYPE_LABELS: Record<OrgUnit['type'], string> = {
-  BLOCK: 'Блок', DEPARTMENT: 'Отдел', UNIT: 'Подразделение',
+  BLOCK: 'Блок', DEPARTMENT: 'Департамент', SLUZHBA: 'Служба', OTDEL: 'Отдел', SEKTOR: 'Сектор',
+}
+
+const ALLOWED_PARENT_TYPES: Record<OrgUnit['type'], OrgUnit['type'][]> = {
+  BLOCK: [],
+  DEPARTMENT: ['BLOCK'],
+  SLUZHBA: ['BLOCK'],
+  OTDEL: ['BLOCK', 'DEPARTMENT', 'SLUZHBA'],
+  SEKTOR: ['BLOCK', 'DEPARTMENT', 'SLUZHBA'],
 }
 
 function flattenUnits(units: OrgUnit[]): OrgUnit[] {
@@ -36,6 +44,10 @@ export function OrgUnitFormModal({ open, editing, defaultParent, users, allUnits
   const [type, setType] = useState<OrgUnit['type']>('BLOCK')
   const [headUserId, setHeadUserId] = useState('')
   const [parentId, setParentId] = useState('')
+  const [code, setCode] = useState('')
+  const [nameRuShort, setNameRuShort] = useState('')
+  const [nameKgShort, setNameKgShort] = useState('')
+  const [displayOrder, setDisplayOrder] = useState('0')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -49,9 +61,14 @@ export function OrgUnitFormModal({ open, editing, defaultParent, users, allUnits
       setType(editing.type)
       setHeadUserId(editing.headUserId?.toString() ?? '')
       setParentId(editing.parentId?.toString() ?? '')
+      setCode(editing.code ?? '')
+      setNameRuShort(editing.nameRuShort ?? '')
+      setNameKgShort(editing.nameKgShort ?? '')
+      setDisplayOrder(String(editing.displayOrder ?? 0))
     } else {
       setNameRu(''); setNameKg(''); setType('BLOCK'); setHeadUserId('')
       setParentId(defaultParent?.id.toString() ?? '')
+      setCode(''); setNameRuShort(''); setNameKgShort(''); setDisplayOrder('0')
     }
     setError('')
   }, [open, editing, defaultParent])
@@ -67,6 +84,10 @@ export function OrgUnitFormModal({ open, editing, defaultParent, users, allUnits
         type,
         headUserId: headUserId ? Number(headUserId) : null,
         parentId: parentId ? Number(parentId) : null,
+        code: code.trim() ? code.trim() : null,
+        nameRuShort: nameRuShort.trim() ? nameRuShort.trim() : null,
+        nameKgShort: nameKgShort.trim() ? nameKgShort.trim() : null,
+        displayOrder: displayOrder ? Number(displayOrder) : 0,
       })
       onClose()
     } catch (err) {
@@ -112,9 +133,11 @@ export function OrgUnitFormModal({ open, editing, defaultParent, users, allUnits
             <select value={parentId} onChange={e => setParentId(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary">
               <option value="">— нет (корневое) —</option>
-              {flat.filter(u => u.id !== editing?.id).map(u => (
-                <option key={u.id} value={u.id}>{u.nameRu}</option>
-              ))}
+              {flat
+                .filter(u => u.id !== editing?.id && ALLOWED_PARENT_TYPES[type].includes(u.type))
+                .map(u => (
+                  <option key={u.id} value={u.id}>{u.nameRu}</option>
+                ))}
             </select>
           </div>
           <div>
@@ -124,6 +147,32 @@ export function OrgUnitFormModal({ open, editing, defaultParent, users, allUnits
               <option value="">— не назначен —</option>
               {users.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
             </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Код</label>
+              <input value={code} onChange={e => setCode(e.target.value)} maxLength={32}
+                placeholder="напр. DEP-IT"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Порядок</label>
+              <input type="number" value={displayOrder} onChange={e => setDisplayOrder(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Сокр. (рус)</label>
+              <input value={nameRuShort} onChange={e => setNameRuShort(e.target.value)} maxLength={64}
+                placeholder="напр. ДИТ"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Сокр. (кыр)</label>
+              <input value={nameKgShort} onChange={e => setNameKgShort(e.target.value)} maxLength={64}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary" />
+            </div>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="flex gap-3 pt-2">

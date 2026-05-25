@@ -59,4 +59,9 @@
     <include file="db/changelog/m6/047-seed-shortcut-data.xml"/>
     <include file="db/changelog/m6/048-seed-norating-user.xml"/>
     <include file="db/changelog/m6/049-extend-users.xml"/>
+    <include file="db/changelog/m6/050-migrate-org-types-and-roles.xml"/>
+    <include file="db/changelog/m6/051-add-user-hr-fields.xml"/>
+    <include file="db/changelog/m6/052-extend-org-units.xml"/>
+    <include file="db/changelog/m6/053-backfill-user-names.xml"/>
+    <include file="db/changelog/m6/054-backfill-org-codes.xml"/>
 </databaseChangeLog>
