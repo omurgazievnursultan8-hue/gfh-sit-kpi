@@ -72,6 +72,9 @@ export function OrgUnitDetailPage() {
   const [newPosKg, setNewPosKg] = useState('')
   const [posBusy, setPosBusy] = useState(false)
   const [posErr, setPosErr] = useState('')
+  const [editPosId, setEditPosId] = useState<number | null>(null)
+  const [editPosRu, setEditPosRu] = useState('')
+  const [editPosKg, setEditPosKg] = useState('')
 
   useEffect(() => {
     let cancel = false
@@ -125,6 +128,24 @@ export function OrgUnitDetailPage() {
     setPosErr('')
     try { await positionsApi.remove(pid); await reloadPositions() }
     catch (e: any) { setPosErr(e?.response?.data?.message_ru ?? 'Ошибка при удалении') }
+  }
+
+  const startRename = (p: Position) => {
+    setPosErr('')
+    setEditPosId(p.id); setEditPosRu(p.nameRu); setEditPosKg(p.nameKg ?? '')
+  }
+  const cancelRename = () => { setEditPosId(null); setEditPosRu(''); setEditPosKg('') }
+  const saveRename = async (p: Position) => {
+    if (!editPosRu.trim() || !editPosKg.trim()) { setPosErr('Укажите название на двух языках'); return }
+    setPosErr('')
+    try {
+      await positionsApi.update(p.id, {
+        nameRu: editPosRu.trim(), nameKg: editPosKg.trim(), unitId: p.unitId,
+        code: p.code, displayOrder: p.displayOrder, isActive: p.isActive,
+      })
+      cancelRename()
+      await reloadPositions()
+    } catch (e: any) { setPosErr(e?.response?.data?.message_ru ?? 'Ошибка при переименовании') }
   }
 
   const togglePosition = async (p: Position) => {
@@ -368,26 +389,58 @@ export function OrgUnitDetailPage() {
                         <div className="oud-pos-list">
                           {positions.map(p => (
                             <div key={p.id} className={`oud-pos-row ${!p.isActive ? 'is-off' : ''}`}>
-                              <div className="oud-pos-names">
-                                <div className="oud-pos-name">{p.nameRu}</div>
-                                {p.nameKg && p.nameKg !== p.nameRu && (
-                                  <div className="oud-pos-name-kg">{p.nameKg}</div>
-                                )}
-                              </div>
-                              <div className="oud-pos-status">
-                                <span className={`oud-pos-pill ${p.isActive ? 'is-on' : 'is-off'}`}>
-                                  {p.isActive ? 'активна' : 'неактивна'}
-                                </span>
-                              </div>
-                              {isAdmin && (
-                                <div className="oud-pos-actions">
-                                  <button type="button" className="oud-pos-btn" onClick={() => togglePosition(p)}>
-                                    {p.isActive ? 'Выкл.' : 'Вкл.'}
-                                  </button>
-                                  <button type="button" className="oud-pos-btn oud-pos-btn--del" onClick={() => removePosition(p.id)}>
-                                    Удалить
-                                  </button>
-                                </div>
+                              {editPosId === p.id ? (
+                                <>
+                                  <div className="oud-pos-names">
+                                    <input
+                                      className="oud-pos-input"
+                                      placeholder="Название (рус)"
+                                      value={editPosRu}
+                                      onChange={e => setEditPosRu(e.target.value)}
+                                    />
+                                    <input
+                                      className="oud-pos-input"
+                                      placeholder="Название (кыр)"
+                                      value={editPosKg}
+                                      onChange={e => setEditPosKg(e.target.value)}
+                                    />
+                                  </div>
+                                  <div className="oud-pos-actions">
+                                    <button type="button" className="oud-pos-btn oud-pos-btn--icon" title="Сохранить" aria-label="Сохранить" onClick={() => saveRename(p)}>
+                                      <CheckIcon />
+                                    </button>
+                                    <button type="button" className="oud-pos-btn oud-pos-btn--icon" title="Отмена" aria-label="Отмена" onClick={cancelRename}>
+                                      <XIcon />
+                                    </button>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="oud-pos-names">
+                                    <div className="oud-pos-name">{p.nameRu}</div>
+                                    {p.nameKg && p.nameKg !== p.nameRu && (
+                                      <div className="oud-pos-name-kg">{p.nameKg}</div>
+                                    )}
+                                  </div>
+                                  <div className="oud-pos-status">
+                                    <span className={`oud-pos-pill ${p.isActive ? 'is-on' : 'is-off'}`}>
+                                      {p.isActive ? 'активна' : 'неактивна'}
+                                    </span>
+                                  </div>
+                                  {isAdmin && (
+                                    <div className="oud-pos-actions">
+                                      <button type="button" className="oud-pos-btn oud-pos-btn--icon" title="Переименовать" aria-label="Переименовать" onClick={() => startRename(p)}>
+                                        <PencilIcon />
+                                      </button>
+                                      <button type="button" className="oud-pos-btn oud-pos-btn--icon" title={p.isActive ? 'Выключить' : 'Включить'} aria-label={p.isActive ? 'Выключить' : 'Включить'} onClick={() => togglePosition(p)}>
+                                        <PowerIcon />
+                                      </button>
+                                      <button type="button" className="oud-pos-btn oud-pos-btn--icon oud-pos-btn--del" title="Удалить" aria-label="Удалить" onClick={() => removePosition(p.id)}>
+                                        <TrashIcon />
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           ))}
@@ -532,6 +585,11 @@ function NetworkIcon()  { return <svg {...svgCommon}><circle cx="12" cy="5" r="2
 function DocIcon()      { return <svg {...svgCommon}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> }
 function GearIcon()     { return <svg {...svgCommon}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> }
 function BriefcaseIcon(){ return <svg {...svgCommon}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg> }
+function PencilIcon()   { return <svg {...svgCommon}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg> }
+function PowerIcon()    { return <svg {...svgCommon}><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> }
+function TrashIcon()    { return <svg {...svgCommon}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg> }
+function CheckIcon()    { return <svg {...svgCommon}><polyline points="20 6 9 17 4 12"/></svg> }
+function XIcon()        { return <svg {...svgCommon}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> }
 
 /* ─── styles ────────────────────────────────────────────────────────────── */
 
@@ -751,6 +809,8 @@ const PAGE_CSS = `
 }
 .oud-pos-btn:hover { color: var(--accent); border-color: var(--accent); }
 .oud-pos-btn--del:hover { color: var(--danger); border-color: var(--danger); }
+.oud-pos-btn--icon { width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.oud-pos-btn--icon svg { width: 14px; height: 14px; }
 .oud-pos-add {
   display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px;
   padding: 14px 20px; background: var(--bg-soft);

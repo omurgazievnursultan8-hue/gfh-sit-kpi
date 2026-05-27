@@ -1,8 +1,8 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { useTranslation } from 'react-i18next'
-import { AppDispatch } from '../../app/store'
+import { AppDispatch, RootState } from '../../app/store'
 import { setAuthState } from './authSlice'
 import api from '../../app/api'
 import type { AxiosError } from 'axios'
@@ -15,6 +15,7 @@ export function ChangePasswordPage() {
   const navigate = useNavigate()
   const dispatch = useDispatch<AppDispatch>()
   const { t } = useTranslation()
+  const passwordExpired = useSelector((s: RootState) => s.auth.passwordExpired)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -66,11 +67,13 @@ export function ChangePasswordPage() {
             <div className="login-form-rule" aria-hidden="true"><span>◆</span></div>
           </div>
 
-          <LoginBanner
-            variant="error"
-            title={t('auth.passwordExpiredTitle', 'Требуется обновление пароля') as string}
-            body={t('auth.passwordExpiredHint', 'Срок действия вашего пароля истёк. Необходимо установить новый пароль.') as string}
-          />
+          {passwordExpired && (
+            <LoginBanner
+              variant="error"
+              title={t('auth.passwordExpiredTitle', 'Требуется обновление пароля') as string}
+              body={t('auth.passwordExpiredHint', 'Срок действия вашего пароля истёк. Необходимо установить новый пароль.') as string}
+            />
+          )}
 
           {error && (
             <LoginBanner
