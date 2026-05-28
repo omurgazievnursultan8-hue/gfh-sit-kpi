@@ -3,6 +3,7 @@ package kg.gfh.kpi.service;
 import kg.gfh.kpi.entity.Evaluation;
 import kg.gfh.kpi.entity.EvaluationFile;
 import kg.gfh.kpi.exception.ApiException;
+import kg.gfh.kpi.repository.CriteriaRepository;
 import kg.gfh.kpi.repository.EvaluationFileRepository;
 import kg.gfh.kpi.repository.EvaluationRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,11 +43,22 @@ public class FileService {
 
     private final EvaluationFileRepository fileRepository;
     private final EvaluationRepository evaluationRepository;
+    private final CriteriaRepository criteriaRepository;
     private final AuditService auditService;
 
     @Transactional
     public EvaluationFile upload(Long evaluationId, Long uploaderId, MultipartFile file) {
+        return upload(evaluationId, null, uploaderId, file);
+    }
+
+    @Transactional
+    public EvaluationFile upload(Long evaluationId, Long criteriaId, Long uploaderId, MultipartFile file) {
         validateAccess(evaluationId, uploaderId);
+
+        if (criteriaId != null && !criteriaRepository.existsById(criteriaId)) {
+            throw new ApiException("INVALID_CRITERIA",
+                "Критерий не найден", "Критерий табылган жок");
+        }
 
         if (fileRepository.countByEvaluationId(evaluationId) >= MAX_FILES_PER_EVALUATION) {
             throw new ApiException("FILE_LIMIT_EXCEEDED",
@@ -80,6 +92,7 @@ public class FileService {
 
         EvaluationFile record = new EvaluationFile();
         record.setEvaluationId(evaluationId);
+        record.setCriteriaId(criteriaId);
         record.setUploadedBy(uploaderId);
         record.setOriginalName(sanitizedName);
         record.setStoragePath(dest.toString());

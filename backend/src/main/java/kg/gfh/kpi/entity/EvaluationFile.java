@@ -17,6 +17,9 @@ public class EvaluationFile {
     @Column(name = "evaluation_id", nullable = false)
     private Long evaluationId;
 
+    @Column(name = "criteria_id")
+    private Long criteriaId;
+
     @Column(name = "uploaded_by", nullable = false)
     private Long uploadedBy;
 

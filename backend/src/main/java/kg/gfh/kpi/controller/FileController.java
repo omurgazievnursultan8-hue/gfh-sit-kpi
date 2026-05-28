@@ -30,9 +30,10 @@ public class FileController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public EvaluationFile upload(
             @PathVariable Long evaluationId,
+            @RequestParam(value = "criteriaId", required = false) Long criteriaId,
             @RequestParam("file") MultipartFile file,
             Authentication auth) {
-        return fileService.upload(evaluationId, resolveUserId(auth), file);
+        return fileService.upload(evaluationId, criteriaId, resolveUserId(auth), file);
     }
 
     @GetMapping("/{fileId}")

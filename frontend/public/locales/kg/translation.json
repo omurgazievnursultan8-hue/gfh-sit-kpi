@@ -275,7 +275,72 @@
     "submittedSuccess": "Баалоо ийгиликтүү жөнөтүлдү",
     "myEvaluations": "Менин баалоолорум",
     "toEvaluate": "Баалоо үчүн",
-    "noPendingEvaluations": "Аткарыла турган баалоолор жок"
+    "noPendingEvaluations": "Аткарыла турган баалоолор жок",
+    "form": {
+      "title": "Баалоону толтуруу",
+      "subtitle": "Ар бир критерий боюнча упайды толтуруңуз. Өзгөртүүлөр автоматтык түрдө сакталат.",
+      "back": "Тапшырмаларыма",
+      "phasePositive": "Этап · Оң",
+      "phaseAntibonus": "Этап · Антибонус",
+      "phaseReview": "Жыйынтык",
+      "criterion": "Критерий",
+      "score": "Упай",
+      "deduction": "Кемитүү",
+      "weight": "салмак {{value}}%",
+      "antiMax": "−{{value}} упайга чейин",
+      "scopeGlobal": "Глобалдык",
+      "noteLabel": "Эскертүү",
+      "notePlaceholder": "Баанын кыска негиздемеси (милдеттүү эмес)",
+      "noteRequiredAntibonus": "Антибонус > 0 үчүн эскертүү талап кылынат (10 белгиден кем эмес)",
+      "filesLabel": "Далил базасы",
+      "filesDrop": "+ файлды сүйрөңүз же басыңыз",
+      "preset": {
+        "zero": "0",
+        "quarter": "25%",
+        "half": "50%",
+        "threeQuarter": "75%",
+        "max": "Макс",
+        "custom": "Өзүм"
+      },
+      "previewValue": "Маани: {{value}}",
+      "stepCount": "{{current}} / {{total}}",
+      "next": "Кийинки",
+      "prev": "Артка",
+      "save": "Сактоо",
+      "saved": "сакталды {{time}}",
+      "saving": "сакталууда…",
+      "saveFailed": "Сактоо мүмкүн болгон жок — кайталаңыз",
+      "checklist": "Тизме",
+      "submit": "Жөнөтүү",
+      "transitionPositiveDone": "Оң баалар бүттү",
+      "transitionAnti": "Антибонуска өтөбү?",
+      "transitionSkip": "Өткөрүп жиберүү (кемитүү жок)",
+      "transitionGo": "Өтүү",
+      "reviewTotal": "Жыйынтык",
+      "reviewPositive": "Оң",
+      "reviewAnti": "Антибонус",
+      "reviewBack": "Түзөтүүгө кайтуу",
+      "reviewConfirm": "Жөнөтүү",
+      "confirmTitle": "Баалоону жөнөтөбү?",
+      "confirmBody": "Жыйынтык упай: {{total}}. Жөнөтүлгөндөн кийин баалоону өзгөртүүгө болбойт.",
+      "confirmLowWarn": "Упай орточодон төмөн. Аң-сезимдүү тастыктаңыз.",
+      "autoBadge": "АВТО",
+      "autoPending": "КҮТҮҮ",
+      "evaluationNotDraftBanner": "Баалоо түзөтүү үчүн жеткиликсиз",
+      "concurrentEditTitle": "Башка түзмөктөн өзгөртүүлөр",
+      "concurrentEditBody": "Учурдагы маалыматтар менен жаңылоо керекпи?",
+      "concurrentEditReload": "Жаңылоо",
+      "noCriteria": "Бул мезгилде критерийлер жок. Администраторго кайрылыңыз.",
+      "shortcuts": {
+        "title": "Тез баскычтар",
+        "prevNext": "← / → — мурунку / кийинки",
+        "presets": "1..5 — пресет, 6 — өзүңкү",
+        "save": "Cmd/Ctrl + S — сактоо",
+        "submit": "Cmd/Ctrl + Enter — жөнөтүү",
+        "help": "? — жардам",
+        "close": "Esc — жабуу"
+      }
+    }
   },
   "appeal": {
     "title": "Даттануу",
@@ -367,19 +432,81 @@
       "tabSystem": "Система",
       "tabAttention": "Көңүл буруу",
       "cards": {
-        "users":       { "title": "Кызматкерлер",   "label": "кызматкер",                 "bdActive": "активдүү",   "bdInactive": "пассивдүү" },
-        "periods":     { "title": "Мезгилдер",      "label": "мезгил",                    "bdActive": "активдүү",   "bdInactive": "пассивдүү" },
-        "evaluations": { "title": "Баалоолор",      "label": "баалоо",                    "bdPending": "иште",      "bdCompleted": "аяктаган" },
-        "appeals":     { "title": "Апелляциялар",   "label": "апелляция",                 "bdOpen": "күтүүдө",      "bdClosed": "жабылган" },
-        "org":         { "title": "Түзүм",          "label": "түзүм түйүндөрү",           "bdBlocks": "блоктор",    "bdDepartments": "департаменттер", "bdUnits": "бөлүмдөр" },
-        "criteria":    { "title": "Критерийлер",    "label": "каталогдо",                 "bdActive": "активдүү",   "bdInactive": "өчүрүлгөн" },
-        "delegations": { "title": "Делегациялар",   "label": "делегация",                 "bdActive": "активдүү",   "bdExpiring": "бүтөт ≤7к" },
-        "jobs":        { "title": "Тапшырмалар",    "label": "фон тапшырмалары",          "bdRunning": "иштеп жатат", "bdPaused": "тындырылган", "bdErrors": "каталар" },
-        "errors":      { "title": "Каталар",        "label": "ката журналындагы саптар",  "emptyNote": "каталар жок" },
-        "completed":   { "title": "Аяктаган",       "label": "баалоо аяктады",            "ariaPct": "{{pct}}% аяктаган" },
-        "overdue":     { "title": "Мөөнөтү өттү",   "label": "мөөнөтү өткөн",             "emptyNote": "мөөнөтү өткөндөр жок" },
-        "avgRating":   { "title": "Орт.рейтинг",    "label": "{{count}} баалоодон",       "emptyNote": "маалымат жок" },
-        "deadline":    { "title": "Мөөнөт",         "label": "мезгилдин аягына чейин күн", "emptyNote": "активдүү мезгилдер жок" }
+        "users": {
+          "title": "Кызматкерлер",
+          "label": "кызматкер",
+          "bdActive": "активдүү",
+          "bdInactive": "пассивдүү"
+        },
+        "periods": {
+          "title": "Мезгилдер",
+          "label": "мезгил",
+          "bdActive": "активдүү",
+          "bdInactive": "пассивдүү"
+        },
+        "evaluations": {
+          "title": "Баалоолор",
+          "label": "баалоо",
+          "bdPending": "иште",
+          "bdCompleted": "аяктаган"
+        },
+        "appeals": {
+          "title": "Апелляциялар",
+          "label": "апелляция",
+          "bdOpen": "күтүүдө",
+          "bdClosed": "жабылган"
+        },
+        "org": {
+          "title": "Түзүм",
+          "label": "түзүм түйүндөрү",
+          "bdBlocks": "блоктор",
+          "bdDepartments": "департаменттер",
+          "bdUnits": "бөлүмдөр"
+        },
+        "criteria": {
+          "title": "Критерийлер",
+          "label": "каталогдо",
+          "bdActive": "активдүү",
+          "bdInactive": "өчүрүлгөн"
+        },
+        "delegations": {
+          "title": "Делегациялар",
+          "label": "делегация",
+          "bdActive": "активдүү",
+          "bdExpiring": "бүтөт ≤7к"
+        },
+        "jobs": {
+          "title": "Тапшырмалар",
+          "label": "фон тапшырмалары",
+          "bdRunning": "иштеп жатат",
+          "bdPaused": "тындырылган",
+          "bdErrors": "каталар"
+        },
+        "errors": {
+          "title": "Каталар",
+          "label": "ката журналындагы саптар",
+          "emptyNote": "каталар жок"
+        },
+        "completed": {
+          "title": "Аяктаган",
+          "label": "баалоо аяктады",
+          "ariaPct": "{{pct}}% аяктаган"
+        },
+        "overdue": {
+          "title": "Мөөнөтү өттү",
+          "label": "мөөнөтү өткөн",
+          "emptyNote": "мөөнөтү өткөндөр жок"
+        },
+        "avgRating": {
+          "title": "Орт.рейтинг",
+          "label": "{{count}} баалоодон",
+          "emptyNote": "маалымат жок"
+        },
+        "deadline": {
+          "title": "Мөөнөт",
+          "label": "мезгилдин аягына чейин күн",
+          "emptyNote": "активдүү мезгилдер жок"
+        }
       }
     },
     "statCards": {
@@ -506,7 +633,6 @@
     "ratingNone": "Мезгил үчүн баа жок",
     "vsPrev": "өткөнгө",
     "ratingAria": "Рейтинг 100дөн {{score}}",
-    "allPeriods": "Бардык мезгилдер",
     "evalCyclePanel": {
       "incompleteTitle": "АЯКТАЛБАГАН БААЛООЛОР",
       "completedTitle": "АЯКТАЛГАН БААЛООЛОР",

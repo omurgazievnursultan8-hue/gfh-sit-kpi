@@ -275,7 +275,72 @@
     "submittedSuccess": "Оценка успешно отправлена",
     "myEvaluations": "Мои оценки",
     "toEvaluate": "К оценке",
-    "noPendingEvaluations": "Нет оценок для выполнения"
+    "noPendingEvaluations": "Нет оценок для выполнения",
+    "form": {
+      "title": "Заполнение оценки",
+      "subtitle": "Заполните баллы по каждому критерию. Изменения сохраняются автоматически.",
+      "back": "К моим задачам",
+      "phasePositive": "Фаза · Положительные",
+      "phaseAntibonus": "Фаза · Антибонус",
+      "phaseReview": "Итог",
+      "criterion": "Критерий",
+      "score": "Балл",
+      "deduction": "Вычет",
+      "weight": "вес {{value}}%",
+      "antiMax": "до −{{value}} баллов",
+      "scopeGlobal": "Глобальный",
+      "noteLabel": "Примечание",
+      "notePlaceholder": "Краткое обоснование оценки (опционально)",
+      "noteRequiredAntibonus": "Для антибонуса > 0 требуется примечание (минимум 10 символов)",
+      "filesLabel": "Доказательная база",
+      "filesDrop": "+ перетащите файл или нажмите",
+      "preset": {
+        "zero": "0",
+        "quarter": "25%",
+        "half": "50%",
+        "threeQuarter": "75%",
+        "max": "Макс",
+        "custom": "Свой"
+      },
+      "previewValue": "Значение: {{value}}",
+      "stepCount": "{{current}} / {{total}}",
+      "next": "Далее",
+      "prev": "Назад",
+      "save": "Сохранить",
+      "saved": "сохранено {{time}}",
+      "saving": "сохранение…",
+      "saveFailed": "Не удалось сохранить — попробуйте снова",
+      "checklist": "Список",
+      "submit": "Отправить",
+      "transitionPositiveDone": "Положительные завершены",
+      "transitionAnti": "Перейти к антибонусу?",
+      "transitionSkip": "Пропустить (вычетов нет)",
+      "transitionGo": "Перейти",
+      "reviewTotal": "Итог",
+      "reviewPositive": "Положительные",
+      "reviewAnti": "Антибонус",
+      "reviewBack": "Назад к редактированию",
+      "reviewConfirm": "Отправить",
+      "confirmTitle": "Отправить оценку?",
+      "confirmBody": "Итоговый балл: {{total}}. После отправки оценку нельзя будет изменить.",
+      "confirmLowWarn": "Балл ниже среднего. Подтвердите осознанно.",
+      "autoBadge": "АВТО",
+      "autoPending": "ОЖИДАНИЕ",
+      "evaluationNotDraftBanner": "Оценка более недоступна для редактирования",
+      "concurrentEditTitle": "Изменения с другого устройства",
+      "concurrentEditBody": "Перезагрузить с актуальными данными?",
+      "concurrentEditReload": "Перезагрузить",
+      "noCriteria": "В этом периоде нет критериев. Обратитесь к администратору.",
+      "shortcuts": {
+        "title": "Горячие клавиши",
+        "prevNext": "← / → — предыдущий / следующий",
+        "presets": "1..5 — пресеты, 6 — свой",
+        "save": "Cmd/Ctrl + S — сохранить",
+        "submit": "Cmd/Ctrl + Enter — отправить",
+        "help": "? — справка",
+        "close": "Esc — закрыть"
+      }
+    }
   },
   "appeal": {
     "title": "Апелляция",
@@ -367,19 +432,81 @@
       "tabSystem": "Система",
       "tabAttention": "Внимание",
       "cards": {
-        "users":       { "title": "Сотрудники",    "label": "сотрудников",         "bdActive": "активны",   "bdInactive": "неактивны" },
-        "periods":     { "title": "Периоды",       "label": "периодов",            "bdActive": "активны",   "bdInactive": "неактивны" },
-        "evaluations": { "title": "Оценки",        "label": "оценок",              "bdPending": "в работе", "bdCompleted": "завершено" },
-        "appeals":     { "title": "Апелляции",     "label": "апелляций",           "bdOpen": "ждут",        "bdClosed": "закрыты" },
-        "org":         { "title": "Структура",     "label": "узлов структуры",     "bdBlocks": "блоки",     "bdDepartments": "департаменты", "bdUnits": "отделы" },
-        "criteria":    { "title": "Критерии",      "label": "в каталоге",          "bdActive": "активны",   "bdInactive": "отключены" },
-        "delegations": { "title": "Делегирования", "label": "делегирований",       "bdActive": "активны",   "bdExpiring": "истекают ≤7д" },
-        "jobs":        { "title": "Задачи",        "label": "фоновых задач",       "bdRunning": "работают", "bdPaused": "на паузе", "bdErrors": "ошибки" },
-        "errors":      { "title": "Ошибки",        "label": "строк в логе ошибок", "emptyNote": "нет ошибок" },
-        "completed":   { "title": "Завершено",     "label": "оценок завершено",    "ariaPct": "{{pct}}% завершено" },
-        "overdue":     { "title": "Просрочено",    "label": "просрочены",          "emptyNote": "нет просроченных" },
-        "avgRating":   { "title": "Ср.рейтинг",    "label": "из {{count}} оценок", "emptyNote": "нет данных" },
-        "deadline":    { "title": "Срок",          "label": "дней до конца периода", "emptyNote": "нет активных периодов" }
+        "users": {
+          "title": "Сотрудники",
+          "label": "сотрудников",
+          "bdActive": "активны",
+          "bdInactive": "неактивны"
+        },
+        "periods": {
+          "title": "Периоды",
+          "label": "периодов",
+          "bdActive": "активны",
+          "bdInactive": "неактивны"
+        },
+        "evaluations": {
+          "title": "Оценки",
+          "label": "оценок",
+          "bdPending": "в работе",
+          "bdCompleted": "завершено"
+        },
+        "appeals": {
+          "title": "Апелляции",
+          "label": "апелляций",
+          "bdOpen": "ждут",
+          "bdClosed": "закрыты"
+        },
+        "org": {
+          "title": "Структура",
+          "label": "узлов структуры",
+          "bdBlocks": "блоки",
+          "bdDepartments": "департаменты",
+          "bdUnits": "отделы"
+        },
+        "criteria": {
+          "title": "Критерии",
+          "label": "в каталоге",
+          "bdActive": "активны",
+          "bdInactive": "отключены"
+        },
+        "delegations": {
+          "title": "Делегирования",
+          "label": "делегирований",
+          "bdActive": "активны",
+          "bdExpiring": "истекают ≤7д"
+        },
+        "jobs": {
+          "title": "Задачи",
+          "label": "фоновых задач",
+          "bdRunning": "работают",
+          "bdPaused": "на паузе",
+          "bdErrors": "ошибки"
+        },
+        "errors": {
+          "title": "Ошибки",
+          "label": "строк в логе ошибок",
+          "emptyNote": "нет ошибок"
+        },
+        "completed": {
+          "title": "Завершено",
+          "label": "оценок завершено",
+          "ariaPct": "{{pct}}% завершено"
+        },
+        "overdue": {
+          "title": "Просрочено",
+          "label": "просрочены",
+          "emptyNote": "нет просроченных"
+        },
+        "avgRating": {
+          "title": "Ср.рейтинг",
+          "label": "из {{count}} оценок",
+          "emptyNote": "нет данных"
+        },
+        "deadline": {
+          "title": "Срок",
+          "label": "дней до конца периода",
+          "emptyNote": "нет активных периодов"
+        }
       }
     },
     "statCards": {
@@ -640,7 +767,6 @@
     "ratingNone": "Нет оценки за период",
     "vsPrev": "vs пред.",
     "ratingAria": "Рейтинг {{score}} из 100",
-    "allPeriods": "Все периоды",
     "evalCyclePanel": {
       "incompleteTitle": "НЕЗАВЕРШЁННЫЕ ОЦЕНКИ",
       "completedTitle": "ЗАВЕРШЁННЫЕ ОЦЕНКИ",
