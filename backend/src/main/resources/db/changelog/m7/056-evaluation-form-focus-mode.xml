@@ -18,17 +18,20 @@
     <changeSet id="056-add-evaluation-files-criteria-id" author="azamat">
         <addColumn tableName="evaluation_files">
             <column name="criteria_id" type="BIGINT">
-                <constraints nullable="true"
-                    foreignKeyName="fk_evaluation_files_criteria"
-                    referencedTableName="criteria"
-                    referencedColumnNames="id"/>
+                <constraints nullable="true"/>
             </column>
         </addColumn>
+        <addForeignKeyConstraint
+            baseTableName="evaluation_files" baseColumnNames="criteria_id"
+            constraintName="fk_evaluation_files_criteria"
+            referencedTableName="criteria" referencedColumnNames="id"
+            onDelete="RESTRICT"/>
         <createIndex tableName="evaluation_files" indexName="idx_evaluation_files_criteria_id">
             <column name="criteria_id"/>
         </createIndex>
         <rollback>
             <dropIndex tableName="evaluation_files" indexName="idx_evaluation_files_criteria_id"/>
+            <dropForeignKeyConstraint baseTableName="evaluation_files" constraintName="fk_evaluation_files_criteria"/>
             <dropColumn tableName="evaluation_files" columnName="criteria_id"/>
         </rollback>
     </changeSet>
