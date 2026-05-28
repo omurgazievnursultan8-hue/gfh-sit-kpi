@@ -6,6 +6,8 @@ export interface Criteria {
   id: number
   nameRu: string
   nameKg: string
+  descriptionRu: string | null
+  descriptionKg: string | null
   type: CriteriaType
   weight: number
   orgUnitId: number | null
@@ -20,6 +22,8 @@ export interface Criteria {
 export interface CriteriaRequest {
   nameRu: string
   nameKg: string
+  descriptionRu: string | null
+  descriptionKg: string | null
   type: CriteriaType
   weight: number
   orgUnitId: number | null

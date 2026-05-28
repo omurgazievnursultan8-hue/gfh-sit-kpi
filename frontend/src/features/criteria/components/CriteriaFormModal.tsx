@@ -17,6 +17,8 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
   const { t } = useTranslation()
   const [nameRu, setNameRu] = useState('')
   const [nameKg, setNameKg] = useState('')
+  const [descriptionRu, setDescriptionRu] = useState('')
+  const [descriptionKg, setDescriptionKg] = useState('')
   const [type, setType] = useState<CriteriaType>('POSITIVE')
   const [weight, setWeight] = useState('')
   const [orgUnitId, setOrgUnitId] = useState<string>('')
@@ -29,6 +31,8 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
     if (editing) {
       setNameRu(editing.nameRu)
       setNameKg(editing.nameKg)
+      setDescriptionRu(editing.descriptionRu ?? '')
+      setDescriptionKg(editing.descriptionKg ?? '')
       setType(editing.type)
       setWeight(editing.weight.toString())
       setOrgUnitId(editing.orgUnitId?.toString() ?? '')
@@ -36,12 +40,15 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
     } else if (prefill) {
       setNameRu(prefill.nameRu ?? '')
       setNameKg(prefill.nameKg ?? '')
+      setDescriptionRu(prefill.descriptionRu ?? '')
+      setDescriptionKg(prefill.descriptionKg ?? '')
       setType(prefill.type ?? 'POSITIVE')
       setWeight(prefill.weight != null ? prefill.weight.toString() : '')
       setOrgUnitId(prefill.orgUnitId != null ? prefill.orgUnitId.toString() : '')
       setAutoCalculated(prefill.autoCalculated ?? false)
     } else {
-      setNameRu(''); setNameKg(''); setType('POSITIVE')
+      setNameRu(''); setNameKg(''); setDescriptionRu(''); setDescriptionKg('')
+      setType('POSITIVE')
       setWeight(''); setOrgUnitId(''); setAutoCalculated(false)
     }
     setError('')
@@ -57,7 +64,10 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
     setLoading(true); setError('')
     try {
       await onSave({
-        nameRu, nameKg, type,
+        nameRu, nameKg,
+        descriptionRu: descriptionRu.trim() || null,
+        descriptionKg: descriptionKg.trim() || null,
+        type,
         weight: weightNum,
         orgUnitId: orgUnitId ? Number(orgUnitId) : null,
         autoCalculated,
@@ -92,6 +102,20 @@ export function CriteriaFormModal({ open, editing, prefill, orgUnits, onSave, on
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formNameKg')}</label>
             <input value={nameKg} onChange={e => setNameKg(e.target.value)} required
               className="w-full h-10 px-3 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15" />
+          </div>
+          <div>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formDescriptionRu', 'Описание (RU)')}</label>
+            <textarea value={descriptionRu} onChange={e => setDescriptionRu(e.target.value)}
+              maxLength={4000} rows={3}
+              placeholder="Рубрика оценки — что считается 0, что считается максимум…"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15 resize-y" />
+          </div>
+          <div>
+            <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formDescriptionKg', 'Сүрөттөмө (KG)')}</label>
+            <textarea value={descriptionKg} onChange={e => setDescriptionKg(e.target.value)}
+              maxLength={4000} rows={3}
+              placeholder="Баалоо рубрикасы…"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg text-[13.5px] outline-none focus:border-[var(--crit-accent,#0a6b4e)] focus:ring-2 focus:ring-[var(--crit-accent,#0a6b4e)]/15 resize-y" />
           </div>
           <div>
             <label className="block text-[13px] font-medium text-slate-700 mb-1.5">{t('v2.criteria.formType')}</label>
