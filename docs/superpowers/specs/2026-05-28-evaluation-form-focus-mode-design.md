@@ -65,14 +65,14 @@ New file `backend/src/main/resources/db/changelog/m7/035-evaluation-form-focus-m
 </changeSet>
 
 <changeSet id="m7-002-add-evaluation-file-criteria-id" author="azamat">
-  <addColumn tableName="evaluation_file">
+  <addColumn tableName="evaluation_files">
     <column name="criteria_id" type="BIGINT">
       <constraints nullable="true"
         foreignKeyName="fk_eval_file_criteria"
         references="criteria(id)"/>
     </column>
   </addColumn>
-  <createIndex tableName="evaluation_file" indexName="idx_eval_file_criteria">
+  <createIndex tableName="evaluation_files" indexName="idx_eval_file_criteria">
     <column name="criteria_id"/>
   </createIndex>
 </changeSet>
