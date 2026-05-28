@@ -10,6 +10,8 @@ public record CriteriaResponse(
     Long id,
     String nameRu,
     String nameKg,
+    String descriptionRu,
+    String descriptionKg,
     CriteriaType type,
     BigDecimal weight,
     Long orgUnitId,
@@ -22,7 +24,9 @@ public record CriteriaResponse(
 ) {
     public static CriteriaResponse from(Criteria c) {
         return new CriteriaResponse(
-            c.getId(), c.getNameRu(), c.getNameKg(), c.getType(), c.getWeight(),
+            c.getId(), c.getNameRu(), c.getNameKg(),
+            c.getDescriptionRu(), c.getDescriptionKg(),
+            c.getType(), c.getWeight(),
             c.getOrgUnit() != null ? c.getOrgUnit().getId() : null,
             c.getOrgUnit() != null ? c.getOrgUnit().getNameRu() : null,
             c.getOrgUnit() != null ? c.getOrgUnit().getNameKg() : null,

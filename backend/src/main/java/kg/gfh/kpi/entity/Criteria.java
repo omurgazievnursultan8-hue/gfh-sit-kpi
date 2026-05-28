@@ -21,6 +21,12 @@ public class Criteria {
     @Column(name = "name_kg", nullable = false)
     private String nameKg;
 
+    @Column(name = "description_ru", columnDefinition = "TEXT")
+    private String descriptionRu;
+
+    @Column(name = "description_kg", columnDefinition = "TEXT")
+    private String descriptionKg;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CriteriaType type;

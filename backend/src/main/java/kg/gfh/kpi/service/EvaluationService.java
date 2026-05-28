@@ -123,15 +123,31 @@ public class EvaluationService {
         assertEditable(eval);
 
         for (ScoreRequest req : scores) {
+            Criteria criterion = criteriaRepository.findById(req.criteriaId())
+                .orElseThrow(() -> new ApiException("CRITERIA_NOT_FOUND",
+                    "Критерий не найден", "Критерий табылган жок"));
+
+            if (criterion.isAutoCalculated()) {
+                throw new ApiException("AUTO_CRITERIA_READONLY",
+                    "Автоматический критерий нельзя редактировать вручную",
+                    "Автоматтык критерийди кол менен өзгөртүүгө болбойт");
+            }
+
+            if (criterion.getType() == Criteria.CriteriaType.ANTI_BONUS
+                    && req.value() != null
+                    && req.value().compareTo(BigDecimal.ZERO) > 0
+                    && (req.note() == null || req.note().trim().length() < 10)) {
+                throw new ApiException("ANTIBONUS_NOTE_REQUIRED",
+                    "Для антибонуса > 0 требуется примечание (минимум 10 символов)",
+                    "Антибонус > 0 үчүн эскертүү талап кылынат (10 белгиден кем эмес)");
+            }
+
             EvaluationScore score = scoreRepository
                 .findByEvaluationIdAndCriteriaId(evaluationId, req.criteriaId())
                 .orElseGet(() -> {
                     EvaluationScore s = new EvaluationScore();
                     s.setEvaluationId(evaluationId);
-                    Criteria c = criteriaRepository.findById(req.criteriaId())
-                        .orElseThrow(() -> new ApiException("CRITERIA_NOT_FOUND",
-                            "Критерий не найден", "Критерий табылган жок"));
-                    s.setCriteria(c);
+                    s.setCriteria(criterion);
                     return s;
                 });
             score.setValue(req.value());

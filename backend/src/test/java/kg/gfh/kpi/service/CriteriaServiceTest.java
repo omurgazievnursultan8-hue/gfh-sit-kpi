@@ -49,7 +49,7 @@ class CriteriaServiceTest {
         saved.setWeight(BigDecimal.valueOf(30));
         when(criteriaRepository.save(any())).thenReturn(saved);
 
-        var req = new CriteriaRequest("Test", "Test KG", CriteriaType.POSITIVE,
+        var req = new CriteriaRequest("Test", "Test KG", null, null, CriteriaType.POSITIVE,
             BigDecimal.valueOf(30), null, false);
 
         assertThatCode(() -> criteriaService.create(req)).doesNotThrowAnyException();
@@ -60,7 +60,7 @@ class CriteriaServiceTest {
         when(criteriaRepository.sumWeightByTypeAndScope(eq(CriteriaType.POSITIVE), isNull(), isNull()))
             .thenReturn(BigDecimal.valueOf(80));
 
-        var req = new CriteriaRequest("Test", "Test KG", CriteriaType.POSITIVE,
+        var req = new CriteriaRequest("Test", "Test KG", null, null, CriteriaType.POSITIVE,
             BigDecimal.valueOf(30), null, false);
 
         assertThatThrownBy(() -> criteriaService.create(req))
@@ -79,7 +79,7 @@ class CriteriaServiceTest {
         saved.setWeight(BigDecimal.valueOf(150));
         when(criteriaRepository.save(any())).thenReturn(saved);
 
-        var req = new CriteriaRequest("Anti", "Anti KG", CriteriaType.ANTI_BONUS,
+        var req = new CriteriaRequest("Anti", "Anti KG", null, null, CriteriaType.ANTI_BONUS,
             BigDecimal.valueOf(150), null, false);
 
         assertThatCode(() -> criteriaService.create(req)).doesNotThrowAnyException();
@@ -95,7 +95,7 @@ class CriteriaServiceTest {
         frozen.setFrozen(true);
         when(criteriaRepository.findById(1L)).thenReturn(Optional.of(frozen));
 
-        var req = new CriteriaRequest("X", "X", CriteriaType.POSITIVE,
+        var req = new CriteriaRequest("X", "X", null, null, CriteriaType.POSITIVE,
             BigDecimal.valueOf(30), null, false);
 
         assertThatThrownBy(() -> criteriaService.update(1L, req))
@@ -116,7 +116,7 @@ class CriteriaServiceTest {
         when(criteriaRepository.findById(1L)).thenReturn(Optional.of(frozen));
         when(criteriaRepository.save(any())).thenReturn(frozen);
 
-        var req = new CriteriaRequest("X Updated", "X Updated", CriteriaType.POSITIVE,
+        var req = new CriteriaRequest("X Updated", "X Updated", null, null, CriteriaType.POSITIVE,
             BigDecimal.valueOf(20), null, false);
 
         assertThatCode(() -> criteriaService.update(1L, req)).doesNotThrowAnyException();

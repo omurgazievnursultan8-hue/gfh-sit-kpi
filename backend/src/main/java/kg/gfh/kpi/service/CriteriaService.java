@@ -36,6 +36,8 @@ public class CriteriaService {
         Criteria c = new Criteria();
         c.setNameRu(req.nameRu());
         c.setNameKg(req.nameKg());
+        c.setDescriptionRu(req.descriptionRu());
+        c.setDescriptionKg(req.descriptionKg());
         c.setType(req.type());
         c.setWeight(req.weight());
         c.setAutoCalculated(req.autoCalculated());
@@ -62,6 +64,8 @@ public class CriteriaService {
 
         c.setNameRu(req.nameRu());
         c.setNameKg(req.nameKg());
+        c.setDescriptionRu(req.descriptionRu());
+        c.setDescriptionKg(req.descriptionKg());
         c.setType(req.type());
         c.setWeight(req.weight());
         c.setAutoCalculated(req.autoCalculated());

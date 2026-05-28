@@ -2,13 +2,18 @@ package kg.gfh.kpi.dto;
 
 import kg.gfh.kpi.entity.Evaluation;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
+import kg.gfh.kpi.entity.EvaluationPeriod.PeriodType;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record EvaluationResponse(
     Long id,
     Long periodId,
+    PeriodType periodType,
+    LocalDate periodStartDate,
+    LocalDate periodEndDate,
     Long evaluateeId,
     String evaluateeName,
     Long evaluatorId,
@@ -22,6 +27,9 @@ public record EvaluationResponse(
     public static EvaluationResponse from(Evaluation e) {
         return new EvaluationResponse(
             e.getId(), e.getPeriod().getId(),
+            e.getPeriod().getType(),
+            e.getPeriod().getStartDate(),
+            e.getPeriod().getEndDate(),
             e.getEvaluatee().getId(), e.getEvaluatee().getFullName(),
             e.getEvaluator().getId(), e.getEvaluator().getFullName(),
             e.getStatus(), e.getFinalScore(), e.getVersion(),
