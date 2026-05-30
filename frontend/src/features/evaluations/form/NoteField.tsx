@@ -22,8 +22,8 @@ export function NoteField({ value, required, onChange }: Props) {
 
   const tooShort = required && value.trim().length < MIN_LEN
   return (
-    <>
-      <label className="efm-label" htmlFor="efm-note">{t('evaluation.form.noteLabel')}</label>
+    <div className="efm-field">
+      <label className="efm-flabel" htmlFor="efm-note">{t('evaluation.form.noteLabel')}</label>
       <textarea
         id="efm-note"
         ref={ref}
@@ -39,6 +39,6 @@ export function NoteField({ value, required, onChange }: Props) {
           {t('evaluation.form.noteRequiredAntibonus')}
         </div>
       )}
-    </>
+    </div>
   )
 }

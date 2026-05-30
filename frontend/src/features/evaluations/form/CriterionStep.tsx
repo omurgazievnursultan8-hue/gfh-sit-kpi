@@ -11,6 +11,7 @@ interface Props {
   evaluationId: number
   criterion: Criteria
   index: number
+  total: number
   negative: boolean
   score: ScoreEntry | undefined
   files: EvaluationFile[]
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export function CriterionStep({
-  evaluationId, criterion, index, negative, score, files, lang,
+  evaluationId, criterion, index, total, negative, score, files, lang,
   onScore, onNote, onAttachFile, onRemoveFile, presetRef,
 }: Props) {
   const max = Number(criterion.weight)
@@ -40,7 +41,7 @@ export function CriterionStep({
 
   return (
     <>
-      <RubricPanel criterion={criterion} index={index} negative={negative} lang={lang} />
+      <RubricPanel criterion={criterion} index={index} negative={negative} lang={lang} position={index + 1} total={total} />
       <ScoreInput
         value={value}
         max={max}

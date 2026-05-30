@@ -13,6 +13,7 @@ import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { PdpaConsentPage } from './features/auth/PdpaConsentPage'
 import { DashboardPage } from './features/dashboard/DashboardPage'
+import { DashboardPageV2 } from './features/dashboard/DashboardPageV2'
 import { UsersPage } from './features/users/UsersPage'
 import { UserDetailPage } from './features/users/UserDetailPage'
 import { CriteriaPage } from './features/criteria/CriteriaPage'
@@ -54,6 +55,7 @@ export default function App() {
       <Route path="/pdpa-consent" element={<ProtectedRoute><PdpaConsentPage /></ProtectedRoute>} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/dashboard-v2" element={<ProtectedRoute><DashboardPageV2 /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
       <Route path="/users/:id" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserDetailPage /></ProtectedRoute>} />
       <Route path="/users-v2" element={<Navigate to="/users" replace />} />

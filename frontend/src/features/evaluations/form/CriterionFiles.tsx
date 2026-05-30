@@ -29,8 +29,8 @@ export function CriterionFiles({ evaluationId, criteriaId, files, onAttach, onRe
   }
 
   return (
-    <>
-      <label className="efm-label">{t('evaluation.form.filesLabel')}</label>
+    <div className="efm-field">
+      <label className="efm-flabel">{t('evaluation.form.filesLabel')}</label>
       <div
         className={`efm-files-drop ${drag ? 'is-drag' : ''}`}
         onClick={() => inputRef.current?.click()}
@@ -73,6 +73,6 @@ export function CriterionFiles({ evaluationId, criteriaId, files, onAttach, onRe
           </button>
         </div>
       ))}
-    </>
+    </div>
   )
 }

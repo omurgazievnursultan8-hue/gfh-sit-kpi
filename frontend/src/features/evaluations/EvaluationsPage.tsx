@@ -257,7 +257,7 @@ export function EvaluationsPage({ defaultMode }: Props) {
   }
 
   const openRow = (e: Evaluation) => {
-    if (effectiveMode === 'given' && e.status === 'DRAFT') navigate(`/evaluations/${e.id}`)
+    if (effectiveMode === 'given') navigate(`/evaluations/${e.id}`)
     else navigate(`/my-evaluations/${e.id}`)
   }
 

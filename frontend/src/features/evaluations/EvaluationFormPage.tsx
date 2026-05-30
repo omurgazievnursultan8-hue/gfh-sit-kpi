@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft } from 'lucide-react'
 import { evaluationsApi } from './evaluationsApi'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
@@ -9,13 +8,12 @@ import { FORM_CSS } from './form/formStyles'
 import { useEvaluationForm } from './form/useEvaluationForm'
 import { useAutosave } from './form/useAutosave'
 import { useKeyboardShortcuts } from './form/useKeyboardShortcuts'
-import { StepperHeader } from './form/StepperHeader'
 import { PhaseRouter } from './form/PhaseRouter'
 import { BottomBar } from './form/BottomBar'
-import { ChecklistDrawer } from './form/ChecklistDrawer'
 import { ShortcutsOverlay } from './form/ShortcutsOverlay'
-
-const idCode = (id: number): string => `EV-${String(id).padStart(6, '0')}`
+import { Ledger } from './form/Ledger'
+import { EmployeeStepper } from './form/EmployeeStepper'
+import { EvaluationDetailPage } from './EvaluationDetailPage'
 
 const buildPayload = (scores: Record<number, { value: string; note: string }>) =>
   Object.entries(scores)
@@ -26,37 +24,28 @@ const buildPayload = (scores: Record<number, { value: string; note: string }>) =
       note: v.note || undefined,
     }))
 
-const periodLabel = (
-  type: string | undefined,
-  start: string | undefined,
-  end: string | undefined,
-): string => {
-  if (!type || !start || !end) return ''
-  const s = new Date(start)
-  const year = s.getFullYear()
-  if (type === 'ANNUAL') return `${year}`
-  if (type === 'QUARTERLY') {
-    const q = Math.floor(s.getMonth() / 3) + 1
-    return `Q${q} ${year}`
-  }
-  if (type === 'MONTHLY') {
-    const m = String(s.getMonth() + 1).padStart(2, '0')
-    return `${m}.${year}`
-  }
-  return `${start}…${end}`
-}
-
 function BannerShell({ text, tone }: { text: string; tone?: 'warn' | 'err' }) {
   const color = tone === 'err' ? 'var(--dv3-zone-down)' : tone === 'warn' ? 'var(--dv3-zone-warn)' : 'var(--dv3-text3)'
   return (
     <div className="dv3-root">
       <style>{DASHBOARD_CSS}</style>
       <style>{FORM_CSS}</style>
-      <div className="efm-shell" style={{ textAlign: 'center', padding: '120px 24px', fontFamily: "'EB Garamond',Georgia,serif", fontStyle: 'italic', fontSize: 22, color }}>
-        {text}
-      </div>
+      <div className="efm-banner" style={{ color }}>{text}</div>
     </div>
   )
+}
+
+const fmtDate = (iso: string | null | undefined): string => {
+  if (!iso) return ''
+  try { return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' }) }
+  catch { return iso }
+}
+
+const daysLeft = (iso: string | null | undefined): number | null => {
+  if (!iso) return null
+  const end = new Date(iso).getTime()
+  if (Number.isNaN(end)) return null
+  return Math.ceil((end - Date.now()) / 86400000)
 }
 
 export function EvaluationFormPage() {
@@ -67,7 +56,6 @@ export function EvaluationFormPage() {
   const lang = (i18n.language?.startsWith('kg') ? 'kg' : 'ru') as 'ru' | 'kg'
 
   const f = useEvaluationForm(evaluationId)
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
   const [saveFailed, setSaveFailed] = useState(false)
@@ -123,82 +111,120 @@ export function EvaluationFormPage() {
     onSave: doSave,
     onSubmit: () => { if (f.state.phase === 'review' && f.canSubmit) onSubmitClick() },
     onHelp: () => setShortcutsOpen(true),
-    onEscape: () => { setShortcutsOpen(false); setDrawerOpen(false) },
+    onEscape: () => { setShortcutsOpen(false) },
   })
+
+  const totals = useMemo(() => {
+    const posSum = f.positive.reduce((s, c) => s + (parseFloat(f.state.scores[c.id]?.value ?? '0') || 0), 0)
+    const negSum = f.antibonus.reduce((s, c) => s + (parseFloat(f.state.scores[c.id]?.value ?? '0') || 0), 0)
+    return { posSum, negSum, total: Math.max(0, posSum - negSum) }
+  }, [f.positive, f.antibonus, f.state.scores])
 
   if (f.state.loading) return <BannerShell text="…" />
   if (f.state.error) return <BannerShell text="Не удалось загрузить" tone="err" />
   if (!f.state.evaluation) return <BannerShell text="Оценка не найдена" tone="err" />
-  if (f.state.evaluation.status !== 'DRAFT') return <BannerShell text={t('evaluation.form.evaluationNotDraftBanner')} tone="warn" />
+  if (f.state.evaluation.status !== 'DRAFT') return <EvaluationDetailPage />
   if (f.positive.length === 0) return <BannerShell text={t('evaluation.form.noCriteria')} tone="warn" />
 
-  const posSum = f.positive.reduce((s, c) => s + (parseFloat(f.state.scores[c.id]?.value ?? '0') || 0), 0)
-  const negSum = f.antibonus.reduce((s, c) => s + (parseFloat(f.state.scores[c.id]?.value ?? '0') || 0), 0)
-  const total = f.state.previewScore ?? Math.max(0, posSum - negSum)
-  const lowTotal = total < 30
+  const lowTotal = totals.total < 30
   const showSubmit = f.state.phase === 'review'
-  const period = periodLabel(f.state.evaluation.periodType, f.state.evaluation.periodStartDate, f.state.evaluation.periodEndDate)
+
+  const totalCriteria = f.positive.length + f.antibonus.length
+  const filledCount = f.posFilled + f.negFilled
+  const filledPct = totalCriteria > 0 ? Math.round((filledCount / totalCriteria) * 100) : 0
+
+  const ev = f.state.evaluation
+  const periodLabel = `${fmtDate(ev.periodStartDate)} — ${fmtDate(ev.periodEndDate)}`
+  const dl = daysLeft(ev.periodEndDate)
+  const deadlineChip = dl != null && dl >= 0
+    ? `${t('evaluation.form.deadlineDays', { defaultValue: 'до дедлайна' })} ${dl} дн · ${fmtDate(ev.periodEndDate)}`
+    : null
 
   return (
-    <div className="dv3-root">
+    <div className="dv3-root" style={{ height: '100%', overflow: 'hidden' }}>
       <style>{DASHBOARD_CSS}</style>
       <style>{FORM_CSS}</style>
-      <div className="efm-shell efm-page" data-phase={f.state.phase}>
-        <div className="efm-topbar">
-          <button className="efm-back" onClick={() => navigate('/my-tasks')}>
-            <ArrowLeft size={12} /> {t('evaluation.form.back')}
-          </button>
-          <span>{idCode(f.state.evaluation.id)} · DRAFT · {period}</span>
-        </div>
+      <div className="efm-page-v2" data-phase={f.state.phase}>
+       <div className="efm-box">
+        <div className="efm-box-inner">
+        <header className="efm-topbar-v2">
+          <div className="efm-tb-ttl">
+            <span className="efm-tb-c">{t('evaluation.form.topbarTag', { defaultValue: 'Оценка сотрудника' })}</span>
+            <h1 className="efm-tb-h1">{ev.evaluateeName}</h1>
+          </div>
+          <span className="efm-grow" />
+          <span className="efm-chip-pill"><span className="dot" />{periodLabel}</span>
+          {deadlineChip && <span className="efm-chip-pill efm-chip-pill--warn"><span className="dot" />{deadlineChip}</span>}
+          <div className="efm-progwrap" aria-label="overall-progress">
+            <span className="efm-pg-lbl">{filledCount}/{totalCriteria}</span>
+            <div className="efm-progtrack"><i style={{ width: filledPct + '%' }} /></div>
+          </div>
+        </header>
 
-        <StepperHeader
-          phase={f.state.phase} cursor={f.state.cursor}
-          positive={f.positive} antibonus={f.antibonus} scores={f.state.scores}
-        />
-
-        <PhaseRouter
-          phase={f.state.phase} cursor={f.state.cursor}
+        <EmployeeStepper
           evaluationId={evaluationId}
-          positive={f.positive} antibonus={f.antibonus}
-          scores={f.state.scores} files={f.state.files}
-          previewScore={f.state.previewScore}
-          posFilled={f.posFilled} negFilled={f.negFilled}
-          canSubmit={f.canSubmit}
-          lang={lang}
-          onScore={f.setScore} onNote={f.setNote}
-          onAttachFile={(file) => f.dispatch({ type: 'ATTACH_FILE', file })}
-          onRemoveFile={(fid) => f.dispatch({ type: 'REMOVE_FILE', fileId: fid })}
-          onJump={f.goToStep}
-          onSubmit={onSubmitClick}
-          presetRef={(n, fire) => { presetTriggers.current[n] = fire }}
+          periodId={ev.periodId}
+          evaluatorId={ev.evaluatorId}
+          evaluateeName={ev.evaluateeName}
         />
 
-        <BottomBar
-          saving={f.state.saving}
-          lastSaved={f.state.lastSaved}
-          saveFailed={saveFailed}
-          canPrev={!(f.state.phase === 'positive' && f.state.cursor === 0)}
-          canNext={f.canAdvance}
-          canSubmit={f.canSubmit}
-          showSubmit={showSubmit}
-          onPrev={f.goPrev}
-          onNext={f.goNext}
-          onSubmit={onSubmitClick}
-          onToggleDrawer={() => setDrawerOpen(v => !v)}
-        />
+        <div className="efm-work">
+          <aside className="efm-lcol">
+            <Ledger
+              positive={f.positive} antibonus={f.antibonus}
+              scores={f.state.scores}
+              phase={f.state.phase} cursor={f.state.cursor}
+              previewScore={f.state.previewScore}
+              lang={lang}
+              onJump={f.goToStep}
+            />
+          </aside>
 
-        <ChecklistDrawer
-          open={drawerOpen} onClose={() => setDrawerOpen(false)}
-          positive={f.positive} antibonus={f.antibonus} scores={f.state.scores}
-          lang={lang} onJump={f.goToStep}
-        />
+          <main className="efm-rcol">
+            <section className="efm-focus">
+              <div className="efm-focus-scroll">
+                <PhaseRouter
+                  phase={f.state.phase} cursor={f.state.cursor}
+                  evaluationId={evaluationId}
+                  positive={f.positive} antibonus={f.antibonus}
+                  scores={f.state.scores} files={f.state.files}
+                  previewScore={f.state.previewScore}
+                  posFilled={f.posFilled} negFilled={f.negFilled}
+                  canSubmit={f.canSubmit}
+                  lang={lang}
+                  onScore={f.setScore} onNote={f.setNote}
+                  onAttachFile={(file) => f.dispatch({ type: 'ATTACH_FILE', file })}
+                  onRemoveFile={(fid) => f.dispatch({ type: 'REMOVE_FILE', fileId: fid })}
+                  onJump={f.goToStep}
+                  onSubmit={onSubmitClick}
+                  presetRef={(n, fire) => { presetTriggers.current[n] = fire }}
+                />
+              </div>
+
+              <BottomBar
+                saving={f.state.saving}
+                lastSaved={f.state.lastSaved}
+                saveFailed={saveFailed}
+                canPrev={!(f.state.phase === 'positive' && f.state.cursor === 0)}
+                canNext={f.canAdvance}
+                canSubmit={f.canSubmit}
+                showSubmit={showSubmit}
+                onPrev={f.goPrev}
+                onNext={f.goNext}
+                onSubmit={onSubmitClick}
+              />
+            </section>
+          </main>
+        </div>
+        </div>
+       </div>
 
         <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
         <ConfirmDialog
           open={submitConfirmOpen}
           title={t('evaluation.form.confirmTitle')}
-          description={`${t('evaluation.form.confirmBody', { total: Math.round(total) })}${lowTotal ? '\n\n' + t('evaluation.form.confirmLowWarn') : ''}`}
+          description={`${t('evaluation.form.confirmBody', { total: Math.round(totals.total) })}${lowTotal ? '\n\n' + t('evaluation.form.confirmLowWarn') : ''}`}
           variant="default"
           onConfirm={doSubmit}
           onCancel={() => setSubmitConfirmOpen(false)}

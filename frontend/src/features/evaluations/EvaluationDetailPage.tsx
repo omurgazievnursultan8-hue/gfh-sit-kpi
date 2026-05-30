@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ThumbsUp, ThumbsDown, AlertCircle, ArrowLeft, FileCheck2 } from 'lucide-react'
+import {
+  ThumbsUp, ThumbsDown, ArrowLeft, Check, Clock3, FileText,
+  TrendingUp, TrendingDown, Hash, ChevronRight, Sparkles,
+} from 'lucide-react'
 import { evaluationsApi, Evaluation } from './evaluationsApi'
 import api from '../../app/api'
-import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
-import { EvaluationStatusBadge } from './components/evaluationStatus'
 
 interface ScoreHistory {
   criteriaId: number
@@ -17,352 +17,488 @@ interface ScoreHistory {
   weightSnapshot: number
 }
 
-const DETAIL_CSS = `
-.evd-shell {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 36px 32px 80px;
-  position: relative;
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-}
-.evd-shell::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 23px,
-      var(--dv3-border) 23px 23.5px
-    );
-  opacity: .25;
-  pointer-events: none;
-  z-index: 0;
-  mask-image: linear-gradient(180deg, transparent 0, #000 80px, #000 calc(100% - 120px), transparent 100%);
-}
-.evd-shell > * { position: relative; z-index: 1; }
+const EVD4_CSS = `
+.evd4-root {
+  --bg: #f6f8fb;
+  --surface: #ffffff;
+  --surface-2: #f1f4f8;
+  --line: #e4e8ee;
+  --line-strong: #cdd4dc;
+  --ink: #0f172a;
+  --ink-mid: #475569;
+  --ink-soft: #94a3b8;
+  --lime: #2563eb;
+  --lime-deep: #1d4ed8;
+  --lime-soft: #eff4ff;
+  --coral: #dc2626;
+  --coral-soft: #fef2f2;
+  --amber: #d97706;
+  --amber-soft: #fffbeb;
+  --on-accent: #ffffff;
+  --display: 'Inter', 'Helvetica Neue', system-ui, sans-serif;
+  --text: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 
-.evd-back {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
-  color: var(--dv3-text3);
-  background: none; border: 0; padding: 0; cursor: pointer;
-  margin-bottom: 24px;
-}
-.evd-back:hover { color: var(--dv3-accent); }
-
-/* ─── HERO ─────────────────────────────────────────────────────────── */
-.evd-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 48px;
-  align-items: end;
-  padding: 24px 0 32px;
-  border-bottom: 1px solid var(--dv3-border);
+  font-family: var(--text);
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
   position: relative;
 }
-.evd-hero::after {
-  content: '';
-  position: absolute; left: 0; right: 0; bottom: -1px;
-  height: 4px;
-  background: repeating-linear-gradient(90deg, var(--dv3-border-hi) 0 6px, transparent 6px 12px);
-  opacity: .5;
-}
-.evd-hero-tag {
-  font-size: 10px; letter-spacing: .28em; text-transform: uppercase;
-  color: var(--dv3-text3);
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 18px;
-}
-.evd-hero-tag::before {
-  content: ''; width: 28px; height: 1px; background: var(--dv3-text4);
-}
-.evd-hero-id {
-  font-size: 10px; letter-spacing: .22em; color: var(--dv3-text4);
-}
+.evd4-root::before { content: none; }
+.evd4-root *, .evd4-root *::before, .evd4-root *::after { box-sizing: border-box; }
 
-.evd-verdict {
-  display: flex; align-items: baseline; gap: 18px;
-  margin-bottom: 18px;
-}
-.evd-verdict-num {
-  font-family: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-weight: 500;
-  font-size: clamp(108px, 18vw, 196px);
-  line-height: .82;
-  letter-spacing: -0.04em;
-  color: var(--dv3-text);
-  position: relative;
-}
-.evd-verdict-num--up   { color: var(--dv3-zone-up); }
-.evd-verdict-num--warn { color: var(--dv3-zone-warn); }
-.evd-verdict-num--down { color: var(--dv3-zone-down); }
-.evd-verdict-num--null { color: var(--dv3-text4); }
+.evd4-wrap { max-width: 1320px; margin: 0 auto; padding: 28px 36px 160px; position: relative; z-index: 1; }
+@media (max-width: 640px) { .evd4-wrap { padding: 16px 16px 180px; } }
 
-.evd-verdict-frac {
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-  font-size: 13px; letter-spacing: .14em; color: var(--dv3-text3);
-  padding-bottom: 28px;
+/* ── Top nav ─────────────────────────────────────────────── */
+.evd4-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 36px;
 }
-.evd-verdict-frac strong {
-  display: block;
-  font-size: 22px; color: var(--dv3-text);
-  letter-spacing: 0;
-  font-weight: 500;
-  margin-bottom: 4px;
+.evd4-crumb {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-soft);
 }
-
-.evd-hero-tail {
-  font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-  color: var(--dv3-text3);
-  display: flex; flex-wrap: wrap; gap: 18px 28px;
-}
-.evd-hero-tail strong {
-  display: block; color: var(--dv3-text);
-  font-weight: 500; letter-spacing: 0;
-  text-transform: none; font-size: 13px; margin-top: 2px;
-}
-
-.evd-hero-side {
-  display: flex; flex-direction: column; gap: 14px;
-  padding-bottom: 12px;
-}
-.evd-hero-side-row {
-  display: grid;
-  grid-template-columns: 88px 1fr;
-  gap: 16px;
-  padding: 10px 0;
-  border-top: 1px solid var(--dv3-border);
-  font-size: 12px;
-}
-.evd-hero-side-row:first-child { border-top: 0; padding-top: 0; }
-.evd-hero-side-row .k {
-  color: var(--dv3-text3);
-  letter-spacing: .16em; text-transform: uppercase; font-size: 10px;
-  align-self: center;
-}
-.evd-hero-side-row .v { color: var(--dv3-text); }
-.evd-hero-side-row .v em {
-  font-style: normal; color: var(--dv3-text3);
-  display: block; font-size: 10px; letter-spacing: .12em; margin-top: 3px;
-}
-
-/* ─── TIMELINE ─────────────────────────────────────────────────────── */
-.evd-timeline {
-  margin: 36px 0 12px;
-  display: flex; align-items: center; gap: 0;
-  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
-  color: var(--dv3-text3);
-}
-.evd-timeline-step {
+.evd4-crumb button {
+  background: 0; border: 0; padding: 0; cursor: pointer;
+  color: var(--ink-soft); font: inherit; letter-spacing: inherit; text-transform: inherit;
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 14px;
-  border: 1px solid var(--dv3-border);
-  background: var(--dv3-bg2);
-  white-space: nowrap;
+  transition: color 140ms ease;
 }
-.evd-timeline-step.is-done {
-  background: var(--dv3-accent-bg);
-  border-color: var(--dv3-border-hi);
-  color: var(--dv3-accent);
+.evd4-crumb button:hover { color: var(--lime); }
+.evd4-crumb .sep { color: var(--line-strong); }
+.evd4-crumb .here { color: var(--ink); }
+.evd4-stamp {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-soft);
+  border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 8px;
 }
-.evd-timeline-step.is-current {
-  border-color: var(--dv3-accent);
-  color: var(--dv3-text);
-  box-shadow: inset 0 0 0 1px var(--dv3-accent);
-}
-.evd-timeline-dash {
-  flex: 0 1 32px; height: 1px;
-  background: repeating-linear-gradient(90deg, var(--dv3-border-hi) 0 4px, transparent 4px 8px);
-}
+.evd4-stamp i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(255,200,87,0.18); }
+.evd4-stamp.is-done i { background: var(--lime); box-shadow: 0 0 0 3px rgba(198,255,61,0.18); }
+.evd4-stamp.is-warn i { background: var(--coral); box-shadow: 0 0 0 3px rgba(255,106,91,0.18); }
 
-/* ─── LEDGER ──────────────────────────────────────────────────────── */
-.evd-section {
-  margin-top: 48px;
-}
-.evd-section-head {
-  display: flex; align-items: baseline; gap: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--dv3-border);
-  margin-bottom: 8px;
-}
-.evd-section-head h2 {
-  margin: 0;
-  font-family: 'EB Garamond', 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 28px;
-  letter-spacing: -0.01em;
-  color: var(--dv3-text);
-}
-.evd-section-head .count {
-  font-size: 10px; letter-spacing: .22em; color: var(--dv3-text3);
-  text-transform: uppercase;
-}
-.evd-section-head .spacer { flex: 1; }
-.evd-section-head .total {
-  font-size: 11px; letter-spacing: .14em; color: var(--dv3-text3);
-  text-transform: uppercase;
-}
-.evd-section-head .total strong {
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-  margin-left: 8px; color: var(--dv3-text); font-size: 14px;
-  letter-spacing: 0;
-}
-.evd-section--neg .evd-section-head h2 { color: var(--dv3-zone-down); }
-.evd-section--neg .evd-section-head .total strong { color: var(--dv3-zone-down); }
+/* ── Hero ────────────────────────────────────────────────── */
+.evd4-hero { display: grid; grid-template-columns: 1.4fr 1fr; gap: 56px; align-items: end; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+@media (max-width: 900px) { .evd4-hero { grid-template-columns: 1fr; gap: 28px; } }
 
-.evd-row {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 92px 110px;
-  gap: 18px;
-  padding: 16px 0;
-  border-bottom: 1px dashed var(--dv3-border);
-  align-items: center;
+.evd4-hero-l { min-width: 0; }
+.evd4-eyebrow {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-mid); margin-bottom: 18px;
+  display: inline-flex; align-items: center; gap: 10px;
 }
-.evd-row-idx {
-  font-size: 10px; letter-spacing: .18em; color: var(--dv3-text4);
+.evd4-eyebrow .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
+.evd4-title {
+  font-family: var(--display); font-weight: 600;
+  font-size: clamp(34px, 4.4vw, 48px); line-height: 1.08;
+  letter-spacing: -0.025em; color: var(--ink); margin: 0;
 }
-.evd-row-name {
-  font-size: 13px; color: var(--dv3-text); font-family: 'EB Garamond', Georgia, serif;
-  font-style: italic; font-weight: 500; letter-spacing: -0.005em;
-  line-height: 1.25;
+.evd4-title em { font-style: normal; color: var(--lime); font-weight: 600; }
+.evd4-sub {
+  margin-top: 18px; font-size: 15px; line-height: 1.6;
+  color: var(--ink-mid); max-width: 58ch;
 }
-.evd-row-name .w {
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-  font-style: normal;
-  font-size: 10px; letter-spacing: .14em;
-  color: var(--dv3-text3);
-  margin-left: 10px;
-  padding: 2px 6px;
-  border: 1px solid var(--dv3-border);
-  border-radius: 1px;
+.evd4-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.evd4-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 7px 12px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px;
+  color: var(--ink-mid);
 }
-.evd-row-bar {
-  height: 6px; background: var(--dv3-bg3);
-  border: 1px solid var(--dv3-border);
-  position: relative; overflow: hidden;
-}
-.evd-row-bar > i {
-  position: absolute; inset: 0 auto 0 0;
-  background: linear-gradient(90deg, var(--dv3-accent), var(--dv3-zone-up));
-  width: var(--w, 0%);
-  transform-origin: left center;
-  animation: evd-grow .9s cubic-bezier(.2,.7,.2,1) both;
-}
-.evd-section--neg .evd-row-bar > i {
-  background: linear-gradient(90deg, var(--dv3-zone-down), #e0866a);
-}
-.evd-row-vals {
-  text-align: right; font-variant-numeric: tabular-nums;
-}
-.evd-row-vals .raw {
-  font-size: 16px; color: var(--dv3-text);
-  font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
-}
-.evd-row-vals .wt {
-  display: block;
-  font-size: 10px; letter-spacing: .16em;
-  color: var(--dv3-text3);
-  text-transform: uppercase;
-  margin-top: 4px;
-}
-.evd-section--neg .evd-row-vals .raw { color: var(--dv3-zone-down); }
+.evd4-chip svg { color: var(--ink-soft); }
+.evd4-chip strong { color: var(--ink); font-weight: 600; letter-spacing: 0.06em; }
 
-@keyframes evd-grow {
-  0%   { width: 0%; }
-  100% { width: var(--w, 0%); }
+/* Score block */
+.evd4-hero-r { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.evd4-score-label {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-soft);
 }
+.evd4-score-n {
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(120px, 16vw, 184px); line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-feature-settings: 'tnum' 1;
+  color: var(--lime);
+  margin: -4px 0 0;
+}
+.evd4-score-n.is-warn { color: var(--amber); }
+.evd4-score-n.is-down { color: var(--coral); }
+.evd4-score-n.is-empty { color: var(--ink-soft); opacity: 0.45; font-size: clamp(84px, 11vw, 120px); }
+.evd4-score-meta {
+  display: flex; align-items: center; gap: 18px; margin-top: 8px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.evd4-score-meta b {
+  color: var(--lime); font-weight: 700;
+  padding: 4px 10px; background: var(--lime-soft); border-radius: 999px;
+  letter-spacing: 0.12em;
+}
+.evd4-score-meta b.is-warn { color: var(--amber); background: var(--amber-soft); }
+.evd4-score-meta b.is-down { color: var(--coral); background: var(--coral-soft); }
+.evd4-score-meta .div { width: 1px; height: 10px; background: var(--line-strong); }
 
-/* ─── REACTION ────────────────────────────────────────────────────── */
-.evd-react {
-  margin-top: 56px;
-  padding: 28px;
-  border: 1px solid var(--dv3-border-hi);
-  background: var(--dv3-bg2);
-  position: relative;
-  background-image:
-    repeating-linear-gradient(45deg,
-      transparent 0 14px,
-      var(--dv3-border) 14px 14.5px);
+/* ── Composition bar ──────────────────────────────────────── */
+.evd4-comp { margin: 48px 0 36px; }
+.evd4-comp-head {
+  display: flex; align-items: end; justify-content: space-between;
+  margin-bottom: 18px;
 }
-.evd-react-inner {
-  background: var(--dv3-bg2);
-  padding: 24px 24px 22px;
-  border: 1px solid var(--dv3-border);
-  position: relative;
+.evd4-comp-head h2 {
+  font-family: var(--display); font-weight: 600;
+  font-size: 20px; letter-spacing: -0.015em; margin: 0;
+  color: var(--ink);
 }
-.evd-react-stamp {
-  position: absolute; right: -14px; top: -14px;
-  transform: rotate(8deg);
-  font-family: 'EB Garamond', Georgia, serif;
-  font-style: italic;
-  font-size: 11px; letter-spacing: .26em; text-transform: uppercase;
-  padding: 6px 14px;
-  background: var(--dv3-bg);
-  border: 1px solid var(--dv3-accent);
-  color: var(--dv3-accent);
+.evd4-comp-head h2 em { font-style: normal; color: var(--ink-soft); font-weight: 500; }
+.evd4-comp-legend { display: flex; gap: 18px; }
+.evd4-comp-legend span {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-mid); display: inline-flex; align-items: center; gap: 8px;
 }
-.evd-react h3 {
-  margin: 0 0 6px;
-  font-family: 'EB Garamond', Georgia, serif;
-  font-style: italic; font-weight: 500;
-  font-size: 22px; color: var(--dv3-text);
-}
-.evd-react p {
-  margin: 0 0 18px;
-  font-size: 12px; color: var(--dv3-text3); line-height: 1.55;
-}
-.evd-react textarea {
-  width: 100%; min-height: 86px;
-  padding: 12px 14px;
-  background: var(--dv3-bg);
-  border: 1px solid var(--dv3-border);
-  color: var(--dv3-text);
-  font: 13px/1.5 'Geist Mono', ui-monospace, Menlo, monospace;
-  resize: vertical;
-  outline: none;
-  transition: border-color .15s;
-}
-.evd-react textarea:focus { border-color: var(--dv3-accent); }
+.evd4-comp-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.evd4-comp-legend .pos i { background: var(--lime); }
+.evd4-comp-legend .neg i { background: var(--coral); }
+.evd4-comp-legend .empty i { background: var(--line-strong); }
 
-.evd-react-actions {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-  margin-top: 16px;
+.evd4-comp-bar {
+  position: relative; height: 88px;
+  background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px;
+  display: flex; overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
 }
-.evd-react-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 14px 16px;
-  font: 12px/1 'Geist Mono', ui-monospace, Menlo, monospace;
-  letter-spacing: .18em; text-transform: uppercase;
-  border: 1px solid var(--dv3-border);
-  background: var(--dv3-bg);
-  color: var(--dv3-text);
+.evd4-comp-seg {
+  position: relative; height: 100%;
+  background: var(--lime);
+  border-right: 1px solid rgba(255,255,255,0.25);
   cursor: pointer;
-  transition: all .15s;
+  transition: opacity 200ms ease, filter 200ms ease, transform 200ms ease;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 10px 12px; min-width: 0;
+  animation: evd4-seg-in 700ms cubic-bezier(.22,.7,.2,1) backwards;
 }
-.evd-react-btn:hover { transform: translateY(-1px); }
-.evd-react-btn--agree {
-  background: var(--dv3-accent);
-  border-color: var(--dv3-accent);
-  color: var(--dv3-bg);
+.evd4-comp-seg.neg { background: var(--coral); }
+.evd4-comp-seg.gap { background: repeating-linear-gradient(135deg, var(--surface) 0 6px, var(--surface-2) 6px 12px); cursor: default; }
+.evd4-comp-seg.dim:not(.gap) { opacity: 0.22; filter: saturate(0.4); }
+.evd4-comp-seg.active { box-shadow: inset 0 0 0 2px var(--ink); z-index: 2; transform: scaleY(1.02); }
+.evd4-comp-seg-w {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  color: rgba(255,255,255,0.85); letter-spacing: 0.06em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.evd-react-btn--agree:hover { background: var(--dv3-zone-up); border-color: var(--dv3-zone-up); }
-.evd-react-btn--disagree {
-  background: var(--dv3-bg);
-  color: var(--dv3-zone-down);
-  border-color: var(--dv3-zone-down);
+.evd4-comp-seg.gap .evd4-comp-seg-w { color: var(--ink-soft); }
+.evd4-comp-seg-n {
+  font-family: var(--display); font-size: 22px; font-weight: 600;
+  color: var(--on-accent); line-height: 1; margin-top: 2px;
+  font-feature-settings: 'tnum' 1;
 }
-.evd-react-btn--disagree:hover { background: var(--dv3-zone-down); color: var(--dv3-bg); }
-.evd-react-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.evd4-comp-seg.narrow .evd4-comp-seg-n,
+.evd4-comp-seg.narrow .evd4-comp-seg-w { display: none; }
+@keyframes evd4-seg-in {
+  from { transform: scaleX(0); transform-origin: left; opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
 
+.evd4-comp-axis {
+  display: flex; justify-content: space-between;
+  margin-top: 10px; padding: 0 2px;
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.14em; color: var(--ink-soft);
+}
+.evd4-comp-anti {
+  margin-top: 14px; display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border: 1px solid color-mix(in srgb, var(--coral) 24%, transparent);
+  border-radius: 10px; background: var(--coral-soft);
+}
+.evd4-comp-anti-k {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--coral);
+}
+.evd4-comp-anti-v {
+  font-family: var(--text); font-size: 18px; font-weight: 700;
+  color: var(--coral); font-feature-settings: 'tnum' 1;
+  margin-left: auto; letter-spacing: -0.01em;
+}
+
+/* ── Two pane: list + detail ─────────────────────────────── */
+.evd4-pane { display: grid; grid-template-columns: 1fr 420px; gap: 24px; margin-top: 8px; align-items: start; }
+@media (max-width: 1100px) { .evd4-pane { grid-template-columns: 1fr; } }
+
+.evd4-list {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+}
+.evd4-list-head {
+  display: grid; grid-template-columns: 30px 1fr 70px 90px 90px;
+  gap: 14px; align-items: center;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.evd4-list-head span:nth-child(3),
+.evd4-list-head span:nth-child(4),
+.evd4-list-head span:nth-child(5) { text-align: right; }
+.evd4-row {
+  display: grid; grid-template-columns: 30px 1fr 70px 90px 90px;
+  gap: 14px; align-items: center;
+  padding: 18px 22px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  cursor: pointer; position: relative;
+  transition: background 140ms ease;
+}
+.evd4-row:first-of-type { border-top: 0; }
+.evd4-row:hover { background: var(--surface-2); }
+.evd4-row.active { background: var(--surface-2); }
+.evd4-row.active::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--lime);
+}
+.evd4-row.neg.active::before { background: var(--coral); }
+.evd4-row-idx {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+  font-feature-settings: 'tnum' 1;
+}
+.evd4-row-name {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.evd4-row-name b {
+  font-family: var(--text); font-weight: 600; font-size: 14.5px;
+  color: var(--ink); letter-spacing: -0.005em; line-height: 1.3;
+}
+.evd4-row-name small {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.evd4-row-name small .badge {
+  color: var(--coral); margin-left: 8px;
+}
+.evd4-row-w, .evd4-row-raw, .evd4-row-wt {
+  font-family: var(--mono); font-size: 12px; text-align: right;
+  font-feature-settings: 'tnum' 1; color: var(--ink-mid);
+}
+.evd4-row-raw {
+  font-family: var(--text); font-size: 18px; font-weight: 600;
+  color: var(--ink); line-height: 1; font-feature-settings: 'tnum' 1;
+}
+.evd4-row-wt {
+  font-family: var(--text); font-size: 16px; font-weight: 700;
+  color: var(--lime); line-height: 1; font-feature-settings: 'tnum' 1;
+}
+.evd4-row.neg .evd4-row-wt { color: var(--coral); }
+
+@media (max-width: 720px) {
+  .evd4-list-head { display: none; }
+  .evd4-row {
+    grid-template-columns: 30px 1fr auto; gap: 12px;
+    padding: 14px 16px;
+  }
+  .evd4-row-w, .evd4-row-raw { display: none; }
+}
+
+/* Detail card */
+.evd4-detail {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); padding: 24px;
+  position: sticky; top: 24px;
+  display: flex; flex-direction: column; gap: 18px;
+  min-height: 320px;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+}
+@media (max-width: 1100px) { .evd4-detail { position: static; } }
+.evd4-detail-head {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--line);
+}
+.evd4-detail-tag {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--lime); display: inline-flex; align-items: center; gap: 6px;
+}
+.evd4-detail.neg .evd4-detail-tag { color: var(--coral); }
+.evd4-detail h3 {
+  margin: 0; font-family: var(--display);
+  font-weight: 600; font-size: 18px; line-height: 1.3;
+  letter-spacing: -0.01em; color: var(--ink);
+}
+.evd4-detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+.evd4-stat {
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; background: var(--bg);
+}
+.evd4-stat-k {
+  font-family: var(--mono); font-size: 9.5px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-soft); margin-bottom: 6px;
+}
+.evd4-stat-v {
+  font-family: var(--text); font-size: 24px; font-weight: 700;
+  color: var(--ink); line-height: 1; font-feature-settings: 'tnum' 1;
+  letter-spacing: -0.02em;
+}
+.evd4-stat-v.pos { color: var(--lime); }
+.evd4-stat-v.neg { color: var(--coral); }
+.evd4-detail-note {
+  font-size: 13px; line-height: 1.6; color: var(--ink-mid);
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  border-left: 3px solid var(--lime);
+  font-family: var(--text);
+}
+.evd4-detail-placeholder {
+  color: var(--ink-soft); font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; text-align: center;
+  padding: 60px 12px;
+}
+
+/* ── Timeline ─────────────────────────────────────────────── */
+.evd4-timeline { margin-top: 64px; padding-top: 36px; border-top: 1px solid var(--line); }
+.evd4-timeline-head {
+  font-family: var(--display); font-weight: 600; font-size: 20px;
+  letter-spacing: -0.015em; margin: 0 0 24px;
+  color: var(--ink);
+}
+.evd4-timeline-head em { font-style: normal; color: var(--ink-soft); font-weight: 500; }
+.evd4-tl { position: relative; padding-left: 28px; }
+.evd4-tl::before {
+  content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px;
+  width: 1px; background: var(--line-strong);
+}
+.evd4-tl-step {
+  display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline;
+  padding: 16px 0; position: relative;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.evd4-tl-step:last-child { border-bottom: 0; }
+.evd4-tl-dot {
+  position: absolute; left: -28px; top: 22px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--bg); border: 1px solid var(--line-strong);
+}
+.evd4-tl-step.done .evd4-tl-dot { background: var(--lime); border-color: var(--lime); }
+.evd4-tl-step.current .evd4-tl-dot {
+  background: var(--amber); border-color: var(--amber);
+  box-shadow: 0 0 0 5px rgba(255,200,87,0.15);
+  animation: evd4-pulse 2.2s ease-in-out infinite;
+}
+@keyframes evd4-pulse {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(255,200,87,0.15); }
+  50% { box-shadow: 0 0 0 10px rgba(255,200,87,0.05); }
+}
+.evd4-tl-body { display: flex; flex-direction: column; gap: 4px; }
+.evd4-tl-name {
+  font-family: var(--text); font-size: 15px; font-weight: 600; color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.evd4-tl-step.current .evd4-tl-name { color: var(--amber); }
+.evd4-tl-meta {
+  font-family: var(--mono); font-size: 10.5px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft);
+}
+.evd4-tl-time {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.08em; color: var(--ink-mid);
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ── Action dock (sticky bottom) ──────────────────────────── */
+.evd4-dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+  padding: 18px 36px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px -12px rgba(15,23,42,0.08);
+}
+.evd4-dock::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0;
+  height: 2px; background: var(--lime);
+}
+@keyframes evd4-shimmer {
+  from { background-position: 0% 0; }
+  to { background-position: 200% 0; }
+}
+.evd4-dock-inner {
+  max-width: 1320px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto auto;
+  gap: 14px; align-items: center;
+}
 @media (max-width: 760px) {
-  .evd-shell { padding: 20px 16px 60px; }
-  .evd-hero { grid-template-columns: 1fr; gap: 24px; }
-  .evd-hero-side { border-top: 1px dashed var(--dv3-border); padding-top: 16px; }
-  .evd-row { grid-template-columns: 28px minmax(0, 1fr) 90px; gap: 12px; }
-  .evd-row-bar { display: none; }
-  .evd-react-actions { grid-template-columns: 1fr; }
+  .evd4-dock { padding: 14px 16px; }
+  .evd4-dock-inner { grid-template-columns: 1fr; }
+}
+.evd4-dock-input {
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--ink); font: 13px/1.4 var(--text); outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+.evd4-dock-input::placeholder { color: var(--ink-soft); }
+.evd4-dock-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(198,255,61,0.15); }
+
+.evd4-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 13px 22px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  border-radius: 10px; cursor: pointer;
+  transition: transform 80ms ease, background 140ms ease, color 140ms ease, border-color 140ms ease;
+  border: 1px solid transparent;
+}
+.evd4-btn:active { transform: translateY(1px); }
+.evd4-btn:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+.evd4-btn--agree { background: var(--lime); color: var(--on-accent); box-shadow: 0 1px 2px rgba(37,99,235,0.25); }
+.evd4-btn--agree:hover { background: var(--lime-deep); }
+.evd4-btn--disagree {
+  background: var(--surface); color: var(--coral);
+  border-color: color-mix(in srgb, var(--coral) 40%, transparent);
+}
+.evd4-btn--disagree:hover { background: var(--coral); color: var(--on-accent); border-color: var(--coral); }
+.evd4-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.evd4-done {
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); padding: 28px;
+  display: flex; align-items: center; gap: 18px;
+  margin-top: 36px;
+}
+.evd4-done-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: rgba(198,255,61,0.1); color: var(--lime);
+  display: grid; place-items: center; flex: none;
+}
+.evd4-done h3 { margin: 0 0 4px; font-family: var(--display); font-weight: 500; font-size: 18px; color: var(--ink); }
+.evd4-done p { margin: 0; color: var(--ink-soft); font-size: 13px; }
+
+.evd4-empty {
+  padding: 80px 20px; text-align: center;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evd4-comp-seg, .evd4-tl-step.current .evd4-tl-dot, .evd4-dock::before { animation: none; }
 }
 `
 
@@ -372,12 +508,29 @@ const formatDate = (iso: string | null) => {
     day: '2-digit', month: 'short', year: 'numeric',
   })
 }
+const formatDateTime = (iso: string | null) => {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('ru-RU', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
 
-const zoneClass = (score: number | null): string => {
-  if (score === null) return 'evd-verdict-num--null'
-  if (score >= 80) return 'evd-verdict-num--up'
-  if (score >= 50) return 'evd-verdict-num--warn'
-  return 'evd-verdict-num--down'
+const zoneClass = (score: number | null): '' | 'is-warn' | 'is-down' => {
+  if (score === null) return ''
+  if (score >= 80) return ''
+  if (score >= 50) return 'is-warn'
+  return 'is-down'
+}
+const zoneLabel = (score: number | null) => {
+  if (score === null) return 'Нет данных'
+  if (score >= 80) return 'Высокая зона'
+  if (score >= 50) return 'Средняя зона'
+  return 'Низкая зона'
+}
+const statusLabel: Record<string, string> = {
+  DRAFT: 'Черновик', SUBMITTED: 'На рассмотрении',
+  ACKNOWLEDGED: 'Принято', APPEALED: 'Апелляция', CLOSED: 'Закрыто',
 }
 
 export function EvaluationDetailPage() {
@@ -390,6 +543,8 @@ export function EvaluationDetailPage() {
   const [reacting, setReacting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [comment, setComment] = useState('')
+  const [selected, setSelected] = useState<number | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     Promise.all([
@@ -398,6 +553,7 @@ export function EvaluationDetailPage() {
     ]).then(([eval_, hist]) => {
       setEvaluation(eval_)
       setScores(hist.data)
+      if (hist.data.length) setSelected(hist.data[0].criteriaId)
     }).finally(() => setLoading(false))
   }, [evaluationId])
 
@@ -414,248 +570,323 @@ export function EvaluationDetailPage() {
     }
   }
 
+  const derived = useMemo(() => {
+    const positive = scores.filter(s => s.type === 'POSITIVE')
+    const negative = scores.filter(s => s.type === 'ANTI_BONUS')
+    const positiveSum = positive.reduce((a, s) => a + s.weightedValue, 0)
+    const negativeSum = negative.reduce((a, s) => a + Math.abs(s.weightedValue), 0)
+    return { positive, negative, positiveSum, negativeSum }
+  }, [scores])
+
   if (loading) {
     return (
-      <div className="dv3-root">
-        <style>{DASHBOARD_CSS}</style>
-        <style>{DETAIL_CSS}</style>
-        <div className="evd-shell">
-          <div style={{ color: 'var(--dv3-text3)', padding: '120px 0', textAlign: 'center' }}>
-            Загрузка досье…
-          </div>
-        </div>
+      <div className="evd4-root">
+        <style>{EVD4_CSS}</style>
+        <div className="evd4-wrap"><div className="evd4-empty">Загрузка…</div></div>
       </div>
     )
   }
   if (!evaluation) {
     return (
-      <div className="dv3-root">
-        <style>{DASHBOARD_CSS}</style>
-        <style>{DETAIL_CSS}</style>
-        <div className="evd-shell">
-          <div style={{ color: 'var(--dv3-zone-down)', padding: '120px 0', textAlign: 'center' }}>
-            Оценка не найдена
-          </div>
+      <div className="evd4-root">
+        <style>{EVD4_CSS}</style>
+        <div className="evd4-wrap">
+          <div className="evd4-empty" style={{ color: 'var(--coral)' }}>Оценка не найдена</div>
         </div>
       </div>
     )
   }
 
-  const positiveScores = scores.filter(s => s.type === 'POSITIVE')
-  const antiBonusScores = scores.filter(s => s.type === 'ANTI_BONUS')
   const finalScore = evaluation.finalScore
   const scoreWhole = finalScore !== null ? Math.round(finalScore) : null
-
-  const positiveSum = positiveScores.reduce((a, s) => a + s.weightedValue, 0)
-  const antiBonusSum = antiBonusScores.reduce((a, s) => a + s.weightedValue, 0)
-  const maxBar = Math.max(
-    1,
-    ...scores.map(s => Math.abs(s.weightedValue)),
-    ...scores.map(s => s.rawValue),
-  )
-
+  const scoreClamped = Math.max(0, Math.min(100, scoreWhole ?? 0))
+  const zone = zoneClass(scoreWhole)
   const idCode = `EV-${String(evaluation.id).padStart(6, '0')}`
+  const isActionable = evaluation.status === 'SUBMITTED'
+  const isDone = evaluation.status === 'ACKNOWLEDGED' || evaluation.status === 'CLOSED'
 
-  const timeline: { key: string; label: string; state: 'done' | 'current' | 'pending' }[] = [
-    { key: 'DRAFT',        label: 'Черновик',  state: 'done' },
-    { key: 'SUBMITTED',    label: 'Отправлено', state:
-        evaluation.status === 'DRAFT' ? 'pending' :
-        evaluation.status === 'SUBMITTED' ? 'current' : 'done' },
-    { key: 'ACKNOWLEDGED', label: 'Принято',
-      state: evaluation.status === 'ACKNOWLEDGED' ? 'current' :
-             evaluation.status === 'CLOSED' || evaluation.status === 'APPEALED' ? 'done' : 'pending' },
-    { key: 'CLOSED',       label: 'Закрыто',
-      state: evaluation.status === 'CLOSED' ? 'current' :
-             evaluation.status === 'APPEALED' ? 'done' : 'pending' },
+  const stampClass = isDone ? 'is-done' : evaluation.status === 'APPEALED' ? 'is-warn' : ''
+
+  const stepDefs = [
+    { key: 'DRAFT', name: 'Создание черновика', who: 'Оценщик', time: evaluation.createdAt },
+    { key: 'SUBMITTED', name: 'Отправлено сотруднику', who: evaluation.evaluatorName, time: evaluation.submittedAt },
+    { key: 'ACKNOWLEDGED', name: 'Принято сотрудником', who: evaluation.evaluateeName, time: null },
+    { key: 'CLOSED', name: 'Закрытие периода', who: 'Система', time: null },
   ]
+  const stateOrder = ['DRAFT', 'SUBMITTED', 'ACKNOWLEDGED', 'CLOSED']
+  const currentIdx = evaluation.status === 'APPEALED' ? 2 : Math.max(0, stateOrder.indexOf(evaluation.status))
+
+  const selectedScore = scores.find(s => s.criteriaId === selected)
 
   return (
-    <div className="dv3-root">
-      <style>{DASHBOARD_CSS}</style>
-      <style>{DV3_FORM_CSS}</style>
-      <style>{DETAIL_CSS}</style>
+    <div className="evd4-root">
+      <style>{EVD4_CSS}</style>
 
-      <div className="evd-shell">
-        <button className="evd-back" onClick={() => navigate('/my-evaluations')}>
-          <ArrowLeft size={12} /> К списку оценок
-        </button>
+      <div className="evd4-wrap">
+        {/* TOP */}
+        <div className="evd4-top">
+          <nav className="evd4-crumb">
+            <button onClick={() => navigate('/my-evaluations')}>
+              <ArrowLeft size={13} /> Мои оценки
+            </button>
+            <ChevronRight size={13} className="sep" />
+            <span className="here">{idCode}</span>
+          </nav>
+          <span className={`evd4-stamp ${stampClass}`}>
+            <i />{statusLabel[evaluation.status] ?? evaluation.status}
+          </span>
+        </div>
 
         {/* HERO */}
-        <header className="evd-hero">
-          <div>
-            <div className="evd-hero-tag">
-              Досье оценки <span className="evd-hero-id">№ {idCode}</span>
+        <section className="evd4-hero">
+          <div className="evd4-hero-l">
+            <div className="evd4-eyebrow">
+              <span className="dot" />Досье {idCode} · Период {evaluation.periodType}
             </div>
-
-            <div className="evd-verdict">
-              <span className={`evd-verdict-num ${zoneClass(scoreWhole)}`}>
-                {scoreWhole !== null ? scoreWhole : '—'}
-              </span>
-              <span className="evd-verdict-frac">
-                <strong>из 100</strong>
-                итоговый балл
-              </span>
-            </div>
-
-            <div className="evd-hero-tail">
-              <div>
-                Критериев<strong>{scores.length}</strong>
-              </div>
-              <div>
-                Положит.<strong style={{ color: 'var(--dv3-zone-up)' }}>
-                  +{positiveSum.toFixed(2)}
-                </strong>
-              </div>
-              <div>
-                Антибонус<strong style={{ color: 'var(--dv3-zone-down)' }}>
-                  −{antiBonusSum.toFixed(2)}
-                </strong>
-              </div>
+            <h1 className="evd4-title">
+              Оценка <em>эффективности</em><br />за {evaluation.periodType === 'MONTHLY' ? 'месяц' : evaluation.periodType === 'QUARTERLY' ? 'квартал' : 'год'}.
+            </h1>
+            <p className="evd4-sub">
+              Декомпозиция итогового балла по {scores.length} критериям. Положительные взносы сформировали{' '}
+              <strong style={{ color: 'var(--lime)' }}>+{derived.positiveSum.toFixed(1)}</strong>
+              {derived.negativeSum > 0 && <>, антибонусы вычли <strong style={{ color: 'var(--coral)' }}>−{derived.negativeSum.toFixed(1)}</strong></>}.
+            </p>
+            <div className="evd4-chips">
+              <span className="evd4-chip"><Hash size={12} />Период<strong>#{evaluation.periodId}</strong></span>
+              <span className="evd4-chip"><FileText size={12} />Оценщик<strong>{evaluation.evaluatorName}</strong></span>
+              <span className="evd4-chip"><Clock3 size={12} />Отправлено<strong>{formatDate(evaluation.submittedAt)}</strong></span>
             </div>
           </div>
 
-          <aside className="evd-hero-side">
-            <div className="evd-hero-side-row">
-              <span className="k">Статус</span>
-              <span className="v"><EvaluationStatusBadge status={evaluation.status} /></span>
+          <div className="evd4-hero-r">
+            <span className="evd4-score-label">Итоговый балл</span>
+            <span className={`evd4-score-n ${scoreWhole === null ? 'is-empty' : zone}`}>
+              {scoreWhole !== null ? scoreWhole : '—'}
+            </span>
+            <div className="evd4-score-meta">
+              <span>из 100</span>
+              <span className="div" />
+              <b className={zone}>{zoneLabel(scoreWhole)}</b>
             </div>
-            <div className="evd-hero-side-row">
-              <span className="k">Оценщик</span>
-              <span className="v">
-                {evaluation.evaluatorName}
-                <em>исполнитель</em>
+          </div>
+        </section>
+
+        {/* COMPOSITION */}
+        <section className="evd4-comp">
+          <div className="evd4-comp-head">
+            <h2>Композиция <em>балла</em></h2>
+            <div className="evd4-comp-legend">
+              <span className="pos"><i />Положительные</span>
+              {derived.negative.length > 0 && <span className="neg"><i />Антибонусы</span>}
+              <span className="empty"><i />Свободно</span>
+            </div>
+          </div>
+
+          <CompositionBar
+            positive={derived.positive}
+            total={100}
+            selected={selected}
+            onSelect={setSelected}
+          />
+
+          <div className="evd4-comp-axis">
+            <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
+          </div>
+
+          {derived.negative.length > 0 && (
+            <div className="evd4-comp-anti">
+              <span className="evd4-comp-anti-k">Антибонусы (вычеты)</span>
+              <span style={{ flex: 1, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {derived.negative.map(n => (
+                  <button
+                    key={n.criteriaId}
+                    onClick={() => setSelected(n.criteriaId)}
+                    style={{
+                      background: selected === n.criteriaId ? 'var(--coral)' : 'transparent',
+                      color: selected === n.criteriaId ? '#0a0d10' : 'var(--coral)',
+                      border: '1px solid color-mix(in srgb, var(--coral) 50%, transparent)',
+                      padding: '5px 11px', borderRadius: 999,
+                      fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.12em',
+                      textTransform: 'uppercase', cursor: 'pointer',
+                    }}
+                  >
+                    {n.nameRu} −{Math.abs(n.weightedValue).toFixed(1)}
+                  </button>
+                ))}
               </span>
+              <span className="evd4-comp-anti-v">−{derived.negativeSum.toFixed(2)}</span>
             </div>
-            <div className="evd-hero-side-row">
-              <span className="k">Период</span>
-              <span className="v">
-                #{evaluation.periodId}
-                <em>оценочный цикл</em>
-              </span>
+          )}
+        </section>
+
+        {/* PANE */}
+        <div className="evd4-pane">
+          <div className="evd4-list" ref={listRef}>
+            <div className="evd4-list-head">
+              <span>№</span><span>Критерий</span><span>Вес</span><span>Сырой</span><span>Взвеш.</span>
             </div>
-            <div className="evd-hero-side-row">
-              <span className="k">Отправлено</span>
-              <span className="v">{formatDate(evaluation.submittedAt)}</span>
-            </div>
-            <div className="evd-hero-side-row">
-              <span className="k">Создано</span>
-              <span className="v">{formatDate(evaluation.createdAt)}</span>
-            </div>
+            {scores.length === 0 && <div className="evd4-empty">Критерии не загружены</div>}
+            {scores.map((s, i) => {
+              const isNeg = s.type === 'ANTI_BONUS'
+              const active = selected === s.criteriaId
+              return (
+                <div
+                  key={s.criteriaId}
+                  className={`evd4-row ${isNeg ? 'neg' : ''} ${active ? 'active' : ''}`}
+                  onClick={() => setSelected(s.criteriaId)}
+                >
+                  <span className="evd4-row-idx">{String(i + 1).padStart(2, '0')}</span>
+                  <div className="evd4-row-name">
+                    <b>{s.nameRu}</b>
+                    <small>
+                      {s.nameKg}
+                      {isNeg && <span className="badge">· антибонус</span>}
+                    </small>
+                  </div>
+                  <span className="evd4-row-w">{s.weightSnapshot}%</span>
+                  <span className="evd4-row-raw">{s.rawValue.toFixed(2)}</span>
+                  <span className="evd4-row-wt">{isNeg ? '−' : '+'}{Math.abs(s.weightedValue).toFixed(2)}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          <aside className={`evd4-detail ${selectedScore?.type === 'ANTI_BONUS' ? 'neg' : ''}`}>
+            {selectedScore ? (
+              <>
+                <div className="evd4-detail-head">
+                  <span className="evd4-detail-tag">
+                    {selectedScore.type === 'ANTI_BONUS' ? <><TrendingDown size={12} />Антибонус</> : <><TrendingUp size={12} />Положительный</>}
+                  </span>
+                </div>
+                <h3>{selectedScore.nameRu}</h3>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--ink-soft)', letterSpacing: '0.1em', marginTop: -8 }}>
+                  {selectedScore.nameKg}
+                </div>
+                <div className="evd4-detail-grid">
+                  <div className="evd4-stat">
+                    <div className="evd4-stat-k">Сырой балл</div>
+                    <div className="evd4-stat-v">{selectedScore.rawValue.toFixed(2)}</div>
+                  </div>
+                  <div className="evd4-stat">
+                    <div className="evd4-stat-k">Вес</div>
+                    <div className="evd4-stat-v">{selectedScore.weightSnapshot}<span style={{ fontSize: 14, color: 'var(--ink-soft)' }}>%</span></div>
+                  </div>
+                  <div className="evd4-stat" style={{ gridColumn: '1 / -1' }}>
+                    <div className="evd4-stat-k">Взвешенный вклад</div>
+                    <div className={`evd4-stat-v ${selectedScore.type === 'ANTI_BONUS' ? 'neg' : 'pos'}`}>
+                      {selectedScore.type === 'ANTI_BONUS' ? '−' : '+'}{Math.abs(selectedScore.weightedValue).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                <div className="evd4-detail-note">
+                  <Sparkles size={14} style={{ display: 'inline', verticalAlign: -2, marginRight: 6, color: 'var(--ink-soft)' }} />
+                  Формула: сырой балл × {selectedScore.weightSnapshot}% = {selectedScore.weightedValue.toFixed(2)}. Итоговый балл — сумма всех вкладов с нижней границей нуля.
+                </div>
+              </>
+            ) : (
+              <div className="evd4-detail-placeholder">Выберите критерий ↑</div>
+            )}
           </aside>
-        </header>
+        </div>
 
         {/* TIMELINE */}
-        <nav className="evd-timeline" aria-label="Жизненный цикл оценки">
-          {timeline.map((step, i) => (
-            <span key={step.key} style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <span className={`evd-timeline-step ${step.state === 'done' ? 'is-done' : step.state === 'current' ? 'is-current' : ''}`}>
-                {String(i + 1).padStart(2, '0')} · {step.label}
-              </span>
-              {i < timeline.length - 1 && <span className="evd-timeline-dash" />}
-            </span>
-          ))}
-        </nav>
+        <section className="evd4-timeline">
+          <h2 className="evd4-timeline-head">Жизненный <em>цикл</em></h2>
+          <div className="evd4-tl">
+            {stepDefs.map((s, i) => {
+              const state = i < currentIdx ? 'done' : i === currentIdx ? 'current' : ''
+              return (
+                <div key={s.key} className={`evd4-tl-step ${state}`}>
+                  <span className="evd4-tl-dot">
+                    {i < currentIdx && <Check size={10} style={{ display: 'block', margin: '1px auto', color: '#ffffff' }} strokeWidth={3} />}
+                  </span>
+                  <div className="evd4-tl-body">
+                    <span className="evd4-tl-name">{s.name}</span>
+                    <span className="evd4-tl-meta">{s.who}</span>
+                  </div>
+                  <span className="evd4-tl-time">{formatDateTime(s.time)}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
 
-        {/* POSITIVE */}
-        {positiveScores.length > 0 && (
-          <section className="evd-section">
-            <div className="evd-section-head">
-              <h2>Положительные критерии</h2>
-              <span className="count">{positiveScores.length} поз.</span>
-              <span className="spacer" />
-              <span className="total">сумма<strong>+{positiveSum.toFixed(2)}</strong></span>
+        {/* DONE STATE */}
+        {isDone && (
+          <div className="evd4-done">
+            <div className="evd4-done-icon"><Check size={22} /></div>
+            <div>
+              <h3>Оценка подписана</h3>
+              <p>Запись передана в архив. Изменения недоступны.</p>
             </div>
-            {positiveScores.map((s, i) => (
-              <LedgerRow key={s.criteriaId} idx={i + 1} s={s} max={maxBar} />
-            ))}
-          </section>
-        )}
-
-        {/* ANTI-BONUS */}
-        {antiBonusScores.length > 0 && (
-          <section className="evd-section evd-section--neg">
-            <div className="evd-section-head">
-              <h2>Антибонусы</h2>
-              <span className="count">{antiBonusScores.length} штрафов</span>
-              <span className="spacer" />
-              <span className="total">сумма<strong>−{antiBonusSum.toFixed(2)}</strong></span>
-            </div>
-            {antiBonusScores.map((s, i) => (
-              <LedgerRow key={s.criteriaId} idx={i + 1} s={s} max={maxBar} negative />
-            ))}
-          </section>
-        )}
-
-        {/* REACTION */}
-        {evaluation.status === 'SUBMITTED' && (
-          <section className="evd-react">
-            <div className="evd-react-inner">
-              <div className="evd-react-stamp">К подписи</div>
-              <h3>
-                <AlertCircle size={16} style={{ verticalAlign: -2, marginRight: 6 }} />
-                Ваша реакция требуется
-              </h3>
-              <p>
-                Подпишите согласие или подайте обоснованное возражение. После согласия
-                оценка закрывается и переходит в архив. Возражение откроет процедуру апелляции.
-              </p>
-              <textarea
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                placeholder="Комментарий (необязательно)…"
-              />
-              <div className="evd-react-actions">
-                <button
-                  onClick={() => react('AGREE')}
-                  disabled={reacting}
-                  className="evd-react-btn evd-react-btn--agree"
-                >
-                  <ThumbsUp size={14} /> Согласен · подписать
-                </button>
-                <button
-                  onClick={() => react('DISAGREE')}
-                  disabled={reacting}
-                  className="evd-react-btn evd-react-btn--disagree"
-                >
-                  <ThumbsDown size={14} /> Не согласен · апелляция
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {evaluation.status === 'ACKNOWLEDGED' && (
-          <section className="evd-react">
-            <div className="evd-react-inner" style={{ textAlign: 'center', padding: '36px 24px' }}>
-              <FileCheck2 size={28} style={{ color: 'var(--dv3-accent)', marginBottom: 8 }} />
-              <h3 style={{ marginBottom: 4 }}>Оценка подписана</h3>
-              <p style={{ margin: 0 }}>Спор закрыт. Запись передана в архив.</p>
-            </div>
-          </section>
+          </div>
         )}
       </div>
+
+      {/* ACTION DOCK */}
+      {isActionable && (
+        <div className="evd4-dock">
+          <div className="evd4-dock-inner">
+            <input
+              className="evd4-dock-input"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Комментарий к решению (необязательно)…"
+            />
+            <button onClick={() => react('DISAGREE')} disabled={reacting} className="evd4-btn evd4-btn--disagree">
+              <ThumbsDown size={14} /> Апелляция
+            </button>
+            <button onClick={() => react('AGREE')} disabled={reacting} className="evd4-btn evd4-btn--agree">
+              <ThumbsUp size={14} /> Согласен
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function LedgerRow({
-  idx, s, max, negative = false,
-}: { idx: number; s: ScoreHistory; max: number; negative?: boolean }) {
-  const pct = Math.min(100, (Math.abs(s.weightedValue) / max) * 100)
+interface CompositionBarProps {
+  positive: ScoreHistory[]
+  total: number
+  selected: number | null
+  onSelect: (id: number) => void
+}
+
+function CompositionBar({ positive, total, selected, onSelect }: CompositionBarProps) {
+  const positiveSum = positive.reduce((a, s) => a + s.weightedValue, 0)
+  const filledPct = Math.min(100, (positiveSum / total) * 100)
+  const gapPct = Math.max(0, 100 - filledPct)
+  const anyActive = selected !== null && positive.some(p => p.criteriaId === selected)
+
   return (
-    <div className="evd-row">
-      <span className="evd-row-idx">{String(idx).padStart(2, '0')}</span>
-      <div className="evd-row-name">
-        {s.nameRu}
-        <span className="w">{s.weightSnapshot}%</span>
-      </div>
-      <div className="evd-row-bar" aria-hidden>
-        <i style={{ ['--w' as any]: `${pct}%` }} />
-      </div>
-      <div className="evd-row-vals">
-        <span className="raw">{s.rawValue.toFixed(2)}</span>
-        <span className="wt">взвеш {negative ? '−' : '+'}{Math.abs(s.weightedValue).toFixed(2)}</span>
-      </div>
+    <div className="evd4-comp-bar" role="list">
+      {positive.map((s, i) => {
+        const pct = (s.weightedValue / total) * 100
+        const narrow = pct < 7
+        const active = selected === s.criteriaId
+        const dim = anyActive && !active
+        return (
+          <div
+            key={s.criteriaId}
+            role="listitem"
+            className={`evd4-comp-seg ${narrow ? 'narrow' : ''} ${active ? 'active' : ''} ${dim ? 'dim' : ''}`}
+            style={{ width: `${pct}%`, animationDelay: `${i * 60}ms` }}
+            onClick={() => onSelect(s.criteriaId)}
+            title={`${s.nameRu} · ${s.weightedValue.toFixed(2)}`}
+          >
+            <span className="evd4-comp-seg-w">{s.weightSnapshot}%</span>
+            <span className="evd4-comp-seg-n">{s.weightedValue.toFixed(1)}</span>
+          </div>
+        )
+      })}
+      {gapPct > 0.5 && (
+        <div className={`evd4-comp-seg gap ${anyActive ? 'dim' : ''}`} style={{ width: `${gapPct}%` }}>
+          <span className="evd4-comp-seg-w">{gapPct.toFixed(0)}%</span>
+          <span className="evd4-comp-seg-n" style={{ color: 'var(--ink-soft)' }}>—</span>
+        </div>
+      )}
     </div>
   )
 }

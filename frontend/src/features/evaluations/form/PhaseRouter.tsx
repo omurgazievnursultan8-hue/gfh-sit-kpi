@@ -55,6 +55,7 @@ export function PhaseRouter(p: Props) {
       evaluationId={p.evaluationId}
       criterion={c}
       index={p.cursor}
+      total={list.length}
       negative={p.phase === 'antibonus'}
       score={p.scores[c.id]}
       files={p.files}
