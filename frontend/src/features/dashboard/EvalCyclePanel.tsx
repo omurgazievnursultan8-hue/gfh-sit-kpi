@@ -4,8 +4,8 @@ import { type Evaluation } from '../evaluations/evaluationsApi'
 import { type Period } from '../periods/periodsApi'
 import { formatPeriodRange } from '../evaluations/components/periodFormat'
 import { EvaluationStatusBadge } from '../evaluations/components/evaluationStatus'
-import { DataTable } from '../../components/DataTable'
-import type { Column } from '../../components/DataTable'
+import { DataTable } from '../../components/datapanel/DataTable'
+import type { Column } from '../../components/datapanel/DataTable'
 
 // Incomplete = evaluator has not submitted yet (still a draft).
 // Completed = submitted or any later status.

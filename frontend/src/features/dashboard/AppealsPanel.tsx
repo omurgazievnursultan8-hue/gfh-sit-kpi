@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { type AppealSummary, type AppealStatus } from '../appeals/appealsApi'
-import { DataTable } from '../../components/DataTable'
-import type { Column } from '../../components/DataTable'
+import { DataTable } from '../../components/datapanel/DataTable'
+import type { Column } from '../../components/datapanel/DataTable'
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '—'

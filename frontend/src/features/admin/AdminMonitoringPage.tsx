@@ -4,7 +4,7 @@ import { RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { adminApi, QuartzJobInfo } from './adminApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import type { ReactNode } from 'react'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import { Badge, type BadgeTone } from '../../components/Badge'
 
 const PANEL_KEY = 'gfh_monitoring_jobs'

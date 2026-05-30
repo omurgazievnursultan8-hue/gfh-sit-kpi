@@ -4,7 +4,7 @@ import {
   ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil,
 } from 'lucide-react'
 import { RootState } from '../../app/store'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import { CalendarDay, DayType, calendarApi } from './calendarApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'

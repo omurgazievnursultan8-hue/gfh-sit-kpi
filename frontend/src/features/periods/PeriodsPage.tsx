@@ -5,7 +5,7 @@ import { PeriodFormModal, PeriodFormData } from './components/PeriodFormModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { usePageTitle } from '../../context/PageContext'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 
 const PANEL_KEY = 'gfh_periods'
 

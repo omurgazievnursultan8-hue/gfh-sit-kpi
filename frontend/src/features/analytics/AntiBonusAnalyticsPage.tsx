@@ -6,7 +6,7 @@ import {
 import { analyticsApi, AntiBonusAnalytics } from './analyticsApi'
 import api from '../../app/api'
 import { ExportButtons } from '../../components/ExportButtons'
-import { DataTable, type Column } from '../../components/DataTable'
+import { DataTable, type Column } from '../../components/datapanel/DataTable'
 import { TableCard } from '../../components/TableCard'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'

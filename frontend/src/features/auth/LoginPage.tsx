@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { LangSwitcher } from '../../shared/layout/LangSwitcher'
+import { LangSwitcher } from '../../components/shell/LangSwitcher'
 import { BrandPanel } from './components/BrandPanel'
 import { LoginForm } from './components/LoginForm'
 import { DevLoginShortcuts } from './components/DevLoginShortcuts'

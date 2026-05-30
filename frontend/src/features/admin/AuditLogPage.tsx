@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Download, X } from 'lucide-react'
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
-import { DataPanel, type Column, type FilterDef, type PanelState } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef, type PanelState } from '../../components/datapanel/DataPanel'
 import { Badge, type BadgeTone } from '../../components/Badge'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 

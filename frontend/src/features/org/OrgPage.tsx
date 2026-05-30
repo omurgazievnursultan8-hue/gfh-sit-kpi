@@ -11,7 +11,7 @@ import { OrgUnitFormModal } from './components/OrgUnitFormModal'
 import { ConfirmDialog } from '../../components/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DV3_FORM_CSS } from '../dashboard/dv3FormStyles'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import api from '../../app/api'
 
 const TYPE_RAIL: Record<OrgUnit['type'], string> = {
