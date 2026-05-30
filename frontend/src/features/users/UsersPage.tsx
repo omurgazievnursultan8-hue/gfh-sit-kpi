@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import { UserFormModal } from './components/UserFormModal'
 import { Avatar, RoleBadge, StatusPill, ROLE_RANK } from './components/usersMeta'
 import { User, usersApi } from './usersApi'

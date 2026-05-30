@@ -6,7 +6,7 @@ import { evaluationsApi, type Evaluation, type EvaluationStatus } from './evalua
 import { periodsApi, type Period } from '../periods/periodsApi'
 import { usePageTitle } from '../../context/PageContext'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import {
   STATUS_LABELS, STATUS_ORDER, EvaluationStatusBadge,
 } from './components/evaluationStatus'

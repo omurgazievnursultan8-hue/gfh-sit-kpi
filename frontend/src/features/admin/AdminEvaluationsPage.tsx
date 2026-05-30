@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import { evaluationsApi, type Evaluation, type EvaluationStatus } from '../evaluations/evaluationsApi'
 import {
   STATUS_LABELS, STATUS_ORDER, EvaluationStatusBadge,

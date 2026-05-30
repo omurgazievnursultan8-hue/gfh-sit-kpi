@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDensity } from '../hooks/useDensity'
+import { useDensity } from '../../hooks/useDensity'
 import styles from './DataTable.module.css'
 
 /**

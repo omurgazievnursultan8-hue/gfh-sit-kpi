@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import type { Density } from '../components/DataTable'
+import type { Density } from '../components/datapanel/DataTable'
 
 export type { Density }
 

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { ScorecardResponse, CriteriaScore } from '../analytics/analyticsApi'
-import { DataTable } from '../../components/DataTable'
-import type { Column } from '../../components/DataTable'
+import { DataTable } from '../../components/datapanel/DataTable'
+import type { Column } from '../../components/datapanel/DataTable'
 
 export interface RatingPanelProps {
   card: ScorecardResponse | null

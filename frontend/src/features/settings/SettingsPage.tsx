@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Check, X, Pencil, RotateCcw, AlertCircle } from 'lucide-react'
 import { SystemSetting, settingsApi } from './settingsApi'
-import { DataPanel, type Column } from '../../components/DataPanel'
+import { DataPanel, type Column } from '../../components/datapanel/DataPanel'
 
 /* ── Setting metadata ─────────────────────────────────────────────── */
 

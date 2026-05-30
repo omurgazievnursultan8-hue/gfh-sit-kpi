@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog'
 import api from '../../app/api'
 import { Badge, type BadgeTone } from '../../components/Badge'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { DataPanel, type Column, type FilterDef } from '../../components/DataPanel'
+import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 
 const PANEL_KEY = 'gfh_delegations'
 

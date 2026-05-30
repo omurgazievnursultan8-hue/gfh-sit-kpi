@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import type { Delegation } from '../org/delegationsApi'
-import { DataTable } from '../../components/DataTable'
-import type { Column } from '../../components/DataTable'
+import { DataTable } from '../../components/datapanel/DataTable'
+import type { Column } from '../../components/datapanel/DataTable'
 
 function fmtDate(iso: string | null): string {
   if (!iso) return '—'
