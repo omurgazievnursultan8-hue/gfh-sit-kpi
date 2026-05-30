@@ -1,5 +1,6 @@
 import { useRef, useEffect, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import styles from './DataPanelToolbar.module.css'
 
 /**
  * DataPanel toolbar — search input, declarative filters, custom filter slot,
@@ -86,7 +87,7 @@ export function DataPanelToolbar({
             onChange={e => onSearch(e.target.value)}
             placeholder={searchPlaceholder ?? t('dataPanel.search')}
             aria-label={t('dataPanel.searchAria')}
-            className="dp-search-input w-full outline-none"
+            className={`${styles.searchInput} w-full outline-none`}
             style={{
               height: 34, padding: '0 34px 0 33px',
               background: 'var(--surface)', border: '1px solid var(--line)',
@@ -137,7 +138,7 @@ export function DataPanelToolbar({
             value={value}
             aria-label={f.label}
             onChange={e => onFilter(f.key, e.target.value)}
-            className="dp-filter-select outline-none"
+            className={`${styles.filterSelect} outline-none`}
             style={{
               height: 34, padding: '0 28px 0 11px', borderRadius: 8,
               fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
