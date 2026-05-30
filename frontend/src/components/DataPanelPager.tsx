@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import styles from './DataPanelPager.module.css'
 
 /**
  * Pagination footer for DataPanel — range label + numbered page buttons.
@@ -110,7 +111,7 @@ export function DataPanelPager({
                 key={item}
                 onClick={() => onPage(item)}
                 aria-current={selected ? 'page' : undefined}
-                className="dp-pager-btn font-mono transition-colors"
+                className={`${styles.pagerBtn} font-mono transition-colors`}
                 style={{
                   minWidth: 28, height: 28, padding: '0 8px', borderRadius: 4,
                   fontSize: 11, fontWeight: 600,

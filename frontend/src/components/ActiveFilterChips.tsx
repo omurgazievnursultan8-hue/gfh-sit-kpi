@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { FilterDef } from './DataPanelToolbar'
+import styles from './ActiveFilterChips.module.css'
 
 interface ActiveFilterChipsProps {
   filters: FilterDef[]
@@ -38,7 +39,7 @@ export function ActiveFilterChips({ filters, values, onClear, onClearAll }: Acti
             type="button"
             onClick={() => onClear(f.key)}
             aria-label={t('dataPanel.removeFilter', { label: f.label })}
-            className="afc-x inline-flex items-center justify-center"
+            className={`${styles.x} inline-flex items-center justify-center`}
             style={{
               width: 16, height: 16, borderRadius: 999, border: 'none', cursor: 'pointer',
               background: 'transparent', color: 'inherit', padding: 0,

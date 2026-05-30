@@ -1,6 +1,7 @@
 import { useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type SavedView, DEFAULT_VIEW_ID } from './panelStorage'
+import styles from './SavedViewsTabs.module.css'
 
 interface SavedViewsTabsProps {
   /** Custom (user-created) views. The default view is rendered implicitly. */
@@ -58,7 +59,7 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
     const n = count(id)
     const canUpdate = deletable && selected && modified
     return (
-      <div key={id} className="svt-tab inline-flex items-center" style={{ marginBottom: -1 }}>
+      <div key={id} className={`${styles.tab} inline-flex items-center`} style={{ marginBottom: -1 }}>
         <button
           type="button"
           role="tab"
@@ -114,7 +115,7 @@ export function SavedViewsTabs({ views, activeViewId, modified, count, onApply, 
         {deletable && (
           <button
             type="button"
-            className="svt-x inline-flex items-center justify-center transition-opacity"
+            className={`${styles.x} inline-flex items-center justify-center transition-opacity`}
             onClick={() => onDelete(id)}
             aria-label={t('dataPanel.deleteViewAria', { name: label })}
             style={{

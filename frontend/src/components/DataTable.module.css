@@ -1,0 +1,29 @@
+/* DataTable — row borders, JS-tracked zebra, expanded rows, click affordance,
+   sort-button hover, and the loading skeleton shimmer. Reads global tokens
+   (--line / --accent / --row-zebra …) inherited from the surrounding panel. */
+
+.row td { border-bottom: 1px solid var(--line-soft); background: var(--row-odd, transparent); }
+.row:last-child td { border-bottom: none; }
+
+/* Explicit zebra class — nth-child miscounts because expanded rows add a
+   second <tr>; the data-row index is tracked in JS instead. */
+.rowEven td { background: var(--row-zebra); }
+
+.expandedRow td { background: var(--surface-mute); border-bottom: 1px solid var(--line); }
+
+.clickable .row { cursor: pointer; transition: background 100ms ease; outline: none; }
+.clickable .row:hover td { background: var(--accent-mute); }
+.clickable .row:focus-visible td { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.sortBtn:hover { color: var(--ink); }
+
+.skeleton {
+  height: 14px; border-radius: 4px;
+  background: linear-gradient(90deg, var(--line-soft) 25%, var(--line) 37%, var(--line-soft) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}

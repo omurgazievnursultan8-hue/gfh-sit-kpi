@@ -1,6 +1,7 @@
 import React, { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDensity } from '../hooks/useDensity'
+import styles from './DataTable.module.css'
 
 /**
  * Generic data table — sortable, sticky header, density modes, skeleton + empty
@@ -103,7 +104,7 @@ export function DataTable<T>({
   }
 
   return (
-    <div className={['overflow-x-auto', clickable ? 'dt-clickable' : undefined].filter(Boolean).join(' ')}>
+    <div className={['overflow-x-auto', clickable ? styles.clickable : undefined].filter(Boolean).join(' ')}>
       <table
         className="w-full"
         style={{ borderCollapse: 'separate', borderSpacing: 0, fontSize: d.fontSize }}
@@ -134,7 +135,7 @@ export function DataTable<T>({
                     <button
                       type="button"
                       onClick={() => onSort!(col.key)}
-                      className="dt-sort-btn inline-flex items-center gap-1.5 transition-colors"
+                      className={`${styles.sortBtn} inline-flex items-center gap-1.5 transition-colors`}
                       style={{
                         width: '100%',
                         justifyContent: col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start',
@@ -158,10 +159,10 @@ export function DataTable<T>({
         <tbody>
           {loading
             ? Array.from({ length: skeletonRows }).map((_, i) => (
-                <tr key={i} className="dt-row" aria-hidden="true">
+                <tr key={i} className={styles.row} aria-hidden="true">
                   {columns.map(col => (
                     <td key={col.key} style={{ padding: d.cellPad }}>
-                      <div className="dt-skeleton" />
+                      <div className={styles.skeleton} />
                     </td>
                   ))}
                 </tr>
@@ -173,8 +174,8 @@ export function DataTable<T>({
                   <Fragment key={key}>
                     <tr
                       className={[
-                        'dt-row',
-                        rowIndex % 2 === 1 ? 'dt-row-even' : undefined,
+                        styles.row,
+                        rowIndex % 2 === 1 ? styles.rowEven : undefined,
                         rowClassName?.(row),
                       ].filter(Boolean).join(' ')}
                       onClick={clickable ? () => onRowClick!(row) : undefined}
@@ -198,7 +199,7 @@ export function DataTable<T>({
                       ))}
                     </tr>
                     {expanded && (
-                      <tr className="dt-expanded-row">
+                      <tr className={styles.expandedRow}>
                         <td colSpan={columns.length} style={{ padding: 0 }}>
                           {renderExpanded!(row)}
                         </td>
