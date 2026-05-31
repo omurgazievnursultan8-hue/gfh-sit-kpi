@@ -4,10 +4,10 @@ import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { analyticsApi, PersonalAnalytics, ScorecardResponse, PeriodScore, CriteriaScore } from './analyticsApi'
-import { ExportButtons } from '../../components/ExportButtons'
+import { ExportButtons } from './components/ExportButtons'
 import { usePageTitle } from '../../context/PageContext'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/StatCard'
+import { StatCard, STAT_CARD_CSS, scoreZone } from '../../components/stats/StatCard'
 
 // "Мой KPI" — rewritten to match the main Dashboard terminal/Swiss-grid aesthetic.
 

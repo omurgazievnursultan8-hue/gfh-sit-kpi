@@ -1,9 +1,0 @@
-/* ActiveFilterChips — 36px touch target on the remove (×) button via a
-   transparent ::after overlay; the visible glyph stays small. */
-
-.x { position: relative; }
-.x::after {
-  content: ''; position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 36px; height: 36px;
-}

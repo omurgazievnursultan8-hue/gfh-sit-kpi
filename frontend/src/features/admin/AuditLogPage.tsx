@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Download, X } from 'lucide-react'
 import { auditApi, AuditLogEntry, AuditSearchParams } from './adminApi'
 import { DataPanel, type Column, type FilterDef, type PanelState } from '../../components/datapanel/DataPanel'
-import { Badge, type BadgeTone } from '../../components/Badge'
+import { Badge, type BadgeTone } from '../../components/ui/Badge'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 
 const PANEL_KEY = 'gfh_audit'

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import {
   usersApi, userDetailApi,

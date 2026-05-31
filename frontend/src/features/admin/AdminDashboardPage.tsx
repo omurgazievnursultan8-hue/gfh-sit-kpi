@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { adminApi, AdminStats, QuartzJobInfo } from './adminApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { StatCard, STAT_CARD_CSS } from '../../components/stats/StatCard'
 import { useAdminRange } from '../../context/AdminRangeContext'
 
 const PLACEHOLDER = '··'

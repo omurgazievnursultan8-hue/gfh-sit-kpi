@@ -1,9 +1,0 @@
-/* DataPanelPager — enlarge each page button's clickable area to >=36px without
-   resizing the visible glyph, via a transparent ::after overlay. */
-
-.pagerBtn { position: relative; }
-.pagerBtn::after {
-  content: ''; position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  min-width: 36px; min-height: 36px; width: 100%; height: 100%;
-}

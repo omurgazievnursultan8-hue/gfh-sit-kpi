@@ -5,7 +5,7 @@ import { adminApi, QuartzJobInfo } from './adminApi'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import type { ReactNode } from 'react'
 import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
-import { Badge, type BadgeTone } from '../../components/Badge'
+import { Badge, type BadgeTone } from '../../components/ui/Badge'
 
 const PANEL_KEY = 'gfh_monitoring_jobs'
 

@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState, useCallback, type ReactNode } from 'react
 import { Plus } from 'lucide-react'
 import { delegationsApi, Delegation, DelegationRequest } from './delegationsApi'
 import { DelegationFormModal } from './components/DelegationFormModal'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import api from '../../app/api'
-import { Badge, type BadgeTone } from '../../components/Badge'
+import { Badge, type BadgeTone } from '../../components/ui/Badge'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 

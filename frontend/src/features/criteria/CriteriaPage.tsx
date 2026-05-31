@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { StatusPill } from '../users/components/usersMeta'

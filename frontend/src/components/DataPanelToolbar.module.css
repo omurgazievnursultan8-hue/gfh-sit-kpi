@@ -1,6 +1,0 @@
-/* DataPanelToolbar — focus ring for the search input and filter selects. */
-
-.searchInput:focus, .filterSelect:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
-}

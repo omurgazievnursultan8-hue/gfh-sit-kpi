@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Column } from './DataTable'
-import { useOutsideClick } from '../useOutsideClick'
+import { useOutsideClick } from '../../hooks/useOutsideClick'
 
 interface ColumnsMenuProps<T> {
   columns: Column<T>[]

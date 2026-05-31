@@ -5,11 +5,11 @@ import {
 import { Table, BarChart2, Grid, X } from 'lucide-react'
 import { analyticsApi, HierarchicalNode } from './analyticsApi'
 import api from '../../app/api'
-import { ExportButtons } from '../../components/ExportButtons'
+import { ExportButtons } from './components/ExportButtons'
 import { DataTable, type Column } from '../../components/datapanel/DataTable'
-import { TableCard } from '../../components/TableCard'
+import { TableCard } from '../../components/ui/TableCard'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { StatCard, STAT_CARD_CSS } from '../../components/stats/StatCard'
 
 const PLACEHOLDER = '··'
 

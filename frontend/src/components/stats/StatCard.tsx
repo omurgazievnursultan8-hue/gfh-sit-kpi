@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { RATING_ZONES } from '../lib/ratingZones'
+import { RATING_ZONES } from '../../lib/ratingZones'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 // Maps a 0–100 score to a colour zone. null/undefined → neutral.

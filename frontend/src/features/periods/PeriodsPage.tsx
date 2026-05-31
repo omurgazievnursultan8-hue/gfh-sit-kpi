@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react
 import { Plus } from 'lucide-react'
 import { periodsApi, Period, PeriodProgress, PeriodType, PeriodStatus } from './periodsApi'
 import { PeriodFormModal, PeriodFormData } from './components/PeriodFormModal'
-import { ConfirmDialog } from '../../components/ConfirmDialog'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { usePageTitle } from '../../context/PageContext'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
 import { DataPanel, type Column, type FilterDef } from '../../components/datapanel/DataPanel'

@@ -6,7 +6,7 @@ import { AppDispatch, RootState } from '../../app/store'
 import { fetchNotifications, markAllRead, type Notification } from './notificationsSlice'
 import { usePageTitle } from '../../context/PageContext'
 import { DASHBOARD_CSS } from '../dashboard/dashboardStyles'
-import { StatCard, STAT_CARD_CSS } from '../../components/StatCard'
+import { StatCard, STAT_CARD_CSS } from '../../components/stats/StatCard'
 
 const PLACEHOLDER = '··'
 

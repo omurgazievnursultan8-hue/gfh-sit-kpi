@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { applyDv3Palette, setDv3Palette, dv3PaletteOptions, DV3_PALETTE_EVENT } from '../lib/dashboardPalettes'
+import { applyDv3Palette, setDv3Palette, dv3PaletteOptions, DV3_PALETTE_EVENT } from '../../lib/dashboardPalettes'
 
 type Option = { label: string; value: string }
 type Setting = {
