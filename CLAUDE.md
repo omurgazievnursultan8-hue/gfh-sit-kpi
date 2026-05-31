@@ -113,21 +113,43 @@ Spring Boot 3.2, Java 17. All API endpoints prefixed `/api/v1/`. Auth via httpOn
 
 ### Frontend (`src/`)
 
-React 18, Vite, Redux Toolkit, React Router v6, Tailwind CSS, react-i18next.
+React 18, Vite, Redux Toolkit, React Router v6, Tailwind CSS, react-i18next. Conventions: `frontend/CONVENTIONS.md`.
+
+**Directory layout:**
+- `src/app/` — bootstrap. `api.ts` (axios), `store.ts` (Redux), `providers/` (ThemeCustomizer, useTheme, useDensity), `routes/ProtectedRoute.tsx`.
+- `src/shared/` — cross-cutting primitives. `ui/` (Badge, ConfirmDialog, TableCard, StatCard), `datapanel/` (DataPanel + DataTable abstraction), `hooks/` (useOutsideClick, useIdleTimeout), `lib/` (ratingZones).
+- `src/layouts/` — top-level chrome. `shell/` (AppShell, Topbar, NavPanel, IconRail, CommandPalette, NotificationsMenu, PageContext, etc.), `admin/` (AdminLayout, AdminHero, AdminStatsCards, AdminRangeContext).
+- `src/features/<domain>/` — one folder per business domain (13: admin, analytics, appeals, auth, calendar, criteria, dashboard, evaluations, notifications, org, periods, settings, users).
+- `src/styles/` — global CSS split into `tokens.css`, `base.css`, `utilities.css`, `index.css` (entry; `@import` rules precede `@tailwind` directives).
+
+**Per-feature layout:**
+- `api.ts` — axios calls (renamed from `<domain>Api.ts`).
+- `slice.ts` — Redux Toolkit slice (only `auth` and `notifications` currently).
+- `pages/<Name>Page.tsx` — page-level components mounted by router.
+- `components/` — feature-only subcomponents.
+- `hooks/` — feature-only hooks.
+- `index.ts` — public barrel; cross-feature imports go through this file.
+- Special case: `features/org/` keeps `positionsApi.ts` and `delegationsApi.ts` at root alongside `api.ts` (distinct sub-domains).
+
+**Path alias:** `@/` → `src/` (configured in `vite.config.ts` + `tsconfig.json`). Cross-feature imports use the barrel: `import { X } from '@/features/foo'` — never `from '@/features/foo/pages/...'`. Same-feature relative imports (`./api`, `../components/Bar`) are fine.
 
 **State:** Redux store has two slices — `auth` (`userId`, `email`, `role`, `isAuthenticated`, `passwordExpired`, `pdpaRequired`) and `notifications`. There is no `user` object or `selectCurrentUser` selector — access role directly via `useSelector((s: RootState) => s.auth.role)`.
 
-**Routing:** `App.tsx` uses flat `<Routes>`. Admin panel uses nested routes under `/admin` with `AdminLayout` (which renders `<Outlet />`). `ProtectedRoute` checks `isAuthenticated`, `passwordExpired`, and optional `allowedRoles`.
+**Routing:** `App.tsx` uses flat `<Routes>` and imports through feature barrels. Admin panel uses nested routes under `/admin` with `AdminLayout` from `@/layouts/admin/AdminLayout` (which renders `<Outlet />`). `ProtectedRoute` from `@/app/routes/ProtectedRoute` checks `isAuthenticated`, `passwordExpired`, and optional `allowedRoles`.
 
 **i18n:** Translation files at `frontend/public/locales/{lng}/translation.json` loaded via `i18next-http-backend` (HttpBackend). Language stored in localStorage key `gfh_lang`. Do NOT put translations in `src/`.
 
-**API calls:** All via `src/app/api.ts` (axios instance with base URL `/api/v1`). Feature-specific API modules (e.g. `adminApi.ts`, `auditApi`) live alongside their feature pages.
+**API calls:** All via `src/app/api.ts` (axios instance with base URL `/api/v1`). Per-feature API surfaces live at `src/features/<domain>/api.ts` and are re-exported from the feature barrel.
 
 **Vite proxy:** `/api` → `http://localhost:8080`, `/ws` → `ws://localhost:8080` (WebSocket). `global: 'globalThis'` define is required for SockJS.
 
-**WebSocket:** STOMP over SockJS at `/ws`. JWT passed via cookie on handshake. Notifications pushed to `/user/queue/notifications`.
+**WebSocket:** STOMP over SockJS at `/ws`. JWT passed via cookie on handshake. Notifications pushed to `/user/queue/notifications`. Hook: `useNotifications` from `@/features/notifications`.
 
-**Admin panel:** Lives in `src/features/admin/`. `AdminLayout` + `AdminSidebar` + per-page components. Routes: `/admin` (dashboard), `/admin/users`, `/admin/org`, `/admin/criteria`, `/admin/periods`, `/admin/delegations`, `/admin/settings`, `/admin/calendar`, `/admin/audit`, `/admin/monitoring`.
+**Period context:** `PeriodContext` lives at `src/features/periods/PeriodContext.tsx` (re-exported via barrel). `AdminRangeContext` lives at `src/layouts/admin/AdminRangeContext.tsx`.
+
+**Admin panel:** `AdminLayout` (in `src/layouts/admin/`) + per-page components in `src/features/admin/pages/`. Routes: `/admin` (dashboard), `/admin/users`, `/admin/org`, `/admin/criteria`, `/admin/periods`, `/admin/delegations`, `/admin/settings`, `/admin/calendar`, `/admin/audit`, `/admin/monitoring`. `AdminAppealsPage` is admin-specific data panel; the employee-facing `AppealPage` lives in `features/appeals`.
+
+**Naming:** Pages end with `Page` (`UsersPage.tsx`). No version suffixes (`V2`, `V3`) — canonical name wins; legacy deleted. CSS Modules colocated with components (`Component.module.css`).
 
 ## Key Constraints
 
