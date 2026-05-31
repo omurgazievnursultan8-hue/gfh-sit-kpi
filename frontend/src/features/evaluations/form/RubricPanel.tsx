@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { Criteria } from '../../criteria/criteriaApi'
+import type { Criteria } from '@/features/criteria/api'
 
 interface Props {
   criterion: Criteria

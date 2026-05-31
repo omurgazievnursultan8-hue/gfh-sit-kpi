@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import type { Evaluation } from '../evaluationsApi'
-import type { Period } from '../../periods/periodsApi'
+import type { Evaluation } from '../api'
+import type { Period } from '@/features/periods/api'
 import { formatPeriodRange } from './periodFormat'
 
 /* Scoped styles — injected once by MyEvaluationsPage. Uses dv3 vars from .dv3-root. */

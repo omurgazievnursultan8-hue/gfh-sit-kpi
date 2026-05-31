@@ -1,4 +1,4 @@
-import type { EvaluationStatus } from '../evaluationsApi'
+import type { EvaluationStatus } from '../api'
 import { STATUS_LABELS, STATUS_VISUALS, STATUS_ORDER } from './evaluationStatus'
 
 function plural(n: number, forms: [string, string, string]): string {

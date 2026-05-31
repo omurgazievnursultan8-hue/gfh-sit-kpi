@@ -15,7 +15,7 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { Search, X, ChevronRight } from 'lucide-react'
-import { OrgUnit, OrgUnitType } from '../orgApi'
+import { OrgUnit, OrgUnitType } from '../api'
 import { OrgNodeCard, ORG_NODE_CSS } from './OrgNodeCard'
 
 interface Props {

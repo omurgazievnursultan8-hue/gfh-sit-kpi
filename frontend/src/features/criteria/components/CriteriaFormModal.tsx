@@ -1,10 +1,10 @@
 import { useState, useEffect, FormEvent, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { Criteria, CriteriaRequest, CriteriaType } from '../criteriaApi'
-import { OrgUnit } from '../../org/orgApi'
-import { DASHBOARD_CSS } from '../../dashboard/dashboardStyles'
-import { DV3_FORM_CSS } from '../../dashboard/dv3FormStyles'
+import { Criteria, CriteriaRequest, CriteriaType } from '../api'
+import { OrgUnit } from '@/features/org'
+import { DASHBOARD_CSS } from '../../dashboard/styles'
+import { DV3_FORM_CSS } from '../../dashboard/styles'
 
 interface Props {
   open: boolean

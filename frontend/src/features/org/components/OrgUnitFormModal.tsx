@@ -1,8 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { X } from 'lucide-react'
-import { OrgUnit, OrgUnitRequest } from '../orgApi'
-import { DASHBOARD_CSS } from '../../dashboard/dashboardStyles'
-import { DV3_FORM_CSS } from '../../dashboard/dv3FormStyles'
+import { OrgUnit, OrgUnitRequest } from '../api'
+import { DASHBOARD_CSS } from '../../dashboard/styles'
+import { DV3_FORM_CSS } from '../../dashboard/styles'
 import axios from 'axios'
 
 interface UserOption {

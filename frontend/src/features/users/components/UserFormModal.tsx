@@ -2,11 +2,10 @@ import { useState, useEffect, FormEvent, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Upload, User as UserIcon, AlertCircle } from 'lucide-react'
 import axios from 'axios'
-import { User, UserCreateRequest, EmploymentType, usersApi } from '../usersApi'
-import { orgApi, OrgUnit } from '../../org/orgApi'
-import { positionsApi, Position } from '../../positions/positionsApi'
-import { DASHBOARD_CSS } from '../../dashboard/dashboardStyles'
-import { DV3_FORM_CSS } from '../../dashboard/dv3FormStyles'
+import { User, UserCreateRequest, EmploymentType, usersApi } from '../api'
+import { orgApi, OrgUnit, positionsApi, Position } from '@/features/org'
+import { DASHBOARD_CSS } from '../../dashboard/styles'
+import { DV3_FORM_CSS } from '../../dashboard/styles'
 
 const ROLE_VALUES = [
   'EMPLOYEE',

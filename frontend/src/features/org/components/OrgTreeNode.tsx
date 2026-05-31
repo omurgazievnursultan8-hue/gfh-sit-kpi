@@ -1,5 +1,5 @@
 import { ChevronRight, ChevronDown } from 'lucide-react'
-import { OrgUnit } from '../orgApi'
+import { OrgUnit } from '../api'
 
 const TYPE_LABELS: Record<OrgUnit['type'], string> = {
   BLOCK: 'Блок',

@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { X } from 'lucide-react'
-import type { PeriodType } from '../periodsApi'
+import type { PeriodType } from '../api'
 
 export interface PeriodFormData {
   type: PeriodType

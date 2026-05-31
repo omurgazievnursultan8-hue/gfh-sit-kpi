@@ -1,4 +1,4 @@
-import type { EvaluationStatus } from '../evaluationsApi'
+import type { EvaluationStatus } from '../api'
 
 export const STATUS_LABELS: Record<EvaluationStatus, string> = {
   DRAFT: 'Черновик',

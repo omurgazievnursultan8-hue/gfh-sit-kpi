@@ -1,4 +1,4 @@
-import type { Period } from '../../periods/periodsApi'
+import type { Period } from '@/features/periods/api'
 
 const MONTHS_SHORT = [
   'янв', 'фев', 'мар', 'апр', 'май', 'июн',

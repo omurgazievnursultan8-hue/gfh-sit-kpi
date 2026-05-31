@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check } from 'lucide-react'
-import { evaluationsApi, Evaluation } from '../evaluationsApi'
+import { evaluationsApi, Evaluation } from '../api'
 
 interface Props {
   evaluationId: number

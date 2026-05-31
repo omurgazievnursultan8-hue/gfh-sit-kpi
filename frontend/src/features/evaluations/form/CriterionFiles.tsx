@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { evaluationsApi, EvaluationFile } from '../evaluationsApi'
+import { evaluationsApi, EvaluationFile } from '../api'
 
 interface Props {
   evaluationId: number

@@ -1,4 +1,4 @@
-import type { Period, PeriodProgress, PeriodType, PeriodStatus } from '../periodsApi'
+import type { Period, PeriodProgress, PeriodType, PeriodStatus } from '../api'
 
 interface PeriodCardProps {
   period: Period

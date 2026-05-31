@@ -1,44 +1,25 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
-import { ProtectedRoute } from './app/ProtectedRoute'
-import { ThemeCustomizer } from './components/theme/ThemeCustomizer'
-import { useIdleTimeout } from './hooks/useIdleTimeout'
-import { useNotifications } from './hooks/useNotifications'
-import { bootstrapAuth } from './features/auth/authSlice'
+import { ProtectedRoute } from '@/app/routes/ProtectedRoute'
+import { ThemeCustomizer } from '@/app/providers/ThemeCustomizer'
+import { useIdleTimeout } from '@/shared/hooks/useIdleTimeout'
+import { useNotifications } from '@/features/notifications'
 import type { AppDispatch } from './app/store'
-import { LoginPage } from './features/auth/LoginPage'
-import { ChangePasswordPage } from './features/auth/ChangePasswordPage'
-import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
-import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
-import { PdpaConsentPage } from './features/auth/PdpaConsentPage'
-import { DashboardPage } from './features/dashboard/DashboardPage'
-import { DashboardPageV3 } from './features/dashboard/DashboardPageV3'
-import { UsersPage } from './features/users/UsersPage'
-import { UserDetailPage } from './features/users/UserDetailPage'
-import { CriteriaPage } from './features/criteria/CriteriaPage'
-import { OrgPage } from './features/org/OrgPage'
-import { OrgUnitDetailPage } from './features/org/OrgUnitDetailPage'
-import { DelegationsPage } from './features/org/DelegationsPage'
-import { SettingsPage } from './features/settings/SettingsPage'
-import { CalendarPage } from './features/calendar/CalendarPage'
-import { EvaluationFormPage } from './features/evaluations/EvaluationFormPage'
-import { MyTasksPage } from './features/evaluations/MyTasksPage'
-import { EvaluationsPage } from './features/evaluations/EvaluationsPage'
-import { EvaluationDetailPage } from './features/evaluations/EvaluationDetailPage'
-import { AppealPage } from './features/appeals/AppealPage'
-import { NotificationsPage } from './features/notifications/NotificationsPage'
-import { PersonalDashboardPage } from './features/analytics/PersonalDashboardPage'
-import { ManagerDashboardPage } from './features/analytics/ManagerDashboardPage'
-import { HierarchicalAnalyticsPage } from './features/analytics/HierarchicalAnalyticsPage'
-import { AntiBonusAnalyticsPage } from './features/analytics/AntiBonusAnalyticsPage'
-import { AdminLayout } from './features/admin/AdminLayout'
-import { AdminDashboardPage } from './features/admin/AdminDashboardPage'
-import { AuditLogPage } from './features/admin/AuditLogPage'
-import { AdminMonitoringPage } from './features/admin/AdminMonitoringPage'
-import { AdminEvaluationsPage } from './features/admin/AdminEvaluationsPage'
-import { AdminAppealsPage } from './features/admin/AdminAppealsPage'
-import { PeriodsPage } from './features/periods/PeriodsPage'
+import { bootstrapAuth, LoginPage, ChangePasswordPage, ForgotPasswordPage, ResetPasswordPage, PdpaConsentPage } from '@/features/auth'
+import { DashboardPage } from '@/features/dashboard'
+import { UsersPage, UserDetailPage } from '@/features/users'
+import { CriteriaPage } from '@/features/criteria'
+import { OrgPage, OrgUnitDetailPage, DelegationsPage } from '@/features/org'
+import { SettingsPage } from '@/features/settings'
+import { CalendarPage } from '@/features/calendar'
+import { EvaluationFormPage, MyTasksPage, EvaluationsPage, EvaluationDetailPage } from '@/features/evaluations'
+import { AppealPage } from '@/features/appeals'
+import { NotificationsPage } from '@/features/notifications'
+import { PersonalDashboardPage, ManagerDashboardPage, HierarchicalAnalyticsPage, AntiBonusAnalyticsPage } from '@/features/analytics'
+import { AdminLayout } from '@/layouts/admin/AdminLayout'
+import { AdminDashboardPage, AuditLogPage, AdminMonitoringPage, AdminEvaluationsPage, AdminAppealsPage } from '@/features/admin'
+import { PeriodsPage } from '@/features/periods'
 
 export default function App() {
   const dispatch = useDispatch<AppDispatch>()
@@ -54,8 +35,7 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/pdpa-consent" element={<ProtectedRoute><PdpaConsentPage /></ProtectedRoute>} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
-      <Route path="/dashboard" element={<ProtectedRoute><DashboardPageV3 /></ProtectedRoute>} />
-      <Route path="/dashboard-v1" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/dashboard-v2" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard-v3" element={<Navigate to="/dashboard" replace />} />
       <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />

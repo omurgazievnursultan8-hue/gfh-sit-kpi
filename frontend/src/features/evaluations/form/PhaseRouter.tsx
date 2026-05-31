@@ -1,6 +1,6 @@
 import type { Phase, ScoreEntry } from './useEvaluationForm'
-import type { Criteria } from '../../criteria/criteriaApi'
-import type { EvaluationFile } from '../evaluationsApi'
+import type { Criteria } from '@/features/criteria/api'
+import type { EvaluationFile } from '../api'
 import { CriterionStep } from './CriterionStep'
 import { PhaseTransition } from './PhaseTransition'
 import { ReviewStep } from './ReviewStep'

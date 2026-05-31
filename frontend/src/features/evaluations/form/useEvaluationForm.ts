@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
-import { evaluationsApi, Evaluation, EvaluationScore, EvaluationFile } from '../evaluationsApi'
-import { criteriaApi, Criteria } from '../../criteria/criteriaApi'
+import { evaluationsApi, Evaluation, EvaluationScore, EvaluationFile } from '../api'
+import { criteriaApi, Criteria } from '@/features/criteria/api'
 import api from '../../../app/api'
 
 export type Phase = 'positive' | 'transition' | 'antibonus' | 'review'

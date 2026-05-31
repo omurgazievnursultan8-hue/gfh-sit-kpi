@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, NodeProps } from 'reactflow'
 import { Users, UserX, ChevronRight } from 'lucide-react'
-import { OrgUnit } from '../orgApi'
+import { OrgUnit } from '../api'
 
 const TYPE_LABEL: Record<OrgUnit['type'], string> = {
   BLOCK: 'BLOCK',

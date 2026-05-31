@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { User } from '../usersApi'
+import type { User } from '../api'
 
 export interface UserActions {
   onEdit: (u: User) => void

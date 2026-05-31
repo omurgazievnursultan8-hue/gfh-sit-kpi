@@ -1,0 +1,71 @@
+/* ===== Design Tokens =====
+ * Core palette = 9 semantic roles. All other variables are derived aliases
+ * so existing `var(--xxx)` references keep rendering, but the only knobs
+ * that need tuning live in the 9 canonical tokens (mirrored in
+ * ThemeCustomizer's TOKEN_KEYS).
+ */
+:root {
+  /* — Core 9 — */
+  --bg: #f4f1ea;
+  --surface: #ffffff;
+  --line: #d8d2c2;
+  --ink: #0e1714;
+  --ink-soft: #344843;
+  --accent: #0d4d3f;
+  --success: #1a7558;
+  --warn: #b25a16;
+  --danger: #a31f1f;
+
+  /* — Derived aliases (computed from core) — */
+  --bg-soft:      color-mix(in srgb, var(--ink) 5%,  var(--bg));
+  --surface-mute: color-mix(in srgb, var(--bg)  40%, var(--surface));
+  --row-zebra:    color-mix(in srgb, var(--ink) 6%, var(--surface));
+  --ink-faint:    color-mix(in srgb, var(--ink) 55%, var(--bg));
+  --ink-dim:      color-mix(in srgb, var(--ink) 35%, var(--bg));
+  --line-soft:    color-mix(in srgb, var(--line) 55%, var(--bg));
+  --line-strong:  color-mix(in srgb, var(--line) 70%, var(--ink));
+  --accent-2:     var(--success);
+  --accent-soft:  color-mix(in srgb, var(--accent) 18%, var(--surface));
+  --accent-mute:  color-mix(in srgb, var(--accent) 8%,  var(--surface));
+  --accent-ink:   color-mix(in srgb, var(--accent) 70%, var(--ink));
+  --gold:         var(--warn);
+  --gold-soft:    color-mix(in srgb, var(--warn) 22%, var(--surface));
+  --warn-soft:    color-mix(in srgb, var(--warn) 22%, var(--surface));
+  --danger-soft:  color-mix(in srgb, var(--danger) 18%, var(--surface));
+  --info:         var(--accent);
+  --info-soft:    color-mix(in srgb, var(--accent) 14%, var(--surface));
+
+  /* — Non-color tokens — */
+  --shadow-sm: 0 1px 2px rgba(15,23,20,0.06);
+  --shadow-md: 0 4px 12px -4px rgba(15,23,20,0.10),0 2px 4px -2px rgba(15,23,20,0.06);
+  --shadow-lg: 0 24px 60px -20px rgba(8,22,18,0.18),0 8px 20px -8px rgba(8,22,18,0.10);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --topbar-h: 52px;
+  --font-text: "Geist","IBM Plex Sans","Söhne","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono: "JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --font-display: "Source Serif Pro","Georgia",serif;
+  --rail-w: 72px;
+  --nav-w: 288px;
+  --rail-bg-1: #082420;
+  --rail-bg-2: #061814;
+  --nav-bg-1: #1d5a48;
+  --nav-bg-2: #144235;
+  --nav-ink: #e4ede8;
+  --nav-ink-soft: #c2d2cb;
+  --nav-ink-faint: #82a294;
+  --nav-ink-dim: #647e72;
+}
+
+[data-theme="dark"] {
+  --bg: #0d1714;
+  --surface: #182a23;
+  --line: #1f3329;
+  --ink: #e8efec;
+  --ink-soft: #b6c3bf;
+  --accent: #1a7558;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+}

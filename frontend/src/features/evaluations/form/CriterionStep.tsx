@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import type { Criteria } from '../../criteria/criteriaApi'
-import type { EvaluationFile } from '../evaluationsApi'
+import type { Criteria } from '@/features/criteria/api'
+import type { EvaluationFile } from '../api'
 import type { ScoreEntry } from './useEvaluationForm'
 import { RubricPanel } from './RubricPanel'
 import { ScoreInput } from './ScoreInput'
