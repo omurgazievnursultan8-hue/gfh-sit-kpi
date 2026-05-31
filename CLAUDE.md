@@ -158,3 +158,25 @@ React 18, Vite, Redux Toolkit, React Router v6, Tailwind CSS, react-i18next. Con
 - Appeal open status enum value: `PENDING` (not `OPEN`).
 - AuditLog `countBy` method uses `countByTimestampAfter` (field is `timestamp`, not `createdAt`).
 - Backend tests use Testcontainers + real PostgreSQL (no mocks for DB layer).
+
+## Maintaining This File
+
+Update `CLAUDE.md` whenever a change invalidates or extends its content. Treat it as living documentation, not a one-time snapshot.
+
+Trigger an update after any of:
+- Directory layout change (new top-level folder, renamed module, removed area).
+- New cross-cutting convention (path alias, barrel rule, naming pattern, lint rule).
+- New or removed feature folder under `src/features/`.
+- New API contract surface, endpoint prefix change, or auth/session mechanism change.
+- New Redux slice, context provider, or shared hook with project-wide implications.
+- New build/run command, env var, or required external service.
+- New domain rule, invariant, or constraint that future work must respect.
+- Removal of anything currently documented here.
+
+What to update:
+1. Add, edit, or remove the relevant section so it reflects current code.
+2. Keep entries concrete: file paths, exact identifiers, exact endpoints.
+3. Delete stale guidance immediately — outdated docs are worse than missing docs.
+4. Commit `CLAUDE.md` together with the change that motivated it (same PR/commit when feasible).
+
+Skip updates for trivial edits (typos, bugfixes, single-line tweaks, formatting). The bar is: would a fresh contributor be misled or surprised by the current `CLAUDE.md` after this change? If yes, update.
