@@ -88,69 +88,6 @@ export const DASHBOARD_CSS = `
   outline: 2px solid var(--dv3-accent); outline-offset: 1px;
 }
 
-.dv3-hero-metric-num--zone-up   { color: var(--dv3-zone-up); }
-.dv3-hero-metric-num--zone-warn { color: var(--dv3-zone-warn); }
-.dv3-hero-metric-num--zone-down { color: var(--dv3-zone-down); }
-
-/* HERO — terminal meta-bar layout */
-.dv3-hero {
-  position: relative;
-  border: 1px solid var(--dv3-border);
-  border-top: 2px solid var(--dv3-zone-info);
-  background: var(--dv3-bg2);
-  margin-bottom: 16px;
-}
-.dv3-hero-meta {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 16px;
-  padding: 8px 18px;
-  border-bottom: 1px solid var(--dv3-border);
-  background: var(--dv3-bg3);
-  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
-}
-.dv3-hero-meta-l { color: var(--dv3-zone-info); }
-.dv3-hero-meta-r { color: var(--dv3-text4); letter-spacing: 0.1em; }
-.dv3-hero-main {
-  display: grid; grid-template-columns: 1fr auto;
-  align-items: center; gap: 24px;
-  padding: 22px;
-}
-.dv3-hero-title {
-  font-size: 26px; font-weight: 600; letter-spacing: -0.01em;
-  color: var(--dv3-text); margin: 0;
-}
-.dv3-hero-title .dv3-accent { color: var(--dv3-accent); }
-.dv3-hero-sub {
-  font-size: 11px; color: var(--dv3-text3);
-  margin: 6px 0 0; letter-spacing: 0.04em;
-}
-.dv3-hero-metrics { display: flex; gap: 28px; }
-.dv3-hero-metric { display: flex; flex-direction: column; align-items: flex-end; }
-.dv3-hero-metric-num {
-  font-size: 38px; font-weight: 600; line-height: 1;
-  color: var(--dv3-text); font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-}
-.dv3-hero-metric-lab {
-  font-size: 9px; color: var(--dv3-text3);
-  letter-spacing: 0.14em; text-transform: uppercase; margin-top: 6px;
-}
-.dv3-hero-foot {
-  display: flex; justify-content: space-between; align-items: center;
-  gap: 16px;
-  padding: 7px 18px;
-  border-top: 1px solid var(--dv3-border);
-  font-size: 10px; color: var(--dv3-text4);
-  letter-spacing: 0.1em; text-transform: uppercase;
-}
-.dv3-hero-foot-ok { color: var(--dv3-zone-up); }
-.dv3-hero-foot-warn { color: var(--dv3-zone-warn); }
-@media (max-width: 640px) {
-  .dv3-hero-main { grid-template-columns: 1fr; }
-  .dv3-hero-metrics { justify-content: flex-start; }
-  .dv3-hero-metric { align-items: flex-start; }
-}
-
 /* card active state when its panel is open */
 .dv3-card-btn[aria-expanded="true"] { border-color: var(--dv3-accent); }
 

@@ -139,26 +139,25 @@ export function DashboardPage() {
   const fullName = analytics?.fullName ?? email ?? ''
   const firstName = fullName.split(/\s+/)[0] || (email?.split('@')[0] ?? '')
 
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(id)
+  }, [])
+
   const greetingDate = useMemo(() => {
     const loc = lng === 'kg' ? 'ky-KG' : 'ru-RU'
-    const d = new Date()
-    return d.toLocaleDateString(loc, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) +
-      ' · ' + d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
-  }, [lng])
+    return now.toLocaleDateString(loc, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) +
+      ' · ' + now.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })
+  }, [lng, now])
 
   const greetingWord = useMemo(() => {
-    const h = new Date().getHours()
-    if (lng === 'kg') {
-      if (h < 5) return 'Жакшы түн'
-      if (h < 12) return 'Кутмандуу таң'
-      if (h < 18) return 'Жакшы күн'
-      return 'Кутмандуу кеч'
-    }
-    if (h < 5) return 'Доброй ночи'
-    if (h < 12) return 'Доброе утро'
-    if (h < 18) return 'Добрый день'
-    return 'Добрый вечер'
-  }, [lng])
+    const h = now.getHours()
+    if (h < 5) return t('dashboard.greetingNight')
+    if (h < 12) return t('dashboard.greetingMorning')
+    if (h < 18) return t('dashboard.greetingAfternoon')
+    return t('dashboard.greetingEvening')
+  }, [now, t])
 
   // ── pending counts ─────────────────────────────────────────────────────
   const pendingEvals = scopedEvals.filter(e => e.status === 'DRAFT' || e.status === 'SUBMITTED')
@@ -298,7 +297,12 @@ export function DashboardPage() {
             </div>
 
             <div className="dv3-hero-stats">
-              <div className="dv3-ring" aria-label={t('dashboard.ratingAria', { score: scoreDisplay ?? 0 })}>
+              <div
+                className="dv3-ring"
+                aria-label={scoreDisplay !== null
+                  ? t('dashboard.ratingAria', { score: scoreDisplay })
+                  : t('dashboard.ratingAriaEmpty', { defaultValue: 'Рейтинг не определён' })}
+              >
                 <svg viewBox="0 0 120 120">
                   <circle className="bg" cx="60" cy="60" r="50" strokeWidth="9" fill="none" />
                   <circle

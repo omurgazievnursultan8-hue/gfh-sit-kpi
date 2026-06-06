@@ -36,8 +36,6 @@ export default function App() {
       <Route path="/pdpa-consent" element={<ProtectedRoute><PdpaConsentPage /></ProtectedRoute>} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/dashboard-v2" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard-v3" element={<Navigate to="/dashboard" replace />} />
       <Route path="/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><UsersPage /></ProtectedRoute>} />
       <Route path="/users/:id" element={<ProtectedRoute allowedRoles={['ADMIN']}><UserDetailPage /></ProtectedRoute>} />
       <Route path="/users-v2" element={<Navigate to="/users" replace />} />

@@ -38,7 +38,6 @@
   },
   "nav": {
     "dashboard": "Дашборд",
-    "dashboardV1": "Дашборд V1",
     "users": "Пользователи",
     "orgStructure": "Оргструктура",
     "delegations": "Делегирования",
@@ -737,6 +736,7 @@
     "greetingMorning": "Доброе утро",
     "greetingAfternoon": "Добрый день",
     "greetingEvening": "Добрый вечер",
+    "greetingNight": "Доброй ночи",
     "heroMeta": "// ДАШБОРД · ЛИЧНЫЙ · KPI",
     "statusOk": "Все данные загружены",
     "statusPartial": "Часть данных не загружена",

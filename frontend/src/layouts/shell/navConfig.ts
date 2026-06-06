@@ -63,7 +63,6 @@ export const NAV_SECTIONS: NavSection[] = [
         groupKey: 'nav.groupMain',
         items: [
           { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, end: true, roles: ALL_ROLES, chord: 'd' },
-          { to: '/dashboard-v1', labelKey: 'nav.dashboardV1', icon: LayoutDashboard, end: true, roles: ALL_ROLES },
           { to: '/my-kpi', labelKey: 'nav.myKpi', icon: Target, roles: ['EMPLOYEE', 'ORG_HEAD', 'DEPUTY_CHAIRMAN', 'CHAIRMAN'], chord: 'm' },
           { to: '/my-evaluations', labelKey: 'nav.myEvaluations', icon: FileCheck, roles: ALL_ROLES, chord: 'e' },
         ],

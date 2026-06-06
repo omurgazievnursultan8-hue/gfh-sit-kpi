@@ -38,7 +38,6 @@
   },
   "nav": {
     "dashboard": "Башкы бет",
-    "dashboardV1": "Башкы бет V1",
     "users": "Колдонуучулар",
     "orgStructure": "Уюм структурасы",
     "delegations": "Делегирлөөлөр",
@@ -603,6 +602,7 @@
     "greetingMorning": "Кутмандуу таң",
     "greetingAfternoon": "Кутмандуу күн",
     "greetingEvening": "Кутмандуу кеч",
+    "greetingNight": "Жакшы түн",
     "heroMeta": "// ДАШБОРД · ЖЕКЕ · KPI",
     "statusOk": "Бардык маалымат жүктөлдү",
     "statusPartial": "Маалыматтын бир бөлүгү жүктөлгөн жок",
