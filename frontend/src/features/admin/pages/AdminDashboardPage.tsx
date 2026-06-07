@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { adminApi, AdminStats, QuartzJobInfo } from '../api'
 import { DASHBOARD_CSS } from '../../dashboard/styles'
-import { StatCard, STAT_CARD_CSS } from '@/shared/ui/StatCard'
+import { AdminStatCard, ADMIN_STAT_CARD_CSS } from '@/layouts/admin/AdminStatsCards'
 import { useAdminRange } from '@/layouts/admin/AdminRangeContext'
 
 const PLACEHOLDER = '··'
@@ -133,7 +133,7 @@ export function AdminDashboardPage() {
   return (
     <div className="dv3-root">
       <style>{DASHBOARD_CSS}</style>
-      <style>{STAT_CARD_CSS}</style>
+      <style>{ADMIN_STAT_CARD_CSS}</style>
 
       <div className="dv3-terminal" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div className="flex gap-1" role="tablist" aria-label={t('admin.dashboard.tabsAria')}>
@@ -171,8 +171,8 @@ export function AdminDashboardPage() {
         {tab === 'inventory' && (
         /* INVENTORY GRID */
         <div className="dv3-grid">
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.users.title').toUpperCase()} id="U01" loading={loading}
             value={totalUsers} label={t('admin.dashboard.cards.users.label')}
             onClick={() => navigate('/admin/users')}
@@ -182,8 +182,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.users.bdInactive'), value: totalUsers - activeUsers, tone: 'neutral', delta: usersInactiveDelta },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.periods.title').toUpperCase()} id="P01" loading={loading}
             value={totalPeriods} label={t('admin.dashboard.cards.periods.label')}
             onClick={() => navigate('/admin/periods')}
@@ -193,8 +193,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.periods.bdInactive'), value: totalPeriods - periods,  tone: 'neutral', delta: periodsInactiveDelta },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.evaluations.title').toUpperCase()} id="E01" loading={loading}
             value={totalEvals} label={t('admin.dashboard.cards.evaluations.label')}
             onClick={() => navigate('/admin/evaluations')}
@@ -204,8 +204,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.evaluations.bdCompleted'), value: completedEvals, tone: 'up',   delta: evalsCompletedDelta },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.appeals.title').toUpperCase()} id="X01" loading={loading}
             value={totalAppeals} label={t('admin.dashboard.cards.appeals.label')}
             zoneScore={appeals > 0 ? 40 : 100}
@@ -216,8 +216,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.appeals.bdClosed'), value: closedAppeals, tone: 'up',   delta: appealsClosedDelta },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.org.title').toUpperCase()} id="O01" loading={loading}
             value={orgUnits} label={t('admin.dashboard.cards.org.label')}
             onClick={() => navigate('/admin/org')}
@@ -228,8 +228,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.org.bdUnits'),       value: orgUnitsLeaf,   tone: 'neutral', delta: orgUnitsLeafDelta },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.criteria.title').toUpperCase()} id="C01" loading={loading}
             value={totalCriteria} label={t('admin.dashboard.cards.criteria.label')}
             onClick={() => navigate('/admin/criteria')}
@@ -239,8 +239,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.criteria.bdInactive'), value: totalCriteria - criteria, tone: 'neutral', delta: criteriaInactiveDelta },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.delegations.title').toUpperCase()} id="D01" loading={loading}
             value={delegationsActive} label={t('admin.dashboard.cards.delegations.label')}
             zoneScore={delegationsExpiring > 0 ? 60 : 100}
@@ -256,8 +256,8 @@ export function AdminDashboardPage() {
         {tab === 'system' && (
         /* SYSTEM HEALTH GRID */
         <div className="dv3-grid">
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.jobs.title').toUpperCase()} id="J01" loading={jobsLoading}
             value={jobsTotal} label={t('admin.dashboard.cards.jobs.label')}
             zoneScore={jobsZone}
@@ -268,8 +268,8 @@ export function AdminDashboardPage() {
               { label: t('admin.dashboard.cards.jobs.bdErrors'),  value: jobsBroken,  tone: 'down' },
             ]}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.errors.title').toUpperCase()} id="J02" loading={errorsLoading}
             value={errorsCount} label={t('admin.dashboard.cards.errors.label')}
             zoneScore={errorsZone}
@@ -282,8 +282,8 @@ export function AdminDashboardPage() {
         {tab === 'attention' && (
         /* ATTENTION GRID — actionable signal */
         <div className="dv3-grid">
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.completed.title').toUpperCase()} id="A01" loading={loading}
             value={completionPct} unit="%" label={t('admin.dashboard.cards.completed.label')}
             zoneScore={completionZone}
@@ -297,16 +297,16 @@ export function AdminDashboardPage() {
               ariaLabel: t('admin.dashboard.cards.completed.ariaPct', { pct: completionPct }),
             }}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.overdue.title').toUpperCase()} id="A02" loading={loading}
             value={overdueEvals} label={t('admin.dashboard.cards.overdue.label')}
             zoneScore={overdueZone}
             onClick={() => navigate('/admin/evaluations')}
             emptyNote={overdueEvals === 0 ? t('admin.dashboard.cards.overdue.emptyNote') : undefined}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.avgRating.title').toUpperCase()} id="A03" loading={loading}
             value={avgRatingRounded}
             label={t('admin.dashboard.cards.avgRating.label', { count: ratedCount })}
@@ -314,8 +314,8 @@ export function AdminDashboardPage() {
             emptyNote={avgRatingRounded == null ? t('admin.dashboard.cards.avgRating.emptyNote') : undefined}
             onClick={() => navigate('/admin/evaluations')}
           />
-          <StatCard
-            className="dv3-col-3"
+          <AdminStatCard
+            className="dv3-col-4"
             title={t('admin.dashboard.cards.deadline.title').toUpperCase()} id="A04" loading={loading}
             value={nextDeadlineDate ? daysUntilNext : null}
             label={nextDeadlineDate ? t('admin.dashboard.cards.deadline.label') : undefined}

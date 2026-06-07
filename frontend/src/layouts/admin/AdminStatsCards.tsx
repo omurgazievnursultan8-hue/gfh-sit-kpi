@@ -1,425 +1,418 @@
-import { useNavigate } from 'react-router-dom'
-import { Trans, useTranslation } from 'react-i18next'
-import type { AdminStats } from '@/features/admin'
+import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  Users, CalendarRange, ClipboardCheck, Gavel, Network, ListChecks,
+  UserCog, Activity, AlertTriangle, Target, TrendingUp, Clock, ArrowRight,
+} from 'lucide-react'
+import { RATING_ZONES } from '@/shared/lib/ratingZones'
 
-interface AdminStatsCardsProps {
-  stats: AdminStats | null
+// ── zone helpers ────────────────────────────────────────────────────────────
+type Tone = 'up' | 'warn' | 'down' | 'info' | 'idle'
+
+function zoneFromScore(score: number | null | undefined): Tone {
+  if (score === null || score === undefined) return 'idle'
+  if (score >= RATING_ZONES.up)   return 'up'
+  if (score >= RATING_ZONES.warn) return 'warn'
+  return 'down'
 }
 
-type PillKind = 'ok' | 'info' | 'warn' | 'danger' | 'idle'
-
-function pillStyle(kind: PillKind): { bg: string; fg: string; border: string } {
-  switch (kind) {
-    case 'ok':     return { bg: 'rgba(120,200,150,0.14)', fg: '#2f9e6d', border: 'rgba(120,200,150,0.32)' }
-    case 'info':   return { bg: 'rgba(120,150,200,0.14)', fg: '#4a73c7', border: 'rgba(120,150,200,0.32)' }
-    case 'warn':   return { bg: 'var(--warn-soft)',       fg: 'var(--warn)',   border: 'color-mix(in srgb,var(--warn) 30%,transparent)' }
-    case 'danger': return { bg: 'var(--danger-soft)',     fg: 'var(--danger)', border: 'color-mix(in srgb,var(--danger) 30%,transparent)' }
-    default:       return { bg: 'var(--bg-soft,#ebe6db)', fg: 'var(--ink-faint)', border: 'var(--line)' }
+function toneVars(tone: Tone): { fg: string; soft: string; stripe: string } {
+  switch (tone) {
+    case 'up':   return { fg: 'var(--accent-2)', soft: 'var(--accent-soft)', stripe: 'var(--accent-2)' }
+    case 'warn': return { fg: 'var(--warn)',     soft: 'var(--warn-soft)',   stripe: 'var(--warn)' }
+    case 'down': return { fg: 'var(--danger)',   soft: 'var(--danger-soft)', stripe: 'var(--danger)' }
+    case 'info': return { fg: 'var(--info)',     soft: 'var(--info-soft)',   stripe: 'var(--info)' }
+    default:     return { fg: 'var(--ink-faint)', soft: 'var(--bg-soft)',    stripe: 'var(--line-strong)' }
   }
 }
 
-function StatusPill({ kind, text }: { kind: PillKind; text: string }) {
-  const s = pillStyle(kind)
-  return (
-    <span
-      className="font-mono font-semibold uppercase tracking-widest"
-      style={{
-        fontSize: 9.5, padding: '2px 7px', borderRadius: 4,
-        background: s.bg, color: s.fg, border: `1px solid ${s.border}`,
-      }}
-    >
-      {text}
-    </span>
-  )
+// ── icon mapping by id prefix ───────────────────────────────────────────────
+function iconForId(id: string): ReactNode {
+  const k = id.charAt(0).toUpperCase()
+  const props = { size: 18, strokeWidth: 2 } as const
+  switch (k) {
+    case 'U': return <Users {...props} />
+    case 'P': return <CalendarRange {...props} />
+    case 'E': return <ClipboardCheck {...props} />
+    case 'X': return <Gavel {...props} />
+    case 'O': return <Network {...props} />
+    case 'C': return <ListChecks {...props} />
+    case 'D': return <UserCog {...props} />
+    case 'J': return <Activity {...props} />
+    case 'A': {
+      if (id === 'A01') return <Target {...props} />
+      if (id === 'A02') return <AlertTriangle {...props} />
+      if (id === 'A03') return <TrendingUp {...props} />
+      if (id === 'A04') return <Clock {...props} />
+      return <Target {...props} />
+    }
+    default: return <Activity {...props} />
+  }
 }
 
-interface ProgressBarProps {
-  label: string
-  percent: number
-  caption: string
-  color: string
+// ── types ───────────────────────────────────────────────────────────────────
+export interface AdminStatCardGauge {
+  pct: number
+  variant: 'marker' | 'meta'
+  left: ReactNode
+  right: ReactNode
+  center?: ReactNode
+  ariaLabel?: string
 }
 
-function ProgressBar({ label, percent, caption, color }: ProgressBarProps) {
-  const clamped = Math.max(0, Math.min(100, percent))
-  return (
-    <div className="mb-2.5 last:mb-0">
-      <div className="flex items-baseline justify-between mb-1">
-        <span
-          className="font-mono uppercase tracking-wider"
-          style={{ fontSize: 10, color: 'var(--ink-faint)', fontWeight: 600 }}
-        >
-          {label}
-        </span>
-        <span
-          className="font-mono"
-          style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600 }}
-        >
-          {caption}
-        </span>
-      </div>
-      <div
-        className="relative overflow-hidden rounded-full"
-        style={{ height: 6, background: 'var(--bg-soft,#ebe6db)' }}
-      >
-        <div
-          className="absolute inset-y-0 left-0 transition-all"
-          style={{ width: `${clamped}%`, background: color, borderRadius: 999 }}
-        />
-      </div>
-    </div>
-  )
+export interface AdminStatCardDelta {
+  value: number
+  unit?: string
 }
 
-interface StatCardShellProps {
+export interface AdminStatCardBreakdownItem {
+  label: ReactNode
+  value: number | string
+  tone?: 'up' | 'warn' | 'down' | 'neutral'
+  delta?: number
+}
+
+export interface AdminStatCardProps {
   title: string
-  pill: { kind: PillKind; text: string }
-  accent: { text: string; color: string }
-  stripe: string
-  to?: string
-  children: React.ReactNode
-  footer: React.ReactNode
+  id: string
+  loading?: boolean
+  value: number | string | null
+  unit?: string
+  label?: string
+  subtitle?: ReactNode
+  emptyNote?: ReactNode
+  zoneScore?: number | null
+  gauge?: AdminStatCardGauge
+  delta?: AdminStatCardDelta
+  breakdown?: AdminStatCardBreakdownItem[]
+  onClick?: () => void
+  className?: string
 }
 
-function StatCardShell({ title, pill, accent, stripe, to, children, footer }: StatCardShellProps) {
-  const navigate = useNavigate()
-  const clickable = !!to
-  return (
-    <div
-      className={`relative overflow-hidden rounded-lg ${clickable ? 'cursor-pointer transition-all hover:-translate-y-px' : ''}`}
-      style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--line-soft)',
-        padding: '15px 17px',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-      onClick={clickable ? () => navigate(to!) : undefined}
-    >
-      <div
-        className="absolute top-0 left-0 right-0"
-        style={{ height: 3, background: stripe }}
-      />
-
-      <div className="flex items-baseline justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
-          <span className="font-display" style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)' }}>
-            {title}
-          </span>
-          <StatusPill kind={pill.kind} text={pill.text} />
-        </div>
-        <span
-          className="font-mono font-semibold"
-          style={{ fontSize: 11, color: accent.color }}
-        >
-          {accent.text}
-        </span>
-      </div>
-
-      {children}
-
-      <div
-        className="font-mono mt-3"
-        style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}
-      >
-        {footer}
-      </div>
-    </div>
-  )
-}
-
-export function AdminStatsCards({ stats }: AdminStatsCardsProps) {
+// ── component ───────────────────────────────────────────────────────────────
+export function AdminStatCard({
+  title, id, loading = false, value, unit, label, subtitle, emptyNote,
+  zoneScore, gauge, delta, breakdown, onClick, className,
+}: AdminStatCardProps) {
   const { t } = useTranslation()
+  const tone: Tone = zoneScore !== undefined ? zoneFromScore(zoneScore) : 'info'
+  const v = toneVars(tone)
+  const clickable = !!onClick
 
-  const totalUsers = stats?.totalUsers ?? 0
-  const activeUsers = stats?.activeUsers ?? 0
-  const activePct = totalUsers > 0 ? (activeUsers / totalUsers) * 100 : 0
+  const isEmpty = !loading && (value === null || value === undefined)
+  const displayValue = loading ? '··' : (isEmpty ? '—' : value)
 
-  const totalEvals = stats?.totalEvaluations ?? 0
-  const pendingEvals = stats?.pendingEvaluations ?? 0
-  const completedEvals = Math.max(0, totalEvals - pendingEvals)
-  const completedPct = totalEvals > 0 ? (completedEvals / totalEvals) * 100 : 0
+  const deltaDir = delta && delta.value !== 0 ? (delta.value > 0 ? 'up' : 'down') : null
 
-  const appeals = stats?.openAppeals ?? 0
-  const periods = stats?.activeEvaluationPeriods ?? 0
-  const audit24 = stats?.auditLogsLast24h ?? 0
-  const criteria = stats?.criteriaActive ?? 0
-  const delegations = stats?.delegationsActive ?? 0
-  const delegationsExpiring = stats?.delegationsExpiringSoon ?? 0
-  const orgUnits = stats?.orgUnitsCount ?? 0
-
-  const SAFE = 'var(--accent-2, #2f9e6d)'
-  const INFO = '#4a73c7'
-  const WARN = 'var(--warn)'
-  const DANGER = 'var(--danger)'
-
-  const strongSoft = <strong style={{ color: 'var(--ink-soft)' }} />
-  const strongWarn = <strong style={{ color: 'var(--warn)' }} />
+  const gaugePct = gauge ? Math.max(0, Math.min(1, gauge.pct)) : 0
+  const gaugeWidth = Math.round(gaugePct * 100)
 
   return (
-    <div className="mb-5">
-      <div className="flex items-baseline justify-between mb-3">
-        <span
-          className="font-mono uppercase font-semibold tracking-widest"
-          style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}
-        >
-          {t('admin.statCards.systemState')}
-        </span>
+    <article
+      className={`asc-card${clickable ? ' asc-card--btn' : ''}${className ? ` ${className}` : ''}`}
+      style={{ ['--asc-stripe' as string]: v.stripe }}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable
+        ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick!() } }
+        : undefined}
+    >
+      <header className="asc-head">
+        <div className="asc-ico" style={{ background: v.soft, color: v.fg }} aria-hidden="true">
+          {iconForId(id)}
+        </div>
+        <div className="asc-ht">
+          <div className="asc-title">{title}</div>
+        </div>
+        <span className="asc-tag font-mono">{id}</span>
+      </header>
+
+      <div className="asc-num-row">
+        {isEmpty && emptyNote ? (
+          <div className="asc-empty-wrap">
+            <span className="asc-num-empty font-mono">—</span>
+            <span className="asc-empty-note">{emptyNote}</span>
+          </div>
+        ) : (
+          <>
+            <b className="asc-num font-mono">
+              {loading ? <span className="asc-skel" aria-hidden="true">··</span> : displayValue}
+              {unit && !loading && !isEmpty && <span className="asc-num-unit">{unit}</span>}
+            </b>
+            {!loading && (delta || label) && (
+              <span className="asc-meta">
+                {delta && deltaDir && (
+                  <span className={`asc-delta asc-delta--${deltaDir} font-mono`}>
+                    {delta.value > 0 ? '+' : ''}{delta.value}{delta.unit ?? ''}
+                  </span>
+                )}
+                {label && <span className="asc-label font-mono">{label}</span>}
+              </span>
+            )}
+          </>
+        )}
       </div>
 
-      <div
-        className="grid gap-3 admin-stats-grid"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
-      >
-        {/* Users */}
-        <StatCardShell
-          title={t('admin.statCards.users.title')}
-          pill={{ kind: 'ok', text: t('admin.statCards.users.pillActive') }}
-          accent={{ text: `${activeUsers}/${totalUsers}`, color: SAFE }}
-          stripe={SAFE}
-          to="/admin/users"
-          footer={
-            <Trans
-              i18nKey="admin.statCards.users.footer"
-              values={{ total: totalUsers, active: activeUsers }}
-              components={[<span />, strongSoft, strongSoft]}
-            />
-          }
-        >
-          <ProgressBar
-            label={t('admin.statCards.users.progressLabel')}
-            percent={activePct}
-            caption={`${Math.round(activePct)}%`}
-            color={SAFE}
-          />
-        </StatCardShell>
+      {subtitle && !isEmpty && (
+        <div className="asc-subtitle font-mono">{subtitle}</div>
+      )}
 
-        {/* Evaluations */}
-        <StatCardShell
-          title={t('admin.statCards.evaluations.title')}
-          pill={{
-            kind: pendingEvals > 0 ? 'warn' : 'ok',
-            text: pendingEvals > 0
-              ? t('admin.statCards.evaluations.pillInProgress')
-              : t('admin.statCards.evaluations.pillDone'),
-          }}
-          accent={{ text: `${completedEvals}/${totalEvals}`, color: pendingEvals > 0 ? WARN : SAFE }}
-          stripe={pendingEvals > 0 ? WARN : SAFE}
-          footer={
-            totalEvals > 0 ? (
-              <Trans
-                i18nKey="admin.statCards.evaluations.footer"
-                values={{ pending: pendingEvals, completed: completedEvals }}
-                components={[<span />, strongSoft, strongSoft]}
-              />
-            ) : (
-              <>{t('admin.statCards.evaluations.footerEmpty')}</>
+      {gauge && !isEmpty && !loading && (
+        <div
+          className="asc-gauge"
+          role="img"
+          aria-label={gauge.ariaLabel ?? `${gaugeWidth}%`}
+        >
+          <div className="asc-gauge-track">
+            <i style={{ width: `${gaugeWidth}%`, background: v.stripe }} />
+          </div>
+          <div className="asc-gauge-meta font-mono">
+            <span>{gauge.left}</span>
+            {gauge.variant === 'meta' && gauge.center && <span>{gauge.center}</span>}
+            <span>{gauge.right}</span>
+          </div>
+        </div>
+      )}
+
+      {breakdown && breakdown.length > 0 && !isEmpty && !loading && (
+        <ul className="asc-bd">
+          {breakdown.map((item, i) => {
+            const itone: Tone =
+              item.tone === 'up' ? 'up'
+              : item.tone === 'warn' ? 'warn'
+              : item.tone === 'down' ? 'down'
+              : 'idle'
+            const iv = toneVars(itone)
+            return (
+              <li key={i} className={`asc-bd-row asc-bd-row--${item.tone ?? 'neutral'}`}>
+                <span className="asc-bd-dot" style={{ background: iv.stripe }} />
+                <span className="asc-bd-lab">{item.label}</span>
+                <span className="asc-bd-val font-mono">{item.value}</span>
+                {item.delta !== undefined && item.delta !== 0 && (
+                  <span
+                    className="asc-bd-delta font-mono"
+                    style={{ color: item.delta > 0 ? 'var(--accent-2)' : 'var(--danger)' }}
+                  >
+                    {item.delta > 0 ? '+' : ''}{item.delta}
+                  </span>
+                )}
+              </li>
             )
-          }
-        >
-          {totalEvals > 0 ? (
-            <ProgressBar
-              label={t('admin.statCards.evaluations.progressLabel')}
-              percent={completedPct}
-              caption={`${Math.round(completedPct)}%`}
-              color={completedPct >= 80 ? SAFE : completedPct >= 40 ? WARN : DANGER}
-            />
-          ) : (
-            <div className="font-mono mb-2.5" style={{ fontSize: 10.5, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.evaluations.noData')}
-            </div>
-          )}
-        </StatCardShell>
+          })}
+        </ul>
+      )}
 
-        {/* Periods */}
-        <StatCardShell
-          title={t('admin.statCards.periods.title')}
-          pill={{
-            kind: periods > 0 ? 'ok' : 'idle',
-            text: periods > 0
-              ? t('admin.statCards.periods.pillRunning')
-              : t('admin.statCards.periods.pillNone'),
-          }}
-          accent={{ text: String(periods), color: periods > 0 ? SAFE : 'var(--ink-faint)' }}
-          stripe={periods > 0 ? SAFE : 'var(--line-strong)'}
-          to="/admin/periods"
-          footer={
-            periods > 0 ? (
-              <Trans
-                i18nKey="admin.statCards.periods.footer"
-                values={{ count: periods }}
-                components={[<span />, strongSoft]}
-              />
-            ) : (
-              <>{t('admin.statCards.periods.footerEmpty')}</>
-            )
-          }
-        >
-          <div className="flex items-baseline gap-3">
-            <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
-              {periods}
-            </span>
-            <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.periods.subtitle')}
-            </span>
-          </div>
-        </StatCardShell>
-
-        {/* Appeals */}
-        <StatCardShell
-          title={t('admin.statCards.appeals.title')}
-          pill={{
-            kind: appeals > 0 ? 'danger' : 'idle',
-            text: appeals > 0
-              ? t('admin.statCards.appeals.pillOpen')
-              : t('admin.statCards.appeals.pillNone'),
-          }}
-          accent={{ text: String(appeals), color: appeals > 0 ? DANGER : 'var(--ink-faint)' }}
-          stripe={appeals > 0 ? DANGER : 'var(--line-strong)'}
-          footer={
-            appeals > 0 ? (
-              <Trans
-                i18nKey="admin.statCards.appeals.footer"
-                values={{ count: appeals }}
-                components={[<span />, strongSoft]}
-              />
-            ) : (
-              <>{t('admin.statCards.appeals.footerEmpty')}</>
-            )
-          }
-        >
-          <div className="flex items-baseline gap-3">
-            <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
-              {appeals}
-            </span>
-            <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.appeals.subtitle')}
-            </span>
-          </div>
-        </StatCardShell>
-
-        {/* Audit */}
-        <StatCardShell
-          title={t('admin.statCards.audit.title')}
-          pill={{ kind: 'info', text: t('admin.statCards.audit.pill') }}
-          accent={{ text: String(audit24), color: INFO }}
-          stripe={INFO}
-          to="/admin/audit"
-          footer={<>{t('admin.statCards.audit.footer')}</>}
-        >
-          <div className="flex items-baseline gap-3">
-            <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
-              {audit24}
-            </span>
-            <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.audit.subtitle')}
-            </span>
-          </div>
-        </StatCardShell>
-
-        {/* Criteria */}
-        <StatCardShell
-          title={t('admin.statCards.criteria.title')}
-          pill={{
-            kind: criteria > 0 ? 'ok' : 'idle',
-            text: criteria > 0
-              ? t('admin.statCards.criteria.pillActive')
-              : t('admin.statCards.criteria.pillNone'),
-          }}
-          accent={{ text: String(criteria), color: criteria > 0 ? SAFE : 'var(--ink-faint)' }}
-          stripe={criteria > 0 ? SAFE : 'var(--line-strong)'}
-          to="/admin/criteria"
-          footer={
-            criteria > 0 ? (
-              <Trans
-                i18nKey="admin.statCards.criteria.footer"
-                values={{ count: criteria }}
-                components={[<span />, strongSoft]}
-              />
-            ) : (
-              <>{t('admin.statCards.criteria.footerEmpty')}</>
-            )
-          }
-        >
-          <div className="flex items-baseline gap-3">
-            <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
-              {criteria}
-            </span>
-            <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.criteria.subtitle')}
-            </span>
-          </div>
-        </StatCardShell>
-
-        {/* Delegations */}
-        <StatCardShell
-          title={t('admin.statCards.delegations.title')}
-          pill={{
-            kind: delegationsExpiring > 0 ? 'warn' : delegations > 0 ? 'ok' : 'idle',
-            text: delegationsExpiring > 0
-              ? t('admin.statCards.delegations.pillExpiring')
-              : delegations > 0
-                ? t('admin.statCards.delegations.pillActive')
-                : t('admin.statCards.delegations.pillNone'),
-          }}
-          accent={{
-            text: String(delegations),
-            color: delegationsExpiring > 0 ? WARN : delegations > 0 ? SAFE : 'var(--ink-faint)',
-          }}
-          stripe={delegationsExpiring > 0 ? WARN : delegations > 0 ? SAFE : 'var(--line-strong)'}
-          to="/admin/delegations"
-          footer={
-            delegationsExpiring > 0 ? (
-              <Trans
-                i18nKey="admin.statCards.delegations.footerExpiring"
-                values={{ count: delegationsExpiring }}
-                components={[<span />, strongWarn]}
-              />
-            ) : delegations > 0 ? (
-              <Trans
-                i18nKey="admin.statCards.delegations.footerActive"
-                values={{ count: delegations }}
-                components={[<span />, strongSoft]}
-              />
-            ) : (
-              <>{t('admin.statCards.delegations.footerEmpty')}</>
-            )
-          }
-        >
-          <div className="flex items-baseline gap-3">
-            <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
-              {delegations}
-            </span>
-            <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.delegations.subtitle')}
-            </span>
-          </div>
-        </StatCardShell>
-
-        {/* Org units */}
-        <StatCardShell
-          title={t('admin.statCards.org.title')}
-          pill={{ kind: 'info', text: t('admin.statCards.org.pill') }}
-          accent={{ text: String(orgUnits), color: INFO }}
-          stripe={INFO}
-          to="/admin/org"
-          footer={<>{t('admin.statCards.org.footer')}</>}
-        >
-          <div className="flex items-baseline gap-3">
-            <span className="font-display" style={{ fontSize: 30, fontWeight: 600, color: 'var(--ink)', lineHeight: 1 }}>
-              {orgUnits}
-            </span>
-            <span className="font-mono uppercase tracking-wider" style={{ fontSize: 10, color: 'var(--ink-faint)' }}>
-              {t('admin.statCards.org.subtitle')}
-            </span>
-          </div>
-        </StatCardShell>
-      </div>
-
-      <style>{`
-        @media (max-width: 720px) {
-          .admin-stats-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
-    </div>
+      {clickable && (
+        <footer className="asc-foot">
+          <span className="asc-cta">
+            {t('common.open', 'Открыть')}<ArrowRight size={14} />
+          </span>
+        </footer>
+      )}
+    </article>
   )
 }
+
+// ── styles ──────────────────────────────────────────────────────────────────
+export const ADMIN_STAT_CARD_CSS = `
+.asc-card {
+  position: relative;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-top: 3px solid var(--asc-stripe);
+  border-radius: 4px;
+  box-shadow: var(--shadow-sm);
+  padding: 0;
+  text-align: left;
+  transition: box-shadow .16s ease, transform .16s ease, border-color .16s ease;
+  min-height: 168px;
+}
+.asc-card--btn {
+  cursor: pointer; font-family: inherit; color: inherit;
+}
+.asc-card--btn:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.asc-card--btn:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+.asc-head {
+  display: flex; align-items: center; gap: 11px;
+  padding: 14px 16px 0;
+}
+.asc-ico {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  display: grid; place-items: center;
+  flex: none;
+}
+.asc-ht { min-width: 0; flex: 1; }
+.asc-title {
+  font-size: 12px; font-weight: 600; line-height: 1.2;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink);
+}
+.asc-sub {
+  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.asc-tag {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.asc-num-row {
+  display: flex; align-items: flex-end; gap: 10px;
+  padding: 12px 16px 4px;
+  min-height: 60px;
+}
+.asc-num {
+  font-size: 44px; font-weight: 600; line-height: 0.88;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; align-items: baseline; gap: 6px;
+}
+.asc-num-unit {
+  font-size: 16px; font-weight: 500; color: var(--ink-faint);
+}
+.asc-num-empty {
+  font-size: 44px; font-weight: 400; color: var(--ink-faint); line-height: 0.88;
+}
+.asc-meta {
+  margin-left: auto;
+  display: grid; grid-template-rows: 1fr auto 1fr auto;
+  justify-items: start;
+  padding: 2px 0 4px;
+}
+.asc-meta .asc-delta { grid-row: 2; }
+.asc-meta .asc-label { grid-row: 4; }
+.asc-delta {
+  font-size: 11.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.asc-delta--up   { color: var(--accent-2); }
+.asc-delta--down { color: var(--danger); }
+.asc-label {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-faint);
+  line-height: 1.2;
+}
+
+.asc-empty-wrap {
+  display: flex; align-items: baseline; gap: 12px;
+}
+.asc-empty-note {
+  font-size: 11px; color: var(--ink-faint);
+  font-style: italic;
+}
+
+.asc-subtitle {
+  padding: 0 16px 4px;
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.asc-gauge { padding: 6px 16px 4px; }
+.asc-gauge-track {
+  height: 7px; border-radius: 5px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+.asc-gauge-track i {
+  display: block; height: 100%;
+  border-radius: 5px;
+  transition: width .7s cubic-bezier(.4,0,.2,1);
+}
+.asc-gauge-meta {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--ink-faint);
+  margin-top: 5px; letter-spacing: 0.03em;
+}
+
+.asc-bd {
+  list-style: none; margin: 0;
+  padding: 0 16px;
+  border-top: 1px solid transparent;
+  display: flex; flex-direction: column; gap: 5px;
+  max-height: 0; overflow: hidden;
+  opacity: 0;
+  transition: max-height .22s ease, opacity .18s ease, padding .22s ease, border-color .22s ease;
+}
+.asc-card:hover .asc-bd,
+.asc-card:focus-within .asc-bd {
+  max-height: 240px;
+  opacity: 1;
+  padding: 8px 16px;
+  border-top-color: var(--line-soft);
+  margin-top: 6px;
+}
+.asc-bd-row {
+  display: grid; align-items: center;
+  grid-template-columns: 8px 1fr auto auto;
+  gap: 8px;
+  font-size: 12px;
+}
+.asc-bd-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+}
+.asc-bd-lab {
+  font-size: 11px; color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+.asc-bd-val {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.asc-bd-delta {
+  font-size: 10.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.asc-foot {
+  margin-top: auto;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--line-soft);
+  display: flex; justify-content: flex-end;
+}
+.asc-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  color: var(--accent);
+}
+.asc-cta svg { transition: transform .14s ease; }
+.asc-card--btn:hover .asc-cta svg { transform: translateX(2px); }
+
+.asc-skel {
+  display: inline-block; color: transparent;
+  background: linear-gradient(90deg, var(--bg-soft) 0%, var(--line) 50%, var(--bg-soft) 100%);
+  background-size: 200% 100%;
+  animation: asc-shimmer 1.4s linear infinite;
+  border-radius: 2px;
+  min-width: 1.4em; height: 0.7em;
+}
+@keyframes asc-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@media (max-width: 720px) {
+  .asc-num { font-size: 34px; }
+  .asc-num-empty { font-size: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .asc-card, .asc-gauge-track i, .asc-cta svg, .asc-skel {
+    animation: none !important; transition: none !important;
+  }
+}
+`

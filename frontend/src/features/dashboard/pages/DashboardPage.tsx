@@ -10,6 +10,7 @@ import { appealsApi, type AppealSummary } from '@/features/appeals/api'
 import { DV3_CSS } from '../styles'
 import { MyTasksPanel } from '../components/MyTasksPanel'
 import { MyKpiPanel } from '../components/MyKpiPanel'
+import { MySubordinatesPanel } from '../components/MySubordinatesPanel'
 
 function fmtDateShort(iso: string | null, lng: string): string {
   if (!iso) return '—'
@@ -214,6 +215,7 @@ export function DashboardPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 18, marginBottom: 22 }}>
           <MyKpiPanel analytics={analytics} />
           <MyTasksPanel />
+          <MySubordinatesPanel />
         </div>
 
       </div>

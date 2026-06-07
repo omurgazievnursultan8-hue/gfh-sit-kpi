@@ -65,6 +65,10 @@ export interface TeamResponse {
   bestPerformer: TeamMemberDto | null
   totalCount: number
   teamAvg: number | null
+  evaluatedCount: number
+  zoneOk: number
+  zoneWarn: number
+  zoneCrit: number
 }
 
 export interface DashboardEvent {

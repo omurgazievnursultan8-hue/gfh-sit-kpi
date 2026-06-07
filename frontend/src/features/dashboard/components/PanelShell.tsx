@@ -26,7 +26,7 @@ export interface PanelShellProps {
 
 export function PanelShell({ tone, head, stat, viz, peek, foot, className }: PanelShellProps) {
   return (
-    <section className="psh-wrap" style={{ gridColumn: 'span 4' }}>
+    <section className="psh-wrap" style={{ gridColumn: 'span 4', alignSelf: 'start' }}>
       <style>{PSH_CSS}</style>
       <article className={`psh-card tone-${tone}${className ? ' ' + className : ''}`}>
         <div className="psh-head">
@@ -111,11 +111,10 @@ const PSH_CSS = `
   border-radius: 4px;
   box-shadow: var(--ps-shadow-sm);
   display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  grid-template-rows: auto auto auto auto auto;
   transition: box-shadow .14s, transform .14s, border-color .14s;
   font-family: var(--font-sans, 'Fira Sans', system-ui, sans-serif);
   color: var(--ps-ink);
-  min-height: 360px;
 }
 .psh-wrap .psh-card.tone-ok { border-top-color: var(--ps-ok); }
 .psh-wrap .psh-card.tone-warn { border-top-color: var(--ps-warn); }
@@ -175,8 +174,8 @@ const PSH_CSS = `
 }
 
 .psh-wrap .psh-viz {
-  padding: 0 18px 12px;
-  min-height: 72px;
+  padding: 0 18px 14px;
+  min-height: 56px;
   box-sizing: border-box;
 }
 
@@ -263,4 +262,29 @@ const PSH_CSS = `
 .psh-wrap .psh-peek .peek.warn .pk-right { background: var(--ps-warn-soft); color: var(--ps-warn-ink); }
 .psh-wrap .psh-peek .peek.crit .pk-right { background: var(--ps-crit-soft); color: var(--ps-crit-ink); }
 .psh-wrap .psh-peek .peek.info .pk-right { background: transparent; color: var(--ps-ink-3); padding: 0; }
+
+.psh-wrap .psh-card .psh-peek,
+.psh-wrap .psh-card .psh-foot {
+  max-height: 0;
+  min-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-color: transparent;
+  transition: max-height .25s ease, opacity .18s ease, padding .25s ease, border-color .25s ease;
+}
+.psh-wrap .psh-card:hover .psh-peek,
+.psh-wrap .psh-card:focus-within .psh-peek {
+  max-height: 320px;
+  opacity: 1;
+  border-top-color: var(--ps-border);
+}
+.psh-wrap .psh-card:hover .psh-foot,
+.psh-wrap .psh-card:focus-within .psh-foot {
+  max-height: 80px;
+  opacity: 1;
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
 `

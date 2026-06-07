@@ -6,7 +6,11 @@ public record TeamResponse(
     List<TeamMemberDto> attention,
     TeamMemberDto bestPerformer,
     int totalCount,
-    Double teamAvg
+    Double teamAvg,
+    int evaluatedCount,
+    int zoneOk,
+    int zoneWarn,
+    int zoneCrit
 ) {
     public record TeamMemberDto(
         Long userId,

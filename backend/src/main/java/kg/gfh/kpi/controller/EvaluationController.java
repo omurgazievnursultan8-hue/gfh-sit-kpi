@@ -5,6 +5,7 @@ import kg.gfh.kpi.dto.EvaluationPeriodRequest;
 import kg.gfh.kpi.dto.EvaluationResponse;
 import kg.gfh.kpi.dto.ScoreRequest;
 import kg.gfh.kpi.dto.ScoreResponse;
+import kg.gfh.kpi.dto.ScoreHistoryResponse;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
 import kg.gfh.kpi.enums.Role;
 import kg.gfh.kpi.repository.EvaluationRepository;
@@ -175,6 +176,11 @@ public class EvaluationController {
     @GetMapping("/evaluations/{id}/scores")
     public List<ScoreResponse> getScores(@PathVariable Long id, Authentication auth) {
         return evaluationService.getScores(id, resolveUserId(auth));
+    }
+
+    @GetMapping("/evaluations/{id}/score-history")
+    public List<ScoreHistoryResponse> getScoreHistory(@PathVariable Long id, Authentication auth) {
+        return evaluationService.getScoreHistory(id, resolveUserId(auth));
     }
 
     @PutMapping("/evaluations/{id}/scores")

@@ -281,7 +281,7 @@ public class AnalyticsService {
             """, managerId);
 
         if (reports.isEmpty()) {
-            return new TeamResponse(List.of(), null, 0, null);
+            return new TeamResponse(List.of(), null, 0, null, 0, 0, 0, 0);
         }
 
         // 2. Find active period
@@ -382,8 +382,16 @@ public class AnalyticsService {
         Double teamAvg = scoreList.isEmpty() ? null
             : scoreList.stream().mapToDouble(Double::doubleValue).average().orElse(0);
 
+        int zoneOk = 0, zoneWarn = 0, zoneCrit = 0;
+        for (Double s : scoreList) {
+            if (s >= 80) zoneOk++;
+            else if (s >= 50) zoneWarn++;
+            else zoneCrit++;
+        }
+
         return new TeamResponse(attentionList, best, reports.size(),
-            teamAvg != null ? Math.round(teamAvg * 10.0) / 10.0 : null);
+            teamAvg != null ? Math.round(teamAvg * 10.0) / 10.0 : null,
+            scoreList.size(), zoneOk, zoneWarn, zoneCrit);
     }
 
     private String iconTypeForAction(String action) {

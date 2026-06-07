@@ -33,6 +33,8 @@ public interface EvaluationScoreHistoryRepository extends JpaRepository<Evaluati
 
     long countByEvaluationIdAndCriteriaType(Long evaluationId, CriteriaType criteriaType);
 
+    List<EvaluationScoreHistory> findByEvaluationIdOrderByIdAsc(Long evaluationId);
+
     @Query("SELECT DISTINCT h.evaluationId FROM EvaluationScoreHistory h WHERE h.criteriaId = :criteriaId")
     List<Long> findEvaluationIdsByCriteriaId(@Param("criteriaId") Long criteriaId);
 }

@@ -5,6 +5,7 @@ import kg.gfh.kpi.dto.EvaluationPeriodRequest;
 import kg.gfh.kpi.dto.EvaluationResponse;
 import kg.gfh.kpi.dto.ScoreRequest;
 import kg.gfh.kpi.dto.ScoreResponse;
+import kg.gfh.kpi.dto.ScoreHistoryResponse;
 import kg.gfh.kpi.enums.Role;
 import kg.gfh.kpi.entity.*;
 import kg.gfh.kpi.entity.Evaluation.EvaluationStatus;
@@ -280,6 +281,29 @@ public class EvaluationService {
         return scoreRepository.findByEvaluationId(evaluationId).stream()
             .map(ScoreResponse::from)
             .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ScoreHistoryResponse> getScoreHistory(Long evaluationId, Long userId) {
+        Evaluation eval = findById(evaluationId);
+        assertCanView(eval, userId);
+        var rows = historyRepository.findByEvaluationIdOrderByIdAsc(evaluationId);
+        if (rows.isEmpty()) return List.of();
+        var criteriaIds = rows.stream().map(EvaluationScoreHistory::getCriteriaId).distinct().toList();
+        var criteria = criteriaRepository.findAllById(criteriaIds).stream()
+            .collect(java.util.stream.Collectors.toMap(Criteria::getId, c -> c));
+        return rows.stream().map(h -> {
+            Criteria c = criteria.get(h.getCriteriaId());
+            return new ScoreHistoryResponse(
+                h.getCriteriaId(),
+                c != null ? c.getNameRu() : "",
+                c != null ? c.getNameKg() : "",
+                h.getCriteriaType().name(),
+                h.getRawValue(),
+                h.getWeightedValue(),
+                h.getWeightSnapshot()
+            );
+        }).toList();
     }
 
     private void assertCanView(Evaluation eval, Long userId) {
