@@ -156,14 +156,15 @@ export const DV3_CSS = `
   font-family: var(--font-text);
   font-size: 14px;
   line-height: 1.45;
-  padding: 28px 32px 60px;
+  padding: 28px 0 60px;
   min-height: 100%;
   -webkit-font-smoothing: antialiased;
 }
 .dv3-root * { box-sizing: border-box; }
 .dv3-root svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 .dv3-root [class*="mono"], .dv3-root .num, .dv3-root .scr { font-variant-numeric: tabular-nums; }
-.dv3-inner { max-width: 1280px; margin: 0 auto; }
+.dv3-inner { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+@media (max-width: 640px) { .dv3-inner { padding: 0 12px; } }
 
 /* warn banner */
 .dv3-warn { background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); color: var(--warn); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; }
