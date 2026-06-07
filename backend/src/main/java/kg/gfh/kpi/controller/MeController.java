@@ -8,12 +8,15 @@ import kg.gfh.kpi.repository.AppealRepository;
 import kg.gfh.kpi.repository.EvaluationRepository;
 import kg.gfh.kpi.repository.NotificationRepository;
 import kg.gfh.kpi.repository.UserRepository;
+import kg.gfh.kpi.service.MyTasksService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/me")
@@ -24,6 +27,7 @@ public class MeController {
     private final EvaluationRepository evaluationRepository;
     private final AppealRepository appealRepository;
     private final NotificationRepository notificationRepository;
+    private final MyTasksService myTasksService;
 
     @GetMapping("/counters")
     public Counters counters(Authentication auth) {
@@ -44,6 +48,11 @@ public class MeController {
     }
 
     public record Counters(long pendingEvaluations, long openAppeals, long unreadNotifications) {}
+
+    @GetMapping("/tasks")
+    public List<MyTasksService.MyTask> tasks(Authentication auth) {
+        return myTasksService.collectFor(resolveUser(auth));
+    }
 
     private User resolveUser(Authentication auth) {
         UserDetails ud = (UserDetails) auth.getPrincipal();

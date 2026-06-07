@@ -689,6 +689,41 @@
       "colPeriod": "Мөөнөтү",
       "noActive": "Активдүү делегациялар жок",
       "noInactive": "Активдүү эмес делегациялар жок"
+    },
+    "myKpiPanel": {
+      "title": "МЕНИН KPI",
+      "target": "максат",
+      "detail": "KPI чоо-жайы",
+      "zone": {
+        "aboveTarget": "Максаттан жогору",
+        "nearTarget": "Максатка жакын",
+        "belowTarget": "Максаттан төмөн"
+      },
+      "peek": {
+        "criteria": "Критерийлер",
+        "criteriaCount": "{{n}} критерий · негиз",
+        "antiBonus": "Анти-бонустар",
+        "antiBonusCount": "{{n}} бузуу · кармоо",
+        "bonus": "Бонустар",
+        "bonusKind": "үстөк"
+      },
+      "footer": {
+        "loading": "жүктөлүүдө…"
+      }
+    },
+    "myTasksPanel": {
+      "title": "МЕНИН ТАПШЫРМАЛАРЫМ",
+      "colTask": "Тапшырма",
+      "colDue": "Мөөнөтү",
+      "empty": "Активдүү тапшырма жок — баары жайында",
+      "overdue": "МӨӨНӨТҮ ӨТКӨН",
+      "type": {
+        "PENDING_EVALUATION": "Баалоо толтуруу",
+        "PENDING_SELF_EVAL": "Өзүн өзү баалоо",
+        "RESPOND_APPEAL": "Апелляцияга жооп",
+        "ADMIN_OPEN_APPEAL": "Даттануулар",
+        "ADMIN_DRAFT_PERIOD": "Мезгилдер"
+      }
     }
   },
   "v2": {

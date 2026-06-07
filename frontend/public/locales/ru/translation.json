@@ -823,6 +823,41 @@
       "colPeriod": "Срок",
       "noActive": "Нет активных делегирований",
       "noInactive": "Нет неактивных делегирований"
+    },
+    "myKpiPanel": {
+      "title": "МОЙ KPI",
+      "target": "цель",
+      "detail": "Детализация KPI",
+      "zone": {
+        "aboveTarget": "Выше цели",
+        "nearTarget": "У цели",
+        "belowTarget": "Ниже цели"
+      },
+      "peek": {
+        "criteria": "Критерии",
+        "criteriaCount": "{{n}} критериев · база",
+        "antiBonus": "Анти-бонусы",
+        "antiBonusCount": "{{n}} нарушений · удержание",
+        "bonus": "Бонусы",
+        "bonusKind": "надбавка"
+      },
+      "footer": {
+        "loading": "загрузка…"
+      }
+    },
+    "myTasksPanel": {
+      "title": "МОИ ЗАДАЧИ",
+      "colTask": "Задача",
+      "colDue": "Срок",
+      "empty": "Нет активных задач — всё в порядке",
+      "overdue": "ПРОСРОЧЕНО",
+      "type": {
+        "PENDING_EVALUATION": "Заполнить оценку",
+        "PENDING_SELF_EVAL": "Самооценка",
+        "RESPOND_APPEAL": "Ответ на апелляцию",
+        "ADMIN_OPEN_APPEAL": "Апелляции",
+        "ADMIN_DRAFT_PERIOD": "Периоды"
+      }
     }
   },
   "dataPanel": {
